@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHTec — Nova Proposta Comercial</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --green: #2e7d32;
+      --green-light: #43a047;
+      --green-bg: #f1f8f1;
+      --border: #c8d8c8;
+      --text: #1f1f1f;
+      --muted: #666;
+      --danger: #c62828;
+      --hint: #1565c0;
+      --radius: 6px;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      background: #f5f5f5;
+      color: var(--text);
+    }
+
+    .nav {
+      background: var(--green);
+      display: flex;
+      align-items: center;
+      padding: 0 32px;
+      gap: 0;
+    }
+    .nav-brand {
+      color: #fff;
+      text-decoration: none;
+      font-size: 17px;
+      font-weight: 800;
+      padding: 16px 20px 16px 0;
+      margin-right: 12px;
+      border-right: 1px solid rgba(255,255,255,0.25);
+      white-space: nowrap;
+    }
+    .nav-link {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 19px 14px;
+      border-bottom: 3px solid transparent;
+      display: inline-block;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
+    .nav-link.active { color: #fff; border-bottom-color: #fff; }
+
+    .page-bar {
+      background: #1b5e20;
+      color: rgba(255,255,255,0.85);
+      padding: 10px 32px;
+      font-size: 13px;
+    }
+    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
+
+    .container {
+      max-width: 920px;
+      margin: 32px auto;
+      padding: 0 16px 60px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      color: var(--green);
+      text-transform: uppercase;
+      margin: 0 0 18px 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+    .field { display: flex; flex-direction: column; gap: 5px; position: relative; }
+
+    .field label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .field input,
+    .field textarea,
+    .field select {
+      padding: 9px 11px;
+      border: 1px solid #ccc;
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      font-family: inherit;
+      color: var(--text);
+      transition: border-color 0.15s;
+      background: #fff;
+    }
+
+    .field input:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--green-light);
+      box-shadow: 0 0 0 3px rgba(67,160,71,0.15);
+    }
+
+    .field textarea { resize: vertical; min-height: 68px; }
+
+    /* ── Autocomplete dropdown ── */
+    .ac-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      z-index: 100;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .ac-item {
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.1s;
+    }
+
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover, .ac-item.active { background: var(--green-bg); }
+
+    .ac-item .ac-main { font-weight: 600; }
+    .ac-item .ac-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* ── Items table ── */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+
+    .items-table th {
+      background: var(--green-bg);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      color: var(--green);
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .items-table td {
+      border: 1px solid #ddd;
+      padding: 4px 5px;
+      vertical-align: top;
+      position: relative;
+    }
+
+    .items-table input {
+      width: 100%;
+      padding: 6px 8px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+    }
+
+    .items-table input:focus {
+      outline: 2px solid var(--green-light);
+      border-radius: 3px;
+      background: #fff;
+    }
+
+    .col-num  { width: 42px; text-align: center; color: var(--muted); font-size: 12px; font-weight: 700; vertical-align: middle !important; }
+    .col-qty  { width: 68px; }
+    .col-desc { }
+    .col-price { width: 130px; }
+    .col-ncm  { width: 92px; }
+    .col-del  { width: 36px; text-align: center; vertical-align: middle !important; }
+
+    .btn-del-row {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #bbb;
+      font-size: 18px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+
+    .btn-del-row:hover { color: var(--danger); }
+
+    /* ── Price hint ── */
+    .price-hint {
+      display: none;
+      font-size: 11px;
+      color: var(--hint);
+      padding: 3px 8px 4px;
+      cursor: pointer;
+      background: #e3f2fd;
+      border-radius: 0 0 4px 4px;
+      user-select: none;
+    }
+
+    .price-hint:hover { background: #bbdefb; }
+
+    /* ── Items footer ── */
+    .items-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .btn-add-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: var(--green-bg);
+      border: 1px dashed var(--green-light);
+      border-radius: var(--radius);
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-add-item:hover { background: #dcedc8; }
+
+    .total-display {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .total-display span {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-right: 6px;
+    }
+
+    /* ── Submit ── */
+    .submit-area {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .btn-submit {
+      padding: 12px 32px;
+      background: var(--green);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-submit:hover { background: var(--green-light); }
+    .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+
+    #result {
+      display: none;
+      padding: 18px 22px;
+      border-radius: var(--radius);
+      margin-top: 20px;
+      font-size: 14px;
+    }
+
+    #result.success {
+      background: #e8f5e9;
+      border: 1px solid #a5d6a7;
+      color: #1b5e20;
+    }
+
+    #result.error {
+      background: #ffebee;
+      border: 1px solid #ef9a9a;
+      color: var(--danger);
+    }
+
+    #result a { color: var(--green); font-weight: 700; }
+
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 3px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .btn-submit.loading .spinner { display: block; }
+    .btn-submit.loading .btn-text { display: none; }
+
+    /* ── Suggestions panel ── */
+    #suggestions { display: none; margin-top: 20px; }
+
+    .sug-section { margin-bottom: 18px; }
+    .sug-section:last-child { margin-bottom: 0; }
+
+    .sug-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .sug-info {
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      margin-bottom: 8px;
+    }
+
+    .sug-info.new-client  { background: #e8f5e9; border: 1px solid #a5d6a7; color: #1b5e20; }
+    .sug-info.warn-dup    { background: #fff8e1; border: 1px solid #ffe082; color: #5d4037; }
+
+    .sug-dup-list { list-style: none; margin: 6px 0 0 0; padding: 0; }
+    .sug-dup-list li {
+      font-size: 12px;
+      padding: 4px 0;
+      border-bottom: 1px solid #ffe082;
+    }
+    .sug-dup-list li:last-child { border-bottom: none; }
+
+    .sug-client-form { margin-top: 12px; display: none; }
+    .sug-client-form .grid-2 { gap: 10px; margin-bottom: 10px; }
+    .sug-client-form .field label { font-size: 11px; }
+    .sug-client-form .field input { font-size: 13px; }
+
+    .btn-sug {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-sug.green  { background: var(--green); color: #fff; }
+    .btn-sug.green:hover  { background: var(--green-light); }
+    .btn-sug.outline { background: #fff; color: var(--green); border: 1px solid var(--green); margin-left: 8px; }
+    .btn-sug.outline:hover { background: var(--green-bg); }
+    .btn-sug.grey   { background: #eee; color: #555; margin-left: 8px; }
+    .btn-sug.grey:hover { background: #ddd; }
+
+    @media (max-width: 640px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="/">GHTec</a>
+  <a class="nav-link active" href="/">Nova Proposta</a>
+  <a class="nav-link" href="/proposals.html">Propostas</a>
+  <a class="nav-link" href="/clients.html">Clientes</a>
+  <a class="nav-link" href="/parts.html">Peças</a>
+</nav>
+<div class="page-bar">
+  <h1>Nova Proposta Comercial</h1>
+  Preencha os dados abaixo e clique em Gerar PDF
+</div>
+
+<div class="container">
+  <form id="proposalForm">
+
+    <!-- Identificação -->
+    <div class="card">
+      <div class="card-title">Identificação da Proposta</div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Nº da Proposta *</label>
+          <input type="text" name="numero_proposta" placeholder="2024-001" required />
+        </div>
+        <div class="field">
+          <label>Cidade de Emissão *</label>
+          <input type="text" name="cidade_emissao" placeholder="São Paulo" required />
+        </div>
+        <div class="field">
+          <label>Data de Emissão *</label>
+          <input type="text" name="data_emissao" placeholder="14 de maio de 2026" required />
+        </div>
+      </div>
+    </div>
+
+    <!-- Cliente -->
+    <div class="card">
+      <div class="card-title">Dados do Cliente</div>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="field" id="field-cliente-nome">
+          <label>Nome / Empresa *</label>
+          <input type="text" id="cliente_nome" name="cliente_nome" placeholder="Digite para buscar ou cadastrar..." required autocomplete="off" />
+          <!-- dropdown injected here -->
+        </div>
+        <div class="field">
+          <label>Razão Social</label>
+          <input type="text" name="cliente_razao_social" placeholder="Hospital São Lucas Ltda." />
+        </div>
+      </div>
+      <div class="grid-3" style="margin-bottom:14px">
+        <div class="field">
+          <label>CNPJ</label>
+          <input type="text" name="cliente_cnpj" placeholder="00.000.000/0001-00" />
+        </div>
+        <div class="field">
+          <label>Cidade *</label>
+          <input type="text" name="cliente_cidade" placeholder="São Paulo" required />
+        </div>
+        <div class="field">
+          <label>Estado *</label>
+          <input type="text" name="cliente_estado" placeholder="SP" maxlength="2" required />
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Endereço</label>
+          <input type="text" name="cliente_endereco" placeholder="Rua das Flores, 123" />
+        </div>
+        <div class="field">
+          <label>CEP</label>
+          <input type="text" name="cliente_cep" placeholder="01234-567" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Objeto -->
+    <div class="card">
+      <div class="card-title">Objeto da Proposta</div>
+      <div class="field">
+        <label>Descrição do Objeto *</label>
+        <textarea name="objeto_proposta" placeholder="Fornecimento e instalação de equipamentos para a UTI..." required></textarea>
+      </div>
+    </div>
+
+    <!-- Itens -->
+    <div class="card">
+      <div class="card-title">Itens da Proposta</div>
+      <table class="items-table" id="itemsTable">
+        <thead>
+          <tr>
+            <th class="col-num">#</th>
+            <th class="col-qty">Qtd *</th>
+            <th class="col-desc">Descrição *</th>
+            <th class="col-price">Valor Unitário (R$) *</th>
+            <th class="col-ncm">NCM</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+      <div class="items-footer">
+        <button type="button" class="btn-add-item" id="btnAddItem">+ Adicionar item</button>
+        <div class="total-display"><span>TOTAL</span><span id="totalDisplay">R$ 0,00</span></div>
+      </div>
+    </div>
+
+    <!-- Condições -->
+    <div class="card">
+      <div class="card-title">Condições Comerciais</div>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="field">
+          <label>Forma de Pagamento *</label>
+          <input type="text" name="forma_pagamento" placeholder="Boleto bancário" required />
+        </div>
+        <div class="field">
+          <label>Prazo de Pagamento *</label>
+          <input type="text" name="prazo_pagamento" placeholder="30 dias após entrega" required />
+        </div>
+      </div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Prazo de Entrega *</label>
+          <input type="text" name="prazo_entrega" placeholder="30 dias úteis" required />
+        </div>
+        <div class="field">
+          <label>Garantia *</label>
+          <input type="text" name="garantia" placeholder="12 meses" required />
+        </div>
+        <div class="field">
+          <label>Validade da Proposta *</label>
+          <input type="text" name="validade" placeholder="30 dias" required />
+        </div>
+      </div>
+    </div>
+
+    <!-- Responsável -->
+    <div class="card">
+      <div class="card-title">Responsável pela Proposta</div>
+      <div class="grid-2" style="margin-bottom:14px">
+        <div class="field">
+          <label>Nome *</label>
+          <input type="text" name="responsavel_nome" placeholder="Ricardo Santos" required />
+        </div>
+        <div class="field">
+          <label>Cargo *</label>
+          <input type="text" name="responsavel_cargo" placeholder="Engenheiro Comercial" required />
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>E-mail *</label>
+          <input type="email" name="responsavel_email" placeholder="ricardo@ghtec.com.br" required />
+        </div>
+        <div class="field">
+          <label>Telefone *</label>
+          <input type="text" name="responsavel_telefone" placeholder="(11) 99999-9999" required />
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-area">
+      <button type="submit" class="btn-submit" id="btnSubmit">
+        <span class="btn-text">Gerar Proposta PDF</span>
+        <span class="spinner"></span>
+      </button>
+    </div>
+
+    <div id="result"></div>
+    <div id="suggestions" class="card"></div>
+  </form>
+</div>
+
+<script>
+  // ─── Utilities ────────────────────────────────────────────────────────────
+
+  function formatBRL(value) {
+    const n = typeof value === 'string' ? parseNumber(value) : Number(value);
+    if (isNaN(n)) return 'R$ 0,00';
+    return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function parseNumber(str) {
+    if (str === null || str === undefined) return 0;
+    const cleaned = String(str).replace(/[^\d,\.]/g, '');
+    // handle Brazilian format "1.234,56" and plain "1234.56"
+    const normalized = cleaned.includes(',')
+      ? cleaned.replace(/\./g, '').replace(',', '.')
+      : cleaned;
+    return parseFloat(normalized) || 0;
+  }
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
+  function getFieldValue(name) {
+    return document.querySelector(`[name="${name}"]`)?.value.trim() || '';
+  }
+
+  // ─── State ────────────────────────────────────────────────────────────────
+
+  let itemCount = 0;
+  let currentClientName = '';  // tracked for price lookups (fallback)
+  let currentClientId   = null; // id do cliente selecionado do autocomplete
+
+  // ─── Client autocomplete ──────────────────────────────────────────────────
+
+  const clientNomeInput = document.getElementById('cliente_nome');
+  const clientField = document.getElementById('field-cliente-nome');
+
+  let clientDropdown = null;
+  let clientAcIndex = -1;
+
+  function closeClientDropdown() {
+    if (clientDropdown) { clientDropdown.remove(); clientDropdown = null; }
+    clientAcIndex = -1;
+  }
+
+  function openClientDropdown(clients) {
+    closeClientDropdown();
+    if (!clients.length) return;
+
+    clientDropdown = document.createElement('div');
+    clientDropdown.className = 'ac-dropdown';
+
+    clients.forEach((c, i) => {
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      item.dataset.idx = i;
+      const sub = [c.cnpj, c.cidade && c.estado ? `${c.cidade} - ${c.estado}` : c.cidade || c.estado].filter(Boolean).join(' · ');
+      item.innerHTML = `<div class="ac-main">${c.nome}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}`;
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        fillClientFields(c);
+        closeClientDropdown();
+      });
+      clientDropdown.appendChild(item);
+    });
+
+    clientField.appendChild(clientDropdown);
+  }
+
+  function fillClientFields(c) {
+    clientNomeInput.value = c.nome;
+    currentClientName = c.nome;
+    currentClientId   = c.id;
+    setField('cliente_razao_social', c.razao_social || '');
+    setField('cliente_cnpj', c.cnpj || '');
+    setField('cliente_cidade', c.cidade || '');
+    setField('cliente_estado', c.estado || '');
+    setField('cliente_endereco', c.endereco || '');
+    setField('cliente_cep', c.cep || '');
+  }
+
+  function setField(name, value) {
+    const el = document.querySelector(`[name="${name}"]`);
+    if (el) el.value = value;
+  }
+
+  const fetchClients = debounce(async (q) => {
+    if (q.length < 2) { closeClientDropdown(); return; }
+    try {
+      const res = await fetch(`/clients/search?q=${encodeURIComponent(q)}`);
+      const clients = await res.json();
+      openClientDropdown(clients);
+    } catch {}
+  }, 280);
+
+  clientNomeInput.addEventListener('input', (e) => {
+    currentClientName = '';
+    currentClientId   = null;
+    fetchClients(e.target.value.trim());
+  });
+
+  clientNomeInput.addEventListener('blur', () => {
+    setTimeout(closeClientDropdown, 150);
+    if (!currentClientName) currentClientName = clientNomeInput.value.trim();
+  });
+
+  clientNomeInput.addEventListener('keydown', (e) => {
+    if (!clientDropdown) return;
+    const items = clientDropdown.querySelectorAll('.ac-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      clientAcIndex = Math.min(clientAcIndex + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      clientAcIndex = Math.max(clientAcIndex - 1, 0);
+    } else if (e.key === 'Enter' && clientAcIndex >= 0) {
+      e.preventDefault();
+      items[clientAcIndex].dispatchEvent(new Event('mousedown'));
+      return;
+    } else if (e.key === 'Escape') {
+      closeClientDropdown();
+      return;
+    }
+    items.forEach((it, i) => it.classList.toggle('active', i === clientAcIndex));
+  });
+
+  // ─── Items table ──────────────────────────────────────────────────────────
+
+  function updateTotal() {
+    let total = 0;
+    document.querySelectorAll('#itemsBody tr').forEach(tr => {
+      const qty = parseFloat(tr.querySelector('[data-field="quantidade"]')?.value) || 0;
+      const price = parseNumber(tr.querySelector('[data-field="valor_unitario"]')?.value);
+      total += qty * price;
+    });
+    document.getElementById('totalDisplay').textContent = formatBRL(total);
+  }
+
+  function addItem() {
+    itemCount++;
+    const idx = itemCount;
+    const tbody = document.getElementById('itemsBody');
+    const tr = document.createElement('tr');
+    tr.dataset.idx = idx;
+    tr.innerHTML = `
+      <td class="col-num">${String(itemCount).padStart(2,'0')}</td>
+      <td class="col-qty">
+        <input type="number" min="1" step="1" value="1" data-field="quantidade" data-row="${idx}" />
+      </td>
+      <td class="col-desc" style="overflow:visible">
+        <div style="position:relative">
+          <input type="text" placeholder="Descrição do item..." data-field="descricao" data-row="${idx}" autocomplete="off" />
+          <!-- ac dropdown for desc -->
+        </div>
+      </td>
+      <td class="col-price">
+        <input type="text" placeholder="0,00" data-field="valor_unitario" data-row="${idx}" />
+        <div class="price-hint" data-row="${idx}"></div>
+      </td>
+      <td class="col-ncm">
+        <input type="text" placeholder="0000.00.00" data-field="ncm" data-row="${idx}" />
+      </td>
+      <td class="col-del">
+        <button type="button" class="btn-del-row" data-row="${idx}" title="Remover">×</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    wireItemRow(tr, idx);
+  }
+
+  function wireItemRow(tr, idx) {
+    const qtyInput   = tr.querySelector('[data-field="quantidade"]');
+    const descInput  = tr.querySelector('[data-field="descricao"]');
+    const priceInput = tr.querySelector('[data-field="valor_unitario"]');
+    const priceHint  = tr.querySelector('.price-hint');
+    const delBtn     = tr.querySelector('.btn-del-row');
+    const descWrapper = tr.querySelector('.col-desc > div');
+
+    qtyInput.addEventListener('input', updateTotal);
+    priceInput.addEventListener('input', updateTotal);
+
+    delBtn.addEventListener('click', () => {
+      tr.remove();
+      renumberRows();
+      updateTotal();
+    });
+
+    // ── Description autocomplete ──
+    let descDropdown = null;
+    let descAcIndex = -1;
+
+    function closeDescDropdown() {
+      if (descDropdown) { descDropdown.remove(); descDropdown = null; }
+      descAcIndex = -1;
+    }
+
+    function openDescDropdown(suggestions) {
+      closeDescDropdown();
+      if (!suggestions.length) return;
+      descDropdown = document.createElement('div');
+      descDropdown.className = 'ac-dropdown';
+
+      suggestions.forEach((s, i) => {
+        const item = document.createElement('div');
+        item.className = 'ac-item';
+        item.innerHTML = `<div class="ac-main">${s}</div>`;
+        item.addEventListener('mousedown', async (e) => {
+          e.preventDefault();
+          descInput.value = s;
+          closeDescDropdown();
+          await fetchPriceHint(s, priceInput, priceHint);
+        });
+        descDropdown.appendChild(item);
+      });
+
+      descWrapper.appendChild(descDropdown);
+    }
+
+    const fetchDescSuggestions = debounce(async (q) => {
+      if (q.length < 2) { closeDescDropdown(); return; }
+      try {
+        const res = await fetch(`/items/search?q=${encodeURIComponent(q)}`);
+        const items = await res.json();
+        openDescDropdown(items);
+      } catch {}
+    }, 300);
+
+    descInput.addEventListener('input', (e) => {
+      fetchDescSuggestions(e.target.value.trim());
+      priceHint.style.display = 'none';
+    });
+
+    descInput.addEventListener('blur', async () => {
+      setTimeout(closeDescDropdown, 150);
+      const desc = descInput.value.trim();
+      if (desc) await fetchPriceHint(desc, priceInput, priceHint);
+    });
+
+    descInput.addEventListener('keydown', (e) => {
+      if (!descDropdown) return;
+      const items = descDropdown.querySelectorAll('.ac-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        descAcIndex = Math.min(descAcIndex + 1, items.length - 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        descAcIndex = Math.max(descAcIndex - 1, 0);
+      } else if (e.key === 'Enter' && descAcIndex >= 0) {
+        e.preventDefault();
+        items[descAcIndex].dispatchEvent(new Event('mousedown'));
+        return;
+      } else if (e.key === 'Escape') {
+        closeDescDropdown();
+        return;
+      }
+      items.forEach((it, i) => it.classList.toggle('active', i === descAcIndex));
+    });
+  }
+
+  // ── Price hint ────────────────────────────────────────────────────────────
+
+  async function fetchPriceHint(descricao, priceInput, priceHint) {
+    if (!descricao) { priceHint.style.display = 'none'; return; }
+
+    // Monta parâmetros: prefere clientId (mais preciso), cai para nome como fallback
+    const clienteNome = currentClientName || clientNomeInput.value.trim();
+    if (!currentClientId && !clienteNome) { priceHint.style.display = 'none'; return; }
+
+    const params = new URLSearchParams({ descricao });
+    if (currentClientId) {
+      params.set('clientId', currentClientId);
+    } else {
+      params.set('clienteNome', clienteNome);
+    }
+
+    try {
+      const res  = await fetch(`/items/last-price?${params}`);
+      const data = await res.json();
+
+      if (data && data.valor_unitario != null) {
+        const formatted = formatBRL(data.valor_unitario);
+        const valorFormatado = Number(data.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+        // Auto-preenche o valor apenas se o campo estiver vazio ou zerado
+        if (!parseNumber(priceInput.value)) {
+          priceInput.value = valorFormatado;
+          updateTotal();
+        }
+
+        priceHint.textContent = `Preço sugerido com base na proposta Nº ${data.numero_proposta}: ${formatted} — clique para restaurar`;
+        priceHint.style.display = 'block';
+
+        priceHint.onclick = () => {
+          priceInput.value = valorFormatado;
+          updateTotal();
+        };
+      } else {
+        priceHint.style.display = 'none';
+      }
+    } catch {
+      priceHint.style.display = 'none';
+    }
+  }
+
+  function renumberRows() {
+    document.querySelectorAll('#itemsBody tr').forEach((tr, i) => {
+      tr.querySelector('.col-num').textContent = String(i + 1).padStart(2, '0');
+    });
+  }
+
+  document.getElementById('btnAddItem').addEventListener('click', addItem);
+
+  // ─── Submit ───────────────────────────────────────────────────────────────
+
+  function collectItems() {
+    return Array.from(document.querySelectorAll('#itemsBody tr')).map(tr => ({
+      quantidade: parseFloat(tr.querySelector('[data-field="quantidade"]').value) || 1,
+      descricao:  tr.querySelector('[data-field="descricao"]').value.trim(),
+      valor_unitario: parseNumber(tr.querySelector('[data-field="valor_unitario"]').value),
+      ncm: tr.querySelector('[data-field="ncm"]').value.trim() || null
+    }));
+  }
+
+  function buildPayload() {
+    return {
+      numero_proposta: getFieldValue('numero_proposta'),
+      cidade_emissao:  getFieldValue('cidade_emissao'),
+      data_emissao:    getFieldValue('data_emissao'),
+      objeto_proposta: getFieldValue('objeto_proposta'),
+      cliente: {
+        nome:         getFieldValue('cliente_nome'),
+        razao_social: getFieldValue('cliente_razao_social') || null,
+        cnpj:         getFieldValue('cliente_cnpj') || null,
+        endereco:     getFieldValue('cliente_endereco') || null,
+        cidade:       getFieldValue('cliente_cidade'),
+        estado:       getFieldValue('cliente_estado'),
+        cep:          getFieldValue('cliente_cep') || null
+      },
+      items: collectItems(),
+      condicoes: {
+        forma_pagamento: getFieldValue('forma_pagamento'),
+        prazo_pagamento: getFieldValue('prazo_pagamento'),
+        prazo_entrega:   getFieldValue('prazo_entrega'),
+        garantia:        getFieldValue('garantia'),
+        validade:        getFieldValue('validade')
+      },
+      responsavel: {
+        nome:     getFieldValue('responsavel_nome'),
+        cargo:    getFieldValue('responsavel_cargo'),
+        email:    getFieldValue('responsavel_email'),
+        telefone: getFieldValue('responsavel_telefone')
+      }
+    };
+  }
+
+  document.getElementById('proposalForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const items = collectItems();
+    if (!items.length) { showResult('error', 'Adicione pelo menos um item à proposta.'); return; }
+    const bad = items.find(it => !it.descricao || it.valor_unitario <= 0);
+    if (bad) { showResult('error', 'Preencha descrição e valor unitário em todos os itens.'); return; }
+
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    hideResult();
+    hideSuggestions();
+
+    try {
+      const res = await fetch('/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload())
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        const numero = getFieldValue('numero_proposta');
+        const url = `/files/proposta-${numero}.pdf`;
+        showResult('success', `Proposta gerada com sucesso!<br><br><a href="${url}" target="_blank">Abrir PDF: proposta-${numero}.pdf</a>`);
+        showSuggestions(data);
+      } else if (res.status === 409 && data.code === 'CLIENT_DATA_CONFLICT') {
+        // Conflito de dados de cliente — exibe mensagem detalhada
+        let html = `<strong>Conflito de dados do cliente</strong><br>${data.message}`;
+        if (data.existingClientId) {
+          html += `<br><br><a href="/clients.html?id=${data.existingClientId}" target="_blank">Ver cliente cadastrado (id=${data.existingClientId})</a>`;
+        }
+        showResult('error', html);
+        hideSuggestions();
+      } else {
+        showResult('error', data.message || 'Erro ao gerar proposta. Tente novamente.');
+        hideSuggestions();
+      }
+    } catch {
+      showResult('error', 'Erro de conexão com o servidor.');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+  });
+
+  function showResult(type, html) {
+    const el = document.getElementById('result');
+    el.className = type;
+    el.innerHTML = html;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function hideResult() {
+    document.getElementById('result').style.display = 'none';
+  }
+
+  // ─── Suggestions panel ───────────────────────────────────────────────────
+
+  function hideSuggestions() {
+    const el = document.getElementById('suggestions');
+    el.style.display = 'none';
+    el.innerHTML = '';
+  }
+
+  async function showSuggestions(apiData) {
+    hideSuggestions();
+    const container = document.getElementById('suggestions');
+    const sections = [];
+
+    // Seção de cliente novo — exibe opção de completar cadastro
+    if (apiData.clienteIsNew) {
+      const clientSection = buildClientSection(
+        apiData.clienteId,
+        apiData.possibleDuplicateClients || []
+      );
+      sections.push(clientSection);
+    }
+
+    // Peças são cadastradas automaticamente pelo servidor — não há seção manual aqui.
+
+    if (!sections.length) return;
+
+    container.innerHTML = `<div class="card-title">Sugestões</div>`;
+    sections.forEach(s => container.appendChild(s));
+    container.style.display = 'block';
+    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ── Cliente ────────────────────────────────────────────────────────────────
+
+  function buildClientSection(clienteId, possibleDuplicates) {
+    const div = document.createElement('div');
+    div.className = 'sug-section';
+    div.innerHTML = `<div class="sug-label">Cliente</div>`;
+
+    if (possibleDuplicates.length > 0) {
+      const dupHtml = possibleDuplicates.map(c => {
+        const sub = [c.cnpj, c.cidade && c.estado ? `${c.cidade}/${c.estado}` : ''].filter(Boolean).join(' · ');
+        return `<li><strong>${c.nome}</strong>${sub ? ` — ${sub}` : ''}</li>`;
+      }).join('');
+
+      div.innerHTML += `
+        <div class="sug-info warn-dup">
+          Atenção: cliente salvo como novo registro. Encontramos clientes com nome similar:
+          <ul class="sug-dup-list">${dupHtml}</ul>
+          Verifique se é o mesmo cliente antes de continuar.
+        </div>`;
+    }
+
+    div.innerHTML += `
+      <div class="sug-info new-client">
+        Novo cliente criado automaticamente com os dados da proposta.
+        Complete o cadastro com e-mail, telefone e outras informações.
+        <div style="margin-top:8px">
+          <button class="btn-sug green" id="btnExpandClientForm">Completar cadastro</button>
+        </div>
+      </div>`;
+
+    // Mini-form para completar cadastro
+    const form = document.createElement('div');
+    form.className = 'sug-client-form';
+    form.id = 'sugClientForm';
+    form.innerHTML = `
+      <div class="grid-2">
+        <div class="field"><label>E-mail</label><input type="email" id="sug_email" placeholder="contato@empresa.com" /></div>
+        <div class="field"><label>Telefone</label><input type="text" id="sug_telefone" placeholder="(11) 99999-9999" /></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Contato responsável</label><input type="text" id="sug_contato" placeholder="Nome do responsável" /></div>
+        <div class="field"><label>Nome fantasia</label><input type="text" id="sug_nome_fantasia" placeholder="Nome fantasia" /></div>
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Observações</label>
+        <input type="text" id="sug_obs" placeholder="Observações sobre o cliente" />
+      </div>
+      <button class="btn-sug green" id="btnSaveClientExtra">Salvar</button>
+      <button class="btn-sug grey" id="btnCancelClientForm">Cancelar</button>
+      <span id="sugClientMsg" style="font-size:12px;margin-left:10px;"></span>`;
+    div.appendChild(form);
+
+    // Eventos (após inserção no DOM, via evento delegado no container)
+    setTimeout(() => {
+      const btnExpand = document.getElementById('btnExpandClientForm');
+      const btnSave   = document.getElementById('btnSaveClientExtra');
+      const btnCancel = document.getElementById('btnCancelClientForm');
+
+      if (btnExpand) btnExpand.addEventListener('click', () => {
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        btnExpand.textContent = form.style.display === 'block' ? 'Fechar' : 'Completar cadastro';
+      });
+
+      if (btnSave) btnSave.addEventListener('click', async () => {
+        const payload = {
+          nome:                getFieldValue('cliente_nome'),
+          razao_social:        getFieldValue('cliente_razao_social'),
+          cnpj:                getFieldValue('cliente_cnpj'),
+          cidade:              getFieldValue('cliente_cidade'),
+          estado:              getFieldValue('cliente_estado'),
+          endereco:            getFieldValue('cliente_endereco'),
+          cep:                 getFieldValue('cliente_cep'),
+          email:               document.getElementById('sug_email').value.trim() || null,
+          telefone:            document.getElementById('sug_telefone').value.trim() || null,
+          contato_responsavel: document.getElementById('sug_contato').value.trim() || null,
+          nome_fantasia:       document.getElementById('sug_nome_fantasia').value.trim() || null,
+          observacoes:         document.getElementById('sug_obs').value.trim() || null,
+        };
+
+        try {
+          const res  = await fetch(`/clients/${clienteId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const msg = document.getElementById('sugClientMsg');
+          if (res.ok) {
+            msg.style.color = '#1b5e20';
+            msg.textContent = 'Cadastro atualizado com sucesso.';
+            btnSave.disabled = true;
+          } else {
+            msg.style.color = '#c62828';
+            msg.textContent = 'Erro ao salvar. Tente novamente.';
+          }
+        } catch {
+          document.getElementById('sugClientMsg').textContent = 'Erro de conexão.';
+        }
+      });
+
+      if (btnCancel) btnCancel.addEventListener('click', () => {
+        form.style.display = 'none';
+        document.getElementById('btnExpandClientForm').textContent = 'Completar cadastro';
+      });
+    }, 0);
+
+    return div;
+  }
+
+  // Start with one empty row
+  addItem();
+</script>
+</body>
+</html>

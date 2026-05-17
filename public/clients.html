@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHTec — Clientes</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
+      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
+      --danger: #c62828; --amber: #f57f17; --radius: 6px;
+    }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
+
+    /* Nav */
+    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; }
+    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
+    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
+    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
+    .nav-link.active { color: #fff; border-bottom-color: #fff; }
+    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
+    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
+
+    /* Layout */
+    .container { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
+    .split { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+
+    /* Card */
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .card-title span { color: var(--amber); font-size: 11px; }
+
+    /* Search + list */
+    .search-wrap { position: relative; margin-bottom: 12px; }
+    .search-wrap input { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+    .search-wrap input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+
+    .client-list { max-height: 560px; overflow-y: auto; }
+    .client-item {
+      padding: 10px 12px; border-radius: var(--radius); cursor: pointer;
+      border: 1px solid transparent; margin-bottom: 4px; transition: all 0.12s;
+    }
+    .client-item:hover { background: var(--green-bg); border-color: var(--border); }
+    .client-item.selected { background: var(--green-bg); border-color: var(--green-light); }
+    .ci-name { font-weight: 700; font-size: 13px; }
+    .ci-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .empty-list { text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px; }
+    #listLoading { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
+
+    /* Form */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input, .field textarea, .field select {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius);
+      font-size: 13px; font-family: inherit; color: var(--text);
+    }
+    .field input:focus, .field textarea:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .field input.error { border-color: var(--danger); }
+    .field textarea { resize: vertical; min-height: 58px; }
+    .col-span-2 { grid-column: span 2; }
+    .col-span-3 { grid-column: span 3; }
+
+    /* Buttons */
+    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
+    .btn-ghost { background: #eee; color: #444; }
+    .btn-ghost:hover:not(:disabled) { background: #ddd; }
+    .btn-new { padding: 5px 12px; font-size: 12px; background: var(--green-bg); color: var(--green); border: 1px dashed var(--green-light); border-radius: var(--radius); cursor: pointer; font-weight: 700; font-family: inherit; transition: background 0.15s; }
+    .btn-new:hover { background: #dcedc8; }
+
+    /* Status message */
+    .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
+    .msg.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .msg.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
+    .msg.warn    { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; }
+
+    /* Edit mode indicator */
+    .edit-badge { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+
+    /* Delete button inside list item */
+    .ci-actions { display: flex; align-items: center; justify-content: space-between; }
+    .btn-del-client {
+      display: none; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+      border: 1px solid #ef9a9a; border-radius: var(--radius); background: #fff; color: var(--danger);
+      transition: background 0.15s;
+    }
+    .client-item:hover .btn-del-client { display: inline-block; }
+    .btn-del-client:hover { background: #ffebee; }
+
+    /* Confirm overlay */
+    .confirm-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .confirm-box {
+      background: #fff; border-radius: var(--radius); padding: 24px 28px;
+      max-width: 420px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .confirm-box h3 { margin: 0 0 10px; font-size: 15px; color: var(--text); }
+    .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
+    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    @media (max-width: 640px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } .col-span-2, .col-span-3 { grid-column: span 1; } }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="/">GHTec</a>
+  <a class="nav-link" href="/">Nova Proposta</a>
+  <a class="nav-link" href="/proposals.html">Propostas</a>
+  <a class="nav-link active" href="/clients.html">Clientes</a>
+  <a class="nav-link" href="/parts.html">Peças</a>
+</nav>
+<div class="page-bar">
+  <h1>Clientes</h1>
+  Cadastro e edição de clientes
+</div>
+
+<div class="container">
+  <div class="split">
+
+    <!-- ── Lista ── -->
+    <div class="card">
+      <div class="card-title">
+        Clientes cadastrados
+        <button class="btn-new" id="btnNew">+ Novo</button>
+      </div>
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Buscar por nome, CNPJ..." autocomplete="off" />
+      </div>
+      <div id="listLoading">Carregando...</div>
+      <div class="client-list" id="clientList"></div>
+    </div>
+
+    <!-- ── Formulário ── -->
+    <div class="card">
+      <div class="card-title">
+        <span id="formTitle">Novo Cliente</span>
+        <span class="edit-badge" id="editBadge" style="display:none">Editando</span>
+      </div>
+
+      <form id="clientForm" novalidate>
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Nome / Razão Social *</label>
+            <input type="text" name="nome" id="f_nome" placeholder="Nome ou razão social completa" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Nome Fantasia</label>
+            <input type="text" name="nome_fantasia" id="f_nome_fantasia" placeholder="Nome fantasia" />
+          </div>
+          <div class="field">
+            <label>Razão Social</label>
+            <input type="text" name="razao_social" id="f_razao_social" placeholder="Razão social completa" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-bottom:12px">
+          <div class="field">
+            <label>CNPJ</label>
+            <input type="text" name="cnpj" id="f_cnpj" placeholder="00.000.000/0001-00" />
+          </div>
+          <div class="field">
+            <label>Inscrição Estadual</label>
+            <input type="text" name="inscricao_estadual" id="f_ie" placeholder="Inscrição estadual" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>E-mail</label>
+            <input type="email" name="email" id="f_email" placeholder="contato@empresa.com" />
+          </div>
+          <div class="field">
+            <label>Telefone</label>
+            <input type="text" name="telefone" id="f_telefone" placeholder="(11) 99999-9999" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Contato Responsável</label>
+            <input type="text" name="contato_responsavel" id="f_contato" placeholder="Nome do responsável pelo contato" />
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="field col-span-3">
+            <label>Endereço</label>
+            <input type="text" name="endereco" id="f_endereco" placeholder="Rua, número, complemento" />
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Cidade</label>
+            <input type="text" name="cidade" id="f_cidade" placeholder="Cidade" />
+          </div>
+          <div class="field">
+            <label>Estado</label>
+            <input type="text" name="estado" id="f_estado" placeholder="SP" maxlength="2" />
+          </div>
+          <div class="field">
+            <label>CEP</label>
+            <input type="text" name="cep" id="f_cep" placeholder="00000-000" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Observações</label>
+            <textarea name="observacoes" id="f_obs" placeholder="Observações internas sobre o cliente"></textarea>
+          </div>
+        </div>
+
+        <div id="formMsg" style="display:none" class="msg"></div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="btnSubmit">Criar cliente</button>
+          <button type="button" class="btn btn-ghost" id="btnCancel" style="display:none">Cancelar</button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ─── State ──────────────────────────────────────────────────────────────────
+  let editingId  = null;
+  let allClients = [];
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  function v(id)       { return document.getElementById(id); }
+  function val(id)     { return v(id).value.trim(); }
+  function set(id, x)  { v(id).value = x ?? ''; }
+
+  function showMsg(type, text) {
+    const el = v('formMsg');
+    el.className = `msg ${type}`;
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+  function hideMsg() { v('formMsg').style.display = 'none'; }
+
+  // ─── Confirm dialog ───────────────────────────────────────────────────────────
+  function showConfirm(title, text, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-box">
+        <h3>${title}</h3>
+        <p>${text}</p>
+        <div class="confirm-actions">
+          <button class="btn btn-ghost" id="_confirmCancel">Cancelar</button>
+          <button class="btn btn-primary" id="_confirmOk" style="background:var(--danger)">Excluir</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_confirmCancel').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#_confirmOk').addEventListener('click', () => { overlay.remove(); onConfirm(); });
+  }
+
+  // ─── List rendering ──────────────────────────────────────────────────────────
+  function renderList(clients) {
+    const container = v('clientList');
+    v('listLoading').style.display = 'none';
+    container.innerHTML = '';
+
+    if (!clients.length) {
+      container.innerHTML = '<div class="empty-list">Nenhum cliente encontrado.</div>';
+      return;
+    }
+
+    clients.forEach(c => {
+      const sub = [c.cnpj, c.cidade && c.estado ? `${c.cidade}/${c.estado}` : c.cidade || c.estado].filter(Boolean).join(' · ');
+      const div = document.createElement('div');
+      div.className = 'client-item' + (c.id === editingId ? ' selected' : '');
+      div.dataset.id = c.id;
+      div.innerHTML = `
+        <div class="ci-actions">
+          <div>
+            <div class="ci-name">${c.nome}</div>
+            ${sub ? `<div class="ci-sub">${sub}</div>` : ''}
+          </div>
+          <button class="btn-del-client" data-id="${c.id}" title="Excluir cliente">✕</button>
+        </div>`;
+
+      div.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-del-client')) return;
+        loadForEdit(c.id);
+      });
+
+      div.querySelector('.btn-del-client').addEventListener('click', (e) => {
+        e.stopPropagation();
+        showConfirm(
+          'Excluir cliente',
+          `Deseja excluir <strong>${c.nome}</strong>? Esta ação não pode ser desfeita.`,
+          () => deleteClientAction(c.id, c.nome)
+        );
+      });
+
+      container.appendChild(div);
+    });
+  }
+
+  async function deleteClientAction(id, nome) {
+    try {
+      const res  = await fetch(`/clients/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        if (editingId === id) setCreateMode();
+        showMsg('success', `Cliente "${nome}" excluído com sucesso.`);
+        await loadClients(v('searchInput').value.trim());
+      } else if (res.status === 409) {
+        showMsg('warn', data.message);
+      } else {
+        showMsg('error', data.message || 'Erro ao excluir cliente.');
+      }
+    } catch {
+      showMsg('error', 'Erro de conexão com o servidor.');
+    }
+  }
+
+  // ─── Load / search clients ────────────────────────────────────────────────────
+  async function loadClients(q) {
+    try {
+      const url = q ? `/clients/search?q=${encodeURIComponent(q)}` : '/clients';
+      const res = await fetch(url);
+      allClients = await res.json();
+      renderList(allClients);
+    } catch {
+      v('listLoading').textContent = 'Erro ao carregar.';
+    }
+  }
+
+  let searchT;
+  v('searchInput').addEventListener('input', e => {
+    clearTimeout(searchT);
+    searchT = setTimeout(() => loadClients(e.target.value.trim()), 280);
+  });
+
+  // ─── Edit mode ────────────────────────────────────────────────────────────────
+  async function loadForEdit(id) {
+    try {
+      const res    = await fetch(`/clients/${id}`);
+      const client = await res.json();
+      if (!client.id) return;
+      fillForm(client);
+      setEditMode(client);
+      v('clientForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch { showMsg('error', 'Erro ao carregar cliente.'); }
+  }
+
+  function fillForm(c) {
+    set('f_nome',         c.nome);
+    set('f_nome_fantasia',c.nome_fantasia);
+    set('f_razao_social', c.razao_social);
+    set('f_cnpj',         c.cnpj);
+    set('f_ie',           c.inscricao_estadual);
+    set('f_email',        c.email);
+    set('f_telefone',     c.telefone);
+    set('f_contato',      c.contato_responsavel);
+    set('f_endereco',     c.endereco);
+    set('f_cidade',       c.cidade);
+    set('f_estado',       c.estado);
+    set('f_cep',          c.cep);
+    set('f_obs',          c.observacoes);
+  }
+
+  function setEditMode(client) {
+    editingId = client.id;
+    v('formTitle').textContent  = `Editando: ${client.nome}`;
+    v('editBadge').style.display = 'inline';
+    v('btnSubmit').textContent  = 'Salvar alterações';
+    v('btnCancel').style.display = 'inline-flex';
+    highlightSelected();
+    hideMsg();
+  }
+
+  function setCreateMode() {
+    editingId = null;
+    v('clientForm').reset();
+    v('formTitle').textContent   = 'Novo Cliente';
+    v('editBadge').style.display  = 'none';
+    v('btnSubmit').textContent   = 'Criar cliente';
+    v('btnCancel').style.display  = 'none';
+    highlightSelected();
+    hideMsg();
+  }
+
+  function highlightSelected() {
+    document.querySelectorAll('.client-item').forEach(el => {
+      el.classList.toggle('selected', Number(el.dataset.id) === editingId);
+    });
+  }
+
+  v('btnNew').addEventListener('click', () => { setCreateMode(); v('f_nome').focus(); });
+  v('btnCancel').addEventListener('click', setCreateMode);
+
+  // ─── Form submit ──────────────────────────────────────────────────────────────
+  function collect() {
+    return {
+      nome:                val('f_nome')         || null,
+      nome_fantasia:       val('f_nome_fantasia')|| null,
+      razao_social:        val('f_razao_social') || null,
+      cnpj:                val('f_cnpj')         || null,
+      inscricao_estadual:  val('f_ie')           || null,
+      email:               val('f_email')        || null,
+      telefone:            val('f_telefone')     || null,
+      contato_responsavel: val('f_contato')      || null,
+      endereco:            val('f_endereco')     || null,
+      cidade:              val('f_cidade')       || null,
+      estado:              val('f_estado')       || null,
+      cep:                 val('f_cep')          || null,
+      observacoes:         val('f_obs')          || null,
+    };
+  }
+
+  v('clientForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    hideMsg();
+
+    if (!val('f_nome')) {
+      v('f_nome').classList.add('error');
+      showMsg('error', 'O campo Nome é obrigatório.');
+      v('f_nome').focus();
+      return;
+    }
+    v('f_nome').classList.remove('error');
+
+    const btn = v('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    const url    = editingId ? `/clients/${editingId}` : '/clients';
+    const method = editingId ? 'PUT' : 'POST';
+
+    try {
+      const res  = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(collect()),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showMsg('success', editingId ? 'Cliente atualizado com sucesso.' : 'Cliente criado com sucesso.');
+        await loadClients(v('searchInput').value.trim());
+        if (!editingId) {
+          // Mantém form preenchido mas troca para edição do cliente recém criado
+          fillForm(data.client);
+          setEditMode(data.client);
+        } else {
+          // Atualiza nome no cabeçalho se tiver mudado
+          v('formTitle').textContent = `Editando: ${data.client.nome}`;
+        }
+      } else if (res.status === 409) {
+        showMsg('warn', data.message);
+      } else {
+        showMsg('error', data.message || 'Erro ao salvar. Tente novamente.');
+      }
+    } catch {
+      showMsg('error', 'Erro de conexão com o servidor.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = editingId ? 'Salvar alterações' : 'Criar cliente';
+    }
+  });
+
+  // ─── Init ────────────────────────────────────────────────────────────────────
+  const urlId = new URLSearchParams(location.search).get('id');
+  loadClients().then(() => {
+    if (urlId) loadForEdit(Number(urlId));
+  });
+</script>
+</body>
+</html>

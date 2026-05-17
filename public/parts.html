@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHTec — Peças</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
+      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
+      --danger: #c62828; --amber: #f57f17; --radius: 6px;
+    }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
+
+    /* Nav */
+    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; }
+    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
+    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
+    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
+    .nav-link.active { color: #fff; border-bottom-color: #fff; }
+    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
+    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
+
+    /* Layout */
+    .container { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
+    .split { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+
+    /* Card */
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+
+    /* Search + list */
+    .search-wrap { margin-bottom: 12px; }
+    .search-wrap input { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+    .search-wrap input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+
+    .part-list { max-height: 560px; overflow-y: auto; }
+    .part-item { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; margin-bottom: 4px; transition: all 0.12s; }
+    .part-item:hover { background: var(--green-bg); border-color: var(--border); }
+    .part-item.selected { background: var(--green-bg); border-color: var(--green-light); }
+    .pi-name { font-weight: 700; font-size: 13px; }
+    .pi-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .empty-list { text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px; }
+    #listLoading { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
+
+    /* Form */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input, .field textarea {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius);
+      font-size: 13px; font-family: inherit; color: var(--text);
+    }
+    .field input:focus, .field textarea:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .field input.error { border-color: var(--danger); }
+    .field textarea { resize: vertical; min-height: 58px; }
+    .col-span-2 { grid-column: span 2; }
+    .col-span-3 { grid-column: span 3; }
+
+    /* Nota de campo */
+    .field-note { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    /* Buttons */
+    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
+    .btn-ghost { background: #eee; color: #444; }
+    .btn-ghost:hover:not(:disabled) { background: #ddd; }
+    .btn-new { padding: 5px 12px; font-size: 12px; background: var(--green-bg); color: var(--green); border: 1px dashed var(--green-light); border-radius: var(--radius); cursor: pointer; font-weight: 700; font-family: inherit; transition: background 0.15s; }
+    .btn-new:hover { background: #dcedc8; }
+
+    /* Status message */
+    .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
+    .msg.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .msg.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
+    .msg.warn    { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; }
+    .edit-badge  { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+
+    @media (max-width: 640px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } .col-span-2, .col-span-3 { grid-column: span 1; } }
+
+    /* ── Histórico de preços ── */
+    #priceHistoryCard {
+      display: none;
+      margin-top: 16px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+    .ph-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin: 0 0 10px;
+    }
+    .ph-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .ph-table th {
+      background: var(--green-bg);
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+    .ph-table td {
+      padding: 6px 8px;
+      border: 1px solid #eee;
+      color: var(--text);
+      vertical-align: middle;
+    }
+    .ph-table tr:nth-child(even) td { background: #fafafa; }
+    .ph-empty {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="/">GHTec</a>
+  <a class="nav-link" href="/">Nova Proposta</a>
+  <a class="nav-link" href="/proposals.html">Propostas</a>
+  <a class="nav-link" href="/clients.html">Clientes</a>
+  <a class="nav-link active" href="/parts.html">Peças</a>
+</nav>
+<div class="page-bar">
+  <h1>Peças</h1>
+  Cadastro e edição do catálogo de peças
+</div>
+
+<div class="container">
+  <div class="split">
+
+    <!-- ── Lista ── -->
+    <div class="card">
+      <div class="card-title">
+        Catálogo de peças
+        <button class="btn-new" id="btnNew">+ Nova</button>
+      </div>
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Buscar por nome, marca, modelo..." autocomplete="off" />
+      </div>
+      <div id="listLoading">Carregando...</div>
+      <div class="part-list" id="partList"></div>
+    </div>
+
+    <!-- ── Formulário ── -->
+    <div class="card">
+      <div class="card-title">
+        <span id="formTitle">Nova Peça</span>
+        <span class="edit-badge" id="editBadge" style="display:none">Editando</span>
+      </div>
+
+      <form id="partForm" novalidate>
+
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Nome técnico da peça *</label>
+            <input type="text" id="f_nome" placeholder="Ex: Resistência elétrica 16kW" />
+          </div>
+        </div>
+
+        <!-- Marca e modelo como campos próprios, conforme solicitado -->
+        <div class="grid-2">
+          <div class="field">
+            <label>Marca</label>
+            <input type="text" id="f_marca" placeholder="Ex: Hydra" />
+            <span class="field-note">Campo próprio — não incluso nas especificações</span>
+          </div>
+          <div class="field">
+            <label>Modelo</label>
+            <input type="text" id="f_modelo" placeholder="Ex: HY-16T" />
+            <span class="field-note">Campo próprio — não incluso nas especificações</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>Categoria</label>
+            <input type="text" id="f_categoria" placeholder="Ex: Resistência, Válvula, Sensor..." />
+          </div>
+          <div class="field">
+            <label>NCM</label>
+            <input type="text" id="f_ncm" placeholder="0000.00.00" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Código Interno</label>
+            <input type="text" id="f_codigo" placeholder="Código interno, se houver" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Descrição</label>
+            <textarea id="f_descricao" placeholder="Descrição técnica da peça, características, aplicação..."></textarea>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Observações</label>
+            <textarea id="f_obs" placeholder="Observações internas"></textarea>
+          </div>
+        </div>
+
+        <div id="formMsg" style="display:none" class="msg"></div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="btnSubmit">Criar peça</button>
+          <button type="button" class="btn btn-ghost" id="btnCancel" style="display:none">Cancelar</button>
+        </div>
+      </form>
+
+      <!-- Histórico de preços por cliente — somente leitura -->
+      <div id="priceHistoryCard">
+        <div class="ph-title">Histórico de preços por cliente</div>
+        <div id="priceHistoryContent"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ─── State ──────────────────────────────────────────────────────────────────
+  let editingId = null;
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  function v(id)      { return document.getElementById(id); }
+  function val(id)    { return v(id).value.trim(); }
+  function set(id, x) { v(id).value = x ?? ''; }
+
+  function showMsg(type, text) {
+    const el = v('formMsg');
+    el.className = `msg ${type}`;
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+  function hideMsg() { v('formMsg').style.display = 'none'; }
+
+  // ─── List rendering ──────────────────────────────────────────────────────────
+  function renderList(parts) {
+    const container = v('partList');
+    v('listLoading').style.display = 'none';
+    container.innerHTML = '';
+
+    if (!parts.length) {
+      container.innerHTML = '<div class="empty-list">Nenhuma peça encontrada.</div>';
+      return;
+    }
+
+    parts.forEach(p => {
+      const sub = [p.marca, p.modelo, p.categoria].filter(Boolean).join(' · ');
+      const div = document.createElement('div');
+      div.className = 'part-item' + (p.id === editingId ? ' selected' : '');
+      div.dataset.id = p.id;
+      div.innerHTML = `<div class="pi-name">${p.nome}</div>${sub ? `<div class="pi-sub">${sub}</div>` : ''}`;
+      div.addEventListener('click', () => loadForEdit(p.id));
+      container.appendChild(div);
+    });
+  }
+
+  // ─── Load / search ────────────────────────────────────────────────────────────
+  async function loadParts(q) {
+    try {
+      const url = q ? `/parts/search?q=${encodeURIComponent(q)}` : '/parts';
+      const res = await fetch(url);
+      renderList(await res.json());
+    } catch {
+      v('listLoading').textContent = 'Erro ao carregar.';
+    }
+  }
+
+  let searchT;
+  v('searchInput').addEventListener('input', e => {
+    clearTimeout(searchT);
+    searchT = setTimeout(() => loadParts(e.target.value.trim()), 280);
+  });
+
+  // ─── Histórico de preços ─────────────────────────────────────────────────────
+
+  function formatBRL(value) {
+    return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  async function loadPriceHistory(partId) {
+    const card    = v('priceHistoryCard');
+    const content = v('priceHistoryContent');
+    card.style.display = 'none';
+    content.innerHTML  = '';
+
+    try {
+      const res  = await fetch(`/parts/${partId}/price-history`);
+      const rows = await res.json();
+
+      card.style.display = 'block';
+
+      if (!rows.length) {
+        content.innerHTML = '<div class="ph-empty">Nenhum histórico de vendas registrado para esta peça.</div>';
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.className = 'ph-table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Qtd</th>
+            <th>Valor unit.</th>
+            <th>Proposta</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${r.cliente_nome}</td>
+              <td style="text-align:center">${r.quantidade}</td>
+              <td style="text-align:right;font-weight:700">${formatBRL(r.valor_unitario)}</td>
+              <td style="color:var(--muted)">${r.numero_proposta}</td>
+              <td style="color:var(--muted);white-space:nowrap">${r.data_proposta}</td>
+            </tr>
+          `).join('')}
+        </tbody>`;
+      content.appendChild(table);
+    } catch {
+      card.style.display = 'none';
+    }
+  }
+
+  // ─── Edit mode ────────────────────────────────────────────────────────────────
+  async function loadForEdit(id) {
+    try {
+      const res  = await fetch(`/parts/${id}`);
+      const part = await res.json();
+      if (!part.id) return;
+      fillForm(part);
+      setEditMode(part);
+      loadPriceHistory(id);
+      v('partForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch { showMsg('error', 'Erro ao carregar peça.'); }
+  }
+
+  function fillForm(p) {
+    set('f_nome',      p.nome);
+    set('f_marca',     p.marca);
+    set('f_modelo',    p.modelo);
+    set('f_categoria', p.categoria);
+    set('f_ncm',       p.ncm);
+    set('f_codigo',    p.codigo_interno);
+    set('f_descricao', p.descricao);
+    set('f_obs',       p.observacoes);
+  }
+
+  function setEditMode(part) {
+    editingId = part.id;
+    v('formTitle').textContent   = `Editando: ${part.nome}`;
+    v('editBadge').style.display  = 'inline';
+    v('btnSubmit').textContent   = 'Salvar alterações';
+    v('btnCancel').style.display  = 'inline-flex';
+    highlightSelected();
+    hideMsg();
+  }
+
+  function setCreateMode() {
+    editingId = null;
+    v('partForm').reset();
+    v('formTitle').textContent    = 'Nova Peça';
+    v('editBadge').style.display  = 'none';
+    v('btnSubmit').textContent    = 'Criar peça';
+    v('btnCancel').style.display  = 'none';
+    v('priceHistoryCard').style.display = 'none';
+    v('priceHistoryContent').innerHTML  = '';
+    highlightSelected();
+    hideMsg();
+  }
+
+  function highlightSelected() {
+    document.querySelectorAll('.part-item').forEach(el => {
+      el.classList.toggle('selected', Number(el.dataset.id) === editingId);
+    });
+  }
+
+  v('btnNew').addEventListener('click', () => { setCreateMode(); v('f_nome').focus(); });
+  v('btnCancel').addEventListener('click', setCreateMode);
+
+  // ─── Form submit ──────────────────────────────────────────────────────────────
+  function collect() {
+    return {
+      nome:           val('f_nome')      || null,
+      marca:          val('f_marca')     || null,
+      modelo:         val('f_modelo')    || null,
+      categoria:      val('f_categoria') || null,
+      ncm:            val('f_ncm')       || null,
+      codigo_interno: val('f_codigo')    || null,
+      descricao:      val('f_descricao') || null,
+      observacoes:    val('f_obs')       || null,
+    };
+  }
+
+  v('partForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    hideMsg();
+
+    if (!val('f_nome')) {
+      v('f_nome').classList.add('error');
+      showMsg('error', 'O campo Nome é obrigatório.');
+      v('f_nome').focus();
+      return;
+    }
+    v('f_nome').classList.remove('error');
+
+    const btn = v('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    const url    = editingId ? `/parts/${editingId}` : '/parts';
+    const method = editingId ? 'PUT' : 'POST';
+
+    try {
+      const res  = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(collect()),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showMsg('success', editingId ? 'Peça atualizada com sucesso.' : 'Peça criada com sucesso.');
+        await loadParts(v('searchInput').value.trim());
+        if (!editingId) {
+          fillForm(data.part);
+          setEditMode(data.part);
+        } else {
+          v('formTitle').textContent = `Editando: ${data.part.nome}`;
+        }
+      } else if (res.status === 409) {
+        showMsg('warn', data.message);
+      } else {
+        showMsg('error', data.message || 'Erro ao salvar. Tente novamente.');
+      }
+    } catch {
+      showMsg('error', 'Erro de conexão com o servidor.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = editingId ? 'Salvar alterações' : 'Criar peça';
+    }
+  });
+
+  // ─── Init ────────────────────────────────────────────────────────────────────
+  const urlId = new URLSearchParams(location.search).get('id');
+  loadParts().then(() => {
+    if (urlId) loadForEdit(Number(urlId));
+  });
+</script>
+</body>
+</html>

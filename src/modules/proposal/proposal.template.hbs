@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proposta {{numero_proposta}}</title>
+  <style>{{inlineCss}}</style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="logos">
+        <img class="logo-ghtec" src="{{logo_ghtec}}" alt="GHTec" />
+        {{#if logo_parceira}}<img class="logo-parceira" src="{{logo_parceira}}" alt="Parceira" />{{/if}}
+      </div>
+    </header>
+
+    <main class="content">
+      <h1>PROPOSTA COMERCIAL Nº {{numero_proposta}}</h1>
+      <div class="title-divider"></div>
+
+      <section class="section two-col">
+        <div>
+          <h2>CLIENTE</h2>
+          <p><strong>{{cliente.nome}}</strong></p>
+          {{#if cliente.razao_social}}<p>{{cliente.razao_social}}</p>{{/if}}
+          {{#if cliente.cnpj}}<p>CNPJ: {{cliente.cnpj}}</p>{{/if}}
+          {{#if cliente.endereco}}<p>{{cliente.endereco}}</p>{{/if}}
+          <p>{{cliente.cidade}} - {{cliente.estado}}</p>
+          {{#if cliente.cep}}<p>CEP: {{cliente.cep}}</p>{{/if}}
+        </div>
+
+        <div>
+          <h2>DATA</h2>
+          <p>{{cidade_emissao}}, {{data_emissao}}</p>
+        </div>
+      </section>
+
+      <section class="section section-objeto">
+        <h2>OBJETO</h2>
+        <p>{{objeto_proposta}}</p>
+      </section>
+
+      <section class="section section-items">
+        <h2>DESCRIÇÃO DOS ITENS</h2>
+
+        <table>
+          <colgroup>
+            <col style="width: 9%">
+            <col style="width: 8%">
+            <col style="width: 37%">
+            <col style="width: 20%">
+            <col style="width: 17%">
+            <col style="width: 9%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="col-center">ITEM</th>
+              <th class="col-center">QTD</th>
+              <th class="col-left">DESCRIÇÃO</th>
+              <th class="col-right">VALOR UNITÁRIO</th>
+              <th class="col-right">SUBTOTAL</th>
+              <th class="col-center">NCM</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each itens}}
+              <tr>
+                <td class="col-center">{{item_label}}</td>
+                <td class="col-center">{{quantidade}}</td>
+                <td class="col-left">{{descricao}}</td>
+                <td class="col-right">{{valor_unitario}}</td>
+                <td class="col-right">{{subtotal}}</td>
+                <td class="col-center">{{ncm}}</td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <div class="total-box">
+          <div class="total-label">TOTAL</div>
+          <div class="total-value">{{valor_total}}</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>CONDIÇÕES COMERCIAIS</h2>
+        <ul class="conditions">
+          <li><strong>Forma de pagamento:</strong> {{condicoes.forma_pagamento}}</li>
+          <li><strong>Prazo de pagamento:</strong> {{condicoes.prazo_pagamento}}</li>
+          <li><strong>Prazo de entrega:</strong> {{condicoes.prazo_entrega}}</li>
+          <li><strong>Garantia:</strong> {{condicoes.garantia}}</li>
+          <li><strong>Validade da proposta:</strong> {{condicoes.validade}}</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <p>Permanecemos à disposição para quaisquer esclarecimentos.</p>
+      </section>
+
+      <section class="signature">
+        <p><strong>{{responsavel.nome}}</strong></p>
+        <p>{{responsavel.cargo}}</p>
+        <p>{{responsavel.email}}</p>
+        <p>{{responsavel.telefone}}</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

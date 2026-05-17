@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHTec — Propostas</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
+      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
+      --danger: #c62828; --radius: 6px;
+    }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
+
+    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; }
+    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
+    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
+    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
+    .nav-link.active { color: #fff; border-bottom-color: #fff; }
+    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
+    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
+
+    .container { max-width: 1000px; margin: 28px auto; padding: 0 16px 60px; }
+
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 28px; margin-bottom: 20px; }
+    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+
+    .search-bar input { width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13.5px; font-family: inherit; margin-bottom: 16px; }
+    .search-bar input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: var(--green-bg); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--green); padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
+    td { padding: 9px 12px; border: 1px solid #eee; vertical-align: middle; }
+    tr:hover td { background: #fafff9; }
+
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: var(--radius); border: none; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.15s; text-decoration: none; font-family: inherit; }
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:hover { background: var(--green-light); }
+    .btn-outline { background: #fff; color: var(--green); border: 1px solid var(--green); }
+    .btn-outline:hover { background: var(--green-bg); }
+    .btn-danger { background: #fff; color: var(--danger); border: 1px solid #ef9a9a; }
+    .btn-danger:hover { background: #ffebee; }
+
+    .empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 13px; }
+    #loading { text-align: center; color: var(--muted); padding: 30px 0; }
+
+    /* Confirm overlay */
+    .confirm-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .confirm-box {
+      background: #fff; border-radius: var(--radius); padding: 24px 28px;
+      max-width: 420px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .confirm-box h3 { margin: 0 0 10px; font-size: 15px; }
+    .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
+    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* Toast message */
+    #toast {
+      display: none; position: fixed; bottom: 24px; right: 24px; z-index: 300;
+      padding: 12px 18px; border-radius: var(--radius); font-size: 13px; font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    #toast.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    #toast.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
+    #toast.warn    { background: #fff8e1; color: #5d4037; border: 1px solid #ffe082; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="/">GHTec</a>
+  <a class="nav-link" href="/">Nova Proposta</a>
+  <a class="nav-link active" href="/proposals.html">Propostas</a>
+  <a class="nav-link" href="/clients.html">Clientes</a>
+  <a class="nav-link" href="/parts.html">Peças</a>
+</nav>
+<div class="page-bar">
+  <h1>Propostas</h1>
+  Histórico de propostas geradas
+</div>
+
+<div class="container">
+  <div class="card">
+    <div class="card-title">
+      Todas as propostas
+      <a class="btn btn-primary" href="/">+ Nova proposta</a>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Filtrar por número ou cliente..." />
+    </div>
+
+    <div id="loading">Carregando...</div>
+    <div id="content" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Nº da Proposta</th>
+            <th>Cliente</th>
+            <th>Data de Emissão</th>
+            <th>Valor Total</th>
+            <th>PDF</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none">Nenhuma proposta encontrada.</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  function fmt(v) {
+    return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  let all = [];
+  let toastTimer;
+
+  function showToast(type, text) {
+    const el = document.getElementById('toast');
+    el.className = type;
+    el.textContent = text;
+    el.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  function showConfirm(title, text, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-box">
+        <h3>${title}</h3>
+        <p>${text}</p>
+        <div class="confirm-actions">
+          <button class="btn" style="background:#eee;color:#444" id="_cc">Cancelar</button>
+          <button class="btn btn-danger" id="_co">Excluir</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_cc').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#_co').addEventListener('click', () => { overlay.remove(); onConfirm(); });
+  }
+
+  function render(data) {
+    const tbody = document.getElementById('tbody');
+    const empty = document.getElementById('empty');
+    tbody.innerHTML = '';
+    if (!data.length) { empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    data.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = p.id;
+      const pdfCell = p.pdf_path
+        ? `<a class="btn btn-outline" href="/files/proposta-${p.numero_proposta}.pdf" target="_blank">Abrir PDF</a>`
+        : `<span style="color:var(--muted);font-size:12px">—</span>`;
+      tr.innerHTML = `
+        <td><strong>${p.numero_proposta}</strong></td>
+        <td>${p.cliente_nome}</td>
+        <td>${p.data_emissao}</td>
+        <td>${fmt(p.valor_total)}</td>
+        <td>${pdfCell}</td>
+        <td><button class="btn btn-danger btn-del-prop" data-id="${p.id}" data-num="${p.numero_proposta}" title="Excluir proposta">✕ Excluir</button></td>`;
+      tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.btn-del-prop').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id  = Number(btn.dataset.id);
+        const num = btn.dataset.num;
+        showConfirm(
+          'Excluir proposta',
+          `Deseja excluir a proposta <strong>${num}</strong>? Esta ação não pode ser desfeita.<br><small>O arquivo PDF gerado não será removido.</small>`,
+          () => deleteProposal(id, num)
+        );
+      });
+    });
+  }
+
+  async function deleteProposal(id, num) {
+    try {
+      const res  = await fetch(`/proposals/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        all = all.filter(p => p.id !== id);
+        const q = document.getElementById('searchInput').value.toLowerCase().trim();
+        render(q ? all.filter(p =>
+          p.numero_proposta.toLowerCase().includes(q) || p.cliente_nome.toLowerCase().includes(q)
+        ) : all);
+        showToast('success', `Proposta ${num} excluída com sucesso.`);
+      } else {
+        showToast('error', data.message || 'Erro ao excluir proposta.');
+      }
+    } catch {
+      showToast('error', 'Erro de conexão com o servidor.');
+    }
+  }
+
+  async function load() {
+    try {
+      const res = await fetch('/proposals');
+      all = await res.json();
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('content').style.display = 'block';
+      render(all);
+    } catch {
+      document.getElementById('loading').textContent = 'Erro ao carregar propostas.';
+    }
+  }
+
+  let t;
+  document.getElementById('searchInput').addEventListener('input', e => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const q = e.target.value.toLowerCase().trim();
+      render(q ? all.filter(p =>
+        p.numero_proposta.toLowerCase().includes(q) || p.cliente_nome.toLowerCase().includes(q)
+      ) : all);
+    }, 200);
+  });
+
+  load();
+</script>
+</body>
+</html>
