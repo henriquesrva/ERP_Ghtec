@@ -28,6 +28,12 @@ const {
 const { formatCurrency } = require("../../shared/utils/currency");
 const { normalizeText } = require("../../shared/utils/normalize");
 
+function todayFormatted() {
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo'
+  }).format(new Date());
+}
+
 function calculateTotal(items) {
   return items.reduce((acc, item) => {
     return acc + Number(item.quantidade) * Number(item.valor_unitario);
@@ -97,6 +103,7 @@ function buildTemplateData(proposalData) {
 
     condicoes: proposalData.condicoes,
     responsavel: proposalData.responsavel,
+    observacoes: proposalData.observacoes || null,
 
     // AJUSTE ESTES NOMES PRA BATER EXATAMENTE COM OS ARQUIVOS REAIS
     marca_dagua_topo: assetDataUri("marcatopo.png"),
@@ -296,6 +303,7 @@ function findOrCreateClient(clientData) {
 
 async function createProposalFlow(data) {
   const outputDir = ensureOutputDir();
+  data = { ...data, data_emissao: todayFormatted() };
 
   // ── Resolve client ────────────────────────────────────────────────────────
   let resolvedClient, clientId, clienteIsNew, possibleDuplicates;
@@ -342,7 +350,7 @@ async function createProposalFlow(data) {
     proposalId = createProposal({
       numero_proposta: data.numero_proposta,
       cliente_id: clientId,
-      cidade_emissao: data.cidade_emissao,
+      cidade_emissao: data.cidade_emissao || '',
       data_emissao: data.data_emissao,
       objeto_proposta: data.objeto_proposta,
       forma_pagamento: data.condicoes.forma_pagamento,

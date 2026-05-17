@@ -183,3 +183,22 @@ th {
   line-height: 1.5;
   margin-bottom: 1.2mm;
 }
+
+.page-footer {
+  margin-top: 10mm;
+  padding: 3mm 0 0;
+  border-top: 0.4mm solid #c8c8c8;
+  text-align: center;
+  break-inside: avoid;
+}
+
+.page-footer p {
+  font-size: 7.5px;
+  color: #888;
+  margin: 0 0 0.8mm 0;
+  line-height: 1.4;
+}
+
+.page-footer p:last-child {
+  margin-bottom: 0;
+}

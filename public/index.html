@@ -392,6 +392,33 @@
     .btn-sug.grey   { background: #eee; color: #555; margin-left: 8px; }
     .btn-sug.grey:hover { background: #ddd; }
 
+    /* ── Entity preview ── */
+    .entity-preview {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 14px;
+    }
+    .ep-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding-top: 2px;
+      white-space: nowrap;
+    }
+    .ep-value { font-size: 12px; color: var(--text); }
+    .ep-block {
+      grid-column: span 2;
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
     /* ── Modal ── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 300;
@@ -478,19 +505,9 @@
     <!-- Identificação -->
     <div class="card">
       <div class="card-title">Identificação da Proposta</div>
-      <div class="grid-3">
-        <div class="field">
-          <label>Nº da Proposta *</label>
-          <input type="text" name="numero_proposta" placeholder="2024-001" required />
-        </div>
-        <div class="field">
-          <label>Cidade de Emissão *</label>
-          <input type="text" name="cidade_emissao" placeholder="São Paulo" required />
-        </div>
-        <div class="field">
-          <label>Data de Emissão *</label>
-          <input type="text" name="data_emissao" placeholder="14 de maio de 2026" required />
-        </div>
+      <div class="field" style="max-width:240px">
+        <label>Nº da Proposta *</label>
+        <input type="text" name="numero_proposta" placeholder="2024-001" required />
       </div>
     </div>
 
@@ -505,10 +522,10 @@
         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
           <div style="min-width:0;">
             <div id="cs-nome" style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
-            <div id="cs-sub" style="font-size:11px; color:var(--muted); margin-top:2px;"></div>
           </div>
           <button type="button" id="btnTrocarCliente" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted); white-space:nowrap;">Trocar</button>
         </div>
+        <div id="cs-preview"></div>
       </div>
     </div>
 
@@ -524,6 +541,7 @@
           <div id="ob-nome" style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
           <button type="button" id="btnTrocarObjeto" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted); white-space:nowrap;">Trocar</button>
         </div>
+        <div id="ob-preview"></div>
       </div>
       <input type="hidden" name="objeto_proposta" />
     </div>
@@ -582,6 +600,14 @@
       </div>
     </div>
 
+    <!-- Observações -->
+    <div class="card">
+      <div class="card-title">Observações <span style="font-size:11px; font-weight:400; color:var(--muted); text-transform:none; letter-spacing:0;">(opcional)</span></div>
+      <div class="field">
+        <textarea name="observacoes" placeholder="Informações adicionais que devem constar na proposta..." style="min-height:80px;"></textarea>
+      </div>
+    </div>
+
     <!-- Responsável -->
     <div class="card">
       <div class="card-title">Responsável pela Proposta</div>
@@ -593,10 +619,10 @@
         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
           <div style="min-width:0;">
             <div id="rs-nome" style="font-weight:700;"></div>
-            <div id="rs-sub" style="font-size:11px; color:var(--muted); margin-top:2px;"></div>
           </div>
           <button type="button" id="btnTrocarResp" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted); white-space:nowrap;">Trocar</button>
         </div>
+        <div id="rs-preview"></div>
       </div>
     </div>
 
@@ -716,6 +742,19 @@
     searchIn.focus();
   }
 
+  // ─── Entity preview helpers ───────────────────────────────────────────────
+
+  function buildPreview(rows) {
+    if (!rows.length) return '';
+    return '<div class="entity-preview">' +
+      rows.map(([l, v]) => `<span class="ep-label">${l}</span><span class="ep-value">${v}</span>`).join('') +
+      '</div>';
+  }
+
+  function buildPreviewBlock(text) {
+    return text ? `<div class="entity-preview"><span class="ep-block">${text}</span></div>` : '';
+  }
+
   // ─── Client modal + painel ───────────────────────────────────────────────
 
   const clientPanel = document.getElementById('cliente-selecionado');
@@ -725,8 +764,18 @@
     currentClientData = c;
     document.getElementById('cliente-buttons').style.display = 'none';
     document.getElementById('cs-nome').textContent = c.nome;
-    const sub = [c.cnpj, c.cidade && c.estado ? `${c.cidade} — ${c.estado}` : c.cidade || c.estado].filter(Boolean).join(' · ');
-    document.getElementById('cs-sub').textContent = sub;
+    const rows = [];
+    if (c.razao_social)        rows.push(['Razão Social', c.razao_social]);
+    if (c.cnpj)                rows.push(['CNPJ', c.cnpj]);
+    if (c.inscricao_estadual)  rows.push(['Insc. Estadual', c.inscricao_estadual]);
+    if (c.endereco)            rows.push(['Endereço', c.endereco]);
+    const cidadeUF = [c.cidade, c.estado].filter(Boolean).join(' — ');
+    if (cidadeUF)              rows.push(['Cidade / UF', cidadeUF]);
+    if (c.cep)                 rows.push(['CEP', c.cep]);
+    if (c.telefone)            rows.push(['Telefone', c.telefone]);
+    if (c.email)               rows.push(['E-mail', c.email]);
+    if (c.contato_responsavel) rows.push(['Contato', c.contato_responsavel]);
+    document.getElementById('cs-preview').innerHTML = buildPreview(rows);
     clientPanel.style.display = 'block';
   }
 
@@ -734,6 +783,7 @@
     currentClientId   = null;
     currentClientData = null;
     document.getElementById('cliente-buttons').style.display = 'flex';
+    document.getElementById('cs-preview').innerHTML = '';
     clientPanel.style.display = 'none';
   }
 
@@ -762,8 +812,10 @@
     currentRespData = r;
     document.getElementById('resp-buttons').style.display = 'none';
     document.getElementById('rs-nome').textContent = r.nome;
-    const sub = [r.cargo, r.telefone].filter(Boolean).join(' · ');
-    document.getElementById('rs-sub').textContent = sub;
+    const rows = [];
+    if (r.cargo)    rows.push(['Cargo', r.cargo]);
+    if (r.telefone) rows.push(['Telefone', r.telefone]);
+    document.getElementById('rs-preview').innerHTML = buildPreview(rows);
     respPanel.style.display = 'block';
   }
 
@@ -771,6 +823,7 @@
     currentRespId   = null;
     currentRespData = null;
     document.getElementById('resp-buttons').style.display = 'flex';
+    document.getElementById('rs-preview').innerHTML = '';
     respPanel.style.display = 'none';
   }
 
@@ -797,14 +850,16 @@
   function selectObjeto(o) {
     document.getElementById('objeto-buttons').style.display = 'none';
     document.getElementById('ob-nome').textContent = o.nome;
+    document.getElementById('ob-preview').innerHTML = buildPreviewBlock(o.descricao);
     objetoPanel.style.display = 'block';
     document.querySelector('[name="objeto_proposta"]').value = o.descricao || o.nome;
   }
 
   function clearObjetoSelection() {
     document.getElementById('objeto-buttons').style.display = 'flex';
-    objetoPanel.style.display = 'none';
     document.getElementById('ob-nome').textContent = '';
+    document.getElementById('ob-preview').innerHTML = '';
+    objetoPanel.style.display = 'none';
     document.querySelector('[name="objeto_proposta"]').value = '';
   }
 
@@ -987,9 +1042,8 @@
 
   function buildPayload() {
     return {
-      numero_proposta: getFieldValue('numero_proposta'),
-      cidade_emissao:  getFieldValue('cidade_emissao'),
-      data_emissao:    getFieldValue('data_emissao'),
+      numero_proposta:  getFieldValue('numero_proposta'),
+      observacoes:      getFieldValue('observacoes') || null,
       objeto_proposta: getFieldValue('objeto_proposta'),
       cliente_id:      currentClientId,
       items:           collectItems(),
