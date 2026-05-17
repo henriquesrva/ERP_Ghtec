@@ -334,7 +334,7 @@ async function createProposalFlow(data) {
       valor_total_extenso: data.valor_total_extenso || "valor por extenso",
       responsavel_nome: data.responsavel.nome,
       responsavel_cargo: data.responsavel.cargo,
-      responsavel_email: data.responsavel.email,
+      responsavel_email: data.responsavel.email || '',
       responsavel_telefone: data.responsavel.telefone,
       pdf_path: null
     });

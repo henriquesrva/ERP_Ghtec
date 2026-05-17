@@ -28,6 +28,14 @@ const {
   getPartPriceHistoryHandler,
 } = require("./modules/part/part.controller");
 
+const {
+  listResponsaveisHandler,
+  getResponsavelByIdHandler,
+  searchResponsaveisHandler,
+  createResponsavelHandler,
+  deleteResponsavelHandler,
+} = require("./modules/responsavel/responsavel.controller");
+
 const app = express();
 
 app.use(express.json());
@@ -55,6 +63,13 @@ app.put("/parts/:id",                updatePartHandler);
 // Itens / preço histórico
 app.get("/items/search",     searchItemsHandler);
 app.get("/items/last-price", getItemPriceHandler);
+
+// Responsáveis — /search deve vir antes de /:id
+app.get("/responsaveis",         listResponsaveisHandler);
+app.get("/responsaveis/search",  searchResponsaveisHandler);
+app.get("/responsaveis/:id",     getResponsavelByIdHandler);
+app.post("/responsaveis",        createResponsavelHandler);
+app.delete("/responsaveis/:id",  deleteResponsavelHandler);
 
 // Propostas
 app.get("/proposals",          listProposals);

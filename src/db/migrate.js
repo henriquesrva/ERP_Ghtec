@@ -179,4 +179,16 @@ if (orphanItems.length > 0) {
   console.log(`[migrate] parts: ${orphanItems.length} peça(s) sincronizada(s) a partir do histórico.`);
 }
 
+// ── Tabela responsaveis ───────────────────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS responsaveis (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome       TEXT NOT NULL,
+    telefone   TEXT,
+    cargo      TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 console.log("[migrate] Banco de dados atualizado com sucesso.");

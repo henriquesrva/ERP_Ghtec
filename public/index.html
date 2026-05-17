@@ -404,6 +404,7 @@
   <a class="nav-link active" href="/">Nova Proposta</a>
   <a class="nav-link" href="/proposals.html">Propostas</a>
   <a class="nav-link" href="/clients.html">Clientes</a>
+  <a class="nav-link" href="/responsaveis.html">Responsáveis</a>
   <a class="nav-link" href="/parts.html">Peças</a>
 </nav>
 <div class="page-bar">
@@ -537,9 +538,10 @@
     <div class="card">
       <div class="card-title">Responsável pela Proposta</div>
       <div class="grid-2" style="margin-bottom:14px">
-        <div class="field">
+        <div class="field" id="field-responsavel-nome">
           <label>Nome *</label>
-          <input type="text" name="responsavel_nome" placeholder="Ricardo Santos" required />
+          <input type="text" id="responsavel_nome" name="responsavel_nome" placeholder="Digite para buscar ou preencher..." required autocomplete="off" />
+          <!-- dropdown injetado aqui -->
         </div>
         <div class="field">
           <label>Cargo *</label>
@@ -547,10 +549,6 @@
         </div>
       </div>
       <div class="grid-2">
-        <div class="field">
-          <label>E-mail *</label>
-          <input type="email" name="responsavel_email" placeholder="ricardo@ghtec.com.br" required />
-        </div>
         <div class="field">
           <label>Telefone *</label>
           <input type="text" name="responsavel_telefone" placeholder="(11) 99999-9999" required />
@@ -696,6 +694,86 @@
       return;
     }
     items.forEach((it, i) => it.classList.toggle('active', i === clientAcIndex));
+  });
+
+  // ─── Responsável autocomplete ─────────────────────────────────────────────
+
+  const respNomeInput = document.getElementById('responsavel_nome');
+  const respField = document.getElementById('field-responsavel-nome');
+
+  let respDropdown = null;
+  let respAcIndex = -1;
+
+  function closeRespDropdown() {
+    if (respDropdown) { respDropdown.remove(); respDropdown = null; }
+    respAcIndex = -1;
+  }
+
+  function openRespDropdown(list) {
+    closeRespDropdown();
+    if (!list.length) return;
+
+    respDropdown = document.createElement('div');
+    respDropdown.className = 'ac-dropdown';
+
+    list.forEach((r, i) => {
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      item.dataset.idx = i;
+      const sub = [r.cargo, r.telefone].filter(Boolean).join(' · ');
+      item.innerHTML = `<div class="ac-main">${r.nome}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}`;
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        fillRespFields(r);
+        closeRespDropdown();
+      });
+      respDropdown.appendChild(item);
+    });
+
+    respField.appendChild(respDropdown);
+  }
+
+  function fillRespFields(r) {
+    respNomeInput.value = r.nome;
+    setField('responsavel_cargo',    r.cargo    || '');
+    setField('responsavel_telefone', r.telefone || '');
+  }
+
+  const fetchResponsaveis = debounce(async (q) => {
+    if (q.length < 2) { closeRespDropdown(); return; }
+    try {
+      const res = await fetch(`/responsaveis/search?q=${encodeURIComponent(q)}`);
+      const list = await res.json();
+      openRespDropdown(list);
+    } catch {}
+  }, 280);
+
+  respNomeInput.addEventListener('input', (e) => {
+    fetchResponsaveis(e.target.value.trim());
+  });
+
+  respNomeInput.addEventListener('blur', () => {
+    setTimeout(closeRespDropdown, 150);
+  });
+
+  respNomeInput.addEventListener('keydown', (e) => {
+    if (!respDropdown) return;
+    const items = respDropdown.querySelectorAll('.ac-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      respAcIndex = Math.min(respAcIndex + 1, items.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      respAcIndex = Math.max(respAcIndex - 1, 0);
+    } else if (e.key === 'Enter' && respAcIndex >= 0) {
+      e.preventDefault();
+      items[respAcIndex].dispatchEvent(new Event('mousedown'));
+      return;
+    } else if (e.key === 'Escape') {
+      closeRespDropdown();
+      return;
+    }
+    items.forEach((it, i) => it.classList.toggle('active', i === respAcIndex));
   });
 
   // ─── Items table ──────────────────────────────────────────────────────────
@@ -921,7 +999,6 @@
       responsavel: {
         nome:     getFieldValue('responsavel_nome'),
         cargo:    getFieldValue('responsavel_cargo'),
-        email:    getFieldValue('responsavel_email'),
         telefone: getFieldValue('responsavel_telefone')
       }
     };
