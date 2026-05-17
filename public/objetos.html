@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GHTec — Responsáveis</title>
+  <title>GHTec — Objetos de Proposta</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     :root {
@@ -37,28 +37,27 @@
     .search-wrap input { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
     .search-wrap input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
 
-    .resp-list { max-height: 560px; overflow-y: auto; }
-    .resp-item {
+    .obj-list { max-height: 560px; overflow-y: auto; }
+    .obj-item {
       padding: 10px 12px; border-radius: var(--radius); cursor: default;
       border: 1px solid transparent; margin-bottom: 4px; transition: all 0.12s;
     }
-    .resp-item:hover { background: var(--green-bg); border-color: var(--border); }
-    .ri-name { font-weight: 700; font-size: 13px; }
-    .ri-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .obj-item:hover { background: var(--green-bg); border-color: var(--border); }
+    .oi-name { font-weight: 700; font-size: 13px; }
+    .oi-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .empty-list { text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px; }
     #listLoading { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
 
     /* Form */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
     .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .field input {
+    .field input, .field textarea {
       padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius);
       font-size: 13px; font-family: inherit; color: var(--text);
     }
-    .field input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
-    .field input.error { border-color: var(--danger); }
-    .col-span-2 { grid-column: span 2; }
+    .field input:focus, .field textarea:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .field input.error, .field textarea.error { border-color: var(--danger); }
+    .field textarea { resize: vertical; min-height: 90px; }
 
     /* Buttons */
     .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
@@ -75,17 +74,16 @@
     .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
     .msg.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
     .msg.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
-    .msg.warn    { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; }
 
     /* Delete button inside list item */
-    .ri-actions { display: flex; align-items: center; justify-content: space-between; }
-    .btn-del-resp {
+    .oi-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .btn-del-obj {
       display: none; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
       border: 1px solid #ef9a9a; border-radius: var(--radius); background: #fff; color: var(--danger);
-      transition: background 0.15s;
+      transition: background 0.15s; flex-shrink: 0;
     }
-    .resp-item:hover .btn-del-resp { display: inline-block; }
-    .btn-del-resp:hover { background: #ffebee; }
+    .obj-item:hover .btn-del-obj { display: inline-block; }
+    .btn-del-obj:hover { background: #ffebee; }
 
     /* Confirm overlay */
     .confirm-overlay {
@@ -100,7 +98,7 @@
     .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
     .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
-    @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } .col-span-2 { grid-column: span 1; } }
+    @media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -110,13 +108,13 @@
   <a class="nav-link" href="/">Nova Proposta</a>
   <a class="nav-link" href="/proposals.html">Propostas</a>
   <a class="nav-link" href="/clients.html">Clientes</a>
-  <a class="nav-link active" href="/responsaveis.html">Responsáveis</a>
+  <a class="nav-link" href="/responsaveis.html">Responsáveis</a>
   <a class="nav-link" href="/parts.html">Peças</a>
-  <a class="nav-link" href="/objetos.html">Objetos</a>
+  <a class="nav-link active" href="/objetos.html">Objetos</a>
 </nav>
 <div class="page-bar">
-  <h1>Responsáveis</h1>
-  Cadastro de responsáveis comerciais pelas propostas
+  <h1>Objetos de Proposta</h1>
+  Cadastro de objetos reutilizáveis para propostas comerciais
 </div>
 
 <div class="container">
@@ -125,44 +123,36 @@
     <!-- ── Lista ── -->
     <div class="card">
       <div class="card-title">
-        Responsáveis cadastrados
+        Objetos cadastrados
         <button class="btn-new" id="btnNew">+ Novo</button>
       </div>
       <div class="search-wrap">
-        <input type="text" id="searchInput" placeholder="Buscar por nome ou cargo..." autocomplete="off" />
+        <input type="text" id="searchInput" placeholder="Buscar por nome ou descrição..." autocomplete="off" />
       </div>
       <div id="listLoading">Carregando...</div>
-      <div class="resp-list" id="respList"></div>
+      <div class="obj-list" id="objList"></div>
     </div>
 
     <!-- ── Formulário ── -->
     <div class="card">
       <div class="card-title">
-        <span id="formTitle">Novo Responsável</span>
+        <span id="formTitle">Novo Objeto</span>
       </div>
 
-      <form id="respForm" novalidate>
-        <div class="grid-2">
-          <div class="field col-span-2">
-            <label>Nome *</label>
-            <input type="text" id="f_nome" placeholder="Nome completo do responsável" />
-          </div>
+      <form id="objForm" novalidate>
+        <div class="field">
+          <label>Nome do Objeto *</label>
+          <input type="text" id="f_nome" placeholder="Ex: Fornecimento de Equipamentos de UTI" />
         </div>
-        <div class="grid-2">
-          <div class="field">
-            <label>Cargo</label>
-            <input type="text" id="f_cargo" placeholder="Engenheiro Comercial" />
-          </div>
-          <div class="field">
-            <label>Telefone</label>
-            <input type="text" id="f_telefone" placeholder="(11) 99999-9999" />
-          </div>
+        <div class="field">
+          <label>Descrição</label>
+          <textarea id="f_descricao" placeholder="Texto completo que será inserido na proposta..."></textarea>
         </div>
 
         <div id="formMsg" style="display:none" class="msg"></div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary" id="btnSubmit">Criar responsável</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmit">Criar objeto</button>
           <button type="button" class="btn btn-ghost" id="btnCancel" style="display:none">Cancelar</button>
         </div>
       </form>
@@ -173,12 +163,11 @@
 
 <script>
   // ─── State ──────────────────────────────────────────────────────────────────
-  let allResp = [];
+  let allObj = [];
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
   function v(id)      { return document.getElementById(id); }
   function val(id)    { return v(id).value.trim(); }
-  function set(id, x) { v(id).value = x ?? ''; }
 
   function showMsg(type, text) {
     const el = v('formMsg');
@@ -208,35 +197,35 @@
 
   // ─── List rendering ────────────────────────────────────────────────────────
   function renderList(list) {
-    const container = v('respList');
+    const container = v('objList');
     v('listLoading').style.display = 'none';
     container.innerHTML = '';
 
     if (!list.length) {
-      container.innerHTML = '<div class="empty-list">Nenhum responsável encontrado.</div>';
+      container.innerHTML = '<div class="empty-list">Nenhum objeto encontrado.</div>';
       return;
     }
 
-    list.forEach(r => {
-      const sub = [r.cargo, r.telefone].filter(Boolean).join(' · ');
+    list.forEach(o => {
+      const desc = o.descricao ? o.descricao.substring(0, 70) + (o.descricao.length > 70 ? '...' : '') : '';
       const div = document.createElement('div');
-      div.className = 'resp-item';
-      div.dataset.id = r.id;
+      div.className = 'obj-item';
+      div.dataset.id = o.id;
       div.innerHTML = `
-        <div class="ri-actions">
-          <div>
-            <div class="ri-name">${r.nome}</div>
-            ${sub ? `<div class="ri-sub">${sub}</div>` : ''}
+        <div class="oi-actions">
+          <div style="min-width:0; flex:1;">
+            <div class="oi-name">${o.nome}</div>
+            ${desc ? `<div class="oi-sub">${desc}</div>` : ''}
           </div>
-          <button class="btn-del-resp" data-id="${r.id}" title="Excluir responsável">✕</button>
+          <button class="btn-del-obj" data-id="${o.id}" title="Excluir objeto">✕</button>
         </div>`;
 
-      div.querySelector('.btn-del-resp').addEventListener('click', (e) => {
+      div.querySelector('.btn-del-obj').addEventListener('click', (e) => {
         e.stopPropagation();
         showConfirm(
-          'Excluir responsável',
-          `Deseja excluir <strong>${r.nome}</strong>? Esta ação não pode ser desfeita.`,
-          () => deleteRespAction(r.id, r.nome)
+          'Excluir objeto',
+          `Deseja excluir <strong>${o.nome}</strong>? Esta ação não pode ser desfeita.`,
+          () => deleteObjAction(o.id, o.nome)
         );
       });
 
@@ -244,15 +233,15 @@
     });
   }
 
-  async function deleteRespAction(id, nome) {
+  async function deleteObjAction(id, nome) {
     try {
-      const res  = await fetch(`/responsaveis/${id}`, { method: 'DELETE' });
+      const res  = await fetch(`/objetos/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok) {
-        showMsg('success', `Responsável "${nome}" excluído com sucesso.`);
+        showMsg('success', `Objeto "${nome}" excluído com sucesso.`);
         await loadList(v('searchInput').value.trim());
       } else {
-        showMsg('error', data.message || 'Erro ao excluir responsável.');
+        showMsg('error', data.message || 'Erro ao excluir objeto.');
       }
     } catch {
       showMsg('error', 'Erro de conexão com o servidor.');
@@ -262,10 +251,10 @@
   // ─── Load / search ─────────────────────────────────────────────────────────
   async function loadList(q) {
     try {
-      const url = q ? `/responsaveis/search?q=${encodeURIComponent(q)}` : '/responsaveis';
+      const url = q ? `/objetos/search?q=${encodeURIComponent(q)}` : '/objetos';
       const res = await fetch(url);
-      allResp = await res.json();
-      renderList(allResp);
+      allObj = await res.json();
+      renderList(allObj);
     } catch {
       v('listLoading').textContent = 'Erro ao carregar.';
     }
@@ -279,9 +268,9 @@
 
   // ─── Form reset ────────────────────────────────────────────────────────────
   function setCreateMode() {
-    v('respForm').reset();
-    v('formTitle').textContent  = 'Novo Responsável';
-    v('btnSubmit').textContent  = 'Criar responsável';
+    v('objForm').reset();
+    v('formTitle').textContent  = 'Novo Objeto';
+    v('btnSubmit').textContent  = 'Criar objeto';
     v('btnCancel').style.display = 'none';
     hideMsg();
   }
@@ -290,15 +279,7 @@
   v('btnCancel').addEventListener('click', setCreateMode);
 
   // ─── Form submit ───────────────────────────────────────────────────────────
-  function collect() {
-    return {
-      nome:     val('f_nome')     || null,
-      cargo:    val('f_cargo')    || null,
-      telefone: val('f_telefone') || null,
-    };
-  }
-
-  v('respForm').addEventListener('submit', async e => {
+  v('objForm').addEventListener('submit', async e => {
     e.preventDefault();
     hideMsg();
 
@@ -315,15 +296,18 @@
     btn.textContent = 'Salvando...';
 
     try {
-      const res  = await fetch('/responsaveis', {
+      const res  = await fetch('/objetos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(collect()),
+        body: JSON.stringify({
+          nome:     val('f_nome')     || null,
+          descricao: v('f_descricao').value.trim() || null,
+        }),
       });
       const data = await res.json();
 
       if (res.ok) {
-        showMsg('success', 'Responsável criado com sucesso.');
+        showMsg('success', 'Objeto criado com sucesso.');
         setCreateMode();
         await loadList(v('searchInput').value.trim());
       } else {
@@ -333,7 +317,7 @@
       showMsg('error', 'Erro de conexão com o servidor.');
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Criar responsável';
+      btn.textContent = 'Criar objeto';
     }
   });
 

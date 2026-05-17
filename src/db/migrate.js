@@ -191,4 +191,15 @@ db.exec(`
   );
 `);
 
+// ── Tabela objetos ────────────────────────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS objetos (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome       TEXT NOT NULL,
+    descricao  TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 console.log("[migrate] Banco de dados atualizado com sucesso.");

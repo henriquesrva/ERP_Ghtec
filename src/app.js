@@ -36,6 +36,14 @@ const {
   deleteResponsavelHandler,
 } = require("./modules/responsavel/responsavel.controller");
 
+const {
+  listObjetosHandler,
+  getObjetoByIdHandler,
+  searchObjetosHandler,
+  createObjetoHandler,
+  deleteObjetoHandler,
+} = require("./modules/objeto/objeto.controller");
+
 const app = express();
 
 app.use(express.json());
@@ -70,6 +78,13 @@ app.get("/responsaveis/search",  searchResponsaveisHandler);
 app.get("/responsaveis/:id",     getResponsavelByIdHandler);
 app.post("/responsaveis",        createResponsavelHandler);
 app.delete("/responsaveis/:id",  deleteResponsavelHandler);
+
+// Objetos — /search deve vir antes de /:id
+app.get("/objetos",         listObjetosHandler);
+app.get("/objetos/search",  searchObjetosHandler);
+app.get("/objetos/:id",     getObjetoByIdHandler);
+app.post("/objetos",        createObjetoHandler);
+app.delete("/objetos/:id",  deleteObjetoHandler);
 
 // Propostas
 app.get("/proposals",          listProposals);
