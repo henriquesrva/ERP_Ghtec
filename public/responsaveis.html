@@ -338,6 +338,10 @@
 
   // ─── Init ──────────────────────────────────────────────────────────────────
   loadList();
+  if (new URLSearchParams(location.search).get('new') === '1') {
+    setCreateMode();
+    v('f_nome').focus();
+  }
 </script>
 </body>
 </html>

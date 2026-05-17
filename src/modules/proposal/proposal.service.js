@@ -296,23 +296,43 @@ function findOrCreateClient(clientData) {
 
 async function createProposalFlow(data) {
   const outputDir = ensureOutputDir();
-  const templateData = buildTemplateData(data);
 
-  const { clientId, isNew: clienteIsNew, possibleDuplicates } = findOrCreateClient({
-    nome:                data.cliente.nome,
-    razao_social:        data.cliente.razao_social        ?? null,
-    nome_fantasia:       data.cliente.nome_fantasia       ?? null,
-    cnpj:                data.cliente.cnpj                ?? null,
-    inscricao_estadual:  data.cliente.inscricao_estadual  ?? null,
-    endereco:            data.cliente.endereco            ?? null,
-    cidade:              data.cliente.cidade              ?? null,
-    estado:              data.cliente.estado              ?? null,
-    cep:                 data.cliente.cep                 ?? null,
-    email:               data.cliente.email               ?? null,
-    telefone:            data.cliente.telefone            ?? null,
-    contato_responsavel: data.cliente.contato_responsavel ?? null,
-    observacoes:         data.cliente.observacoes         ?? null,
-  });
+  // ── Resolve client ────────────────────────────────────────────────────────
+  let resolvedClient, clientId, clienteIsNew, possibleDuplicates;
+
+  if (data.cliente_id) {
+    resolvedClient = findClientById(Number(data.cliente_id));
+    if (!resolvedClient) {
+      throw new Error("Cliente selecionado não encontrado no cadastro. Por favor, selecione novamente.");
+    }
+    clientId = resolvedClient.id;
+    clienteIsNew = false;
+    possibleDuplicates = [];
+  } else if (data.cliente && data.cliente.nome) {
+    const result = findOrCreateClient({
+      nome:                data.cliente.nome,
+      razao_social:        data.cliente.razao_social        ?? null,
+      nome_fantasia:       data.cliente.nome_fantasia       ?? null,
+      cnpj:                data.cliente.cnpj                ?? null,
+      inscricao_estadual:  data.cliente.inscricao_estadual  ?? null,
+      endereco:            data.cliente.endereco            ?? null,
+      cidade:              data.cliente.cidade              ?? null,
+      estado:              data.cliente.estado              ?? null,
+      cep:                 data.cliente.cep                 ?? null,
+      email:               data.cliente.email               ?? null,
+      telefone:            data.cliente.telefone            ?? null,
+      contato_responsavel: data.cliente.contato_responsavel ?? null,
+      observacoes:         data.cliente.observacoes         ?? null,
+    });
+    clientId = result.clientId;
+    clienteIsNew = result.isNew;
+    possibleDuplicates = result.possibleDuplicates;
+    resolvedClient = findClientById(clientId);
+  } else {
+    throw new Error("Cliente é obrigatório.");
+  }
+
+  const templateData = buildTemplateData({ ...data, cliente: resolvedClient });
 
   const total = calculateTotal(data.items);
 

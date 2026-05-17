@@ -436,41 +436,24 @@
 
     <!-- Cliente -->
     <div class="card">
-      <div class="card-title">Dados do Cliente</div>
-      <div class="grid-2" style="margin-bottom:14px">
-        <div class="field" id="field-cliente-nome">
-          <label>Nome / Empresa *</label>
-          <input type="text" id="cliente_nome" name="cliente_nome" placeholder="Digite para buscar ou cadastrar..." required autocomplete="off" />
-          <!-- dropdown injected here -->
-        </div>
-        <div class="field">
-          <label>Razão Social</label>
-          <input type="text" name="cliente_razao_social" placeholder="Hospital São Lucas Ltda." />
+      <div class="card-title">Hospital / Cliente</div>
+      <div class="field" id="field-cliente-nome" style="margin-bottom:10px">
+        <label>Selecionar Hospital/Cliente *</label>
+        <input type="text" id="cliente_nome" placeholder="Digite para buscar..." autocomplete="off" />
+        <!-- dropdown injetado aqui -->
+      </div>
+      <div id="cliente-selecionado" style="display:none; background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; font-size:13px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <div style="min-width:0;">
+            <div id="cs-nome" style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+            <div id="cs-sub" style="font-size:11px; color:var(--muted); margin-top:2px;"></div>
+          </div>
+          <button type="button" id="btnTrocarCliente" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted); white-space:nowrap;">Trocar</button>
         </div>
       </div>
-      <div class="grid-3" style="margin-bottom:14px">
-        <div class="field">
-          <label>CNPJ</label>
-          <input type="text" name="cliente_cnpj" placeholder="00.000.000/0001-00" />
-        </div>
-        <div class="field">
-          <label>Cidade *</label>
-          <input type="text" name="cliente_cidade" placeholder="São Paulo" required />
-        </div>
-        <div class="field">
-          <label>Estado *</label>
-          <input type="text" name="cliente_estado" placeholder="SP" maxlength="2" required />
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="field">
-          <label>Endereço</label>
-          <input type="text" name="cliente_endereco" placeholder="Rua das Flores, 123" />
-        </div>
-        <div class="field">
-          <label>CEP</label>
-          <input type="text" name="cliente_cep" placeholder="01234-567" />
-        </div>
+      <div style="font-size:12px;">
+        <a href="/clients.html?new=1" target="_blank" style="color:var(--green); font-weight:700; text-decoration:none;">+ Criar novo cliente</a>
+        <span style="color:var(--muted); margin-left:6px;">(abre em nova aba)</span>
       </div>
     </div>
 
@@ -500,7 +483,10 @@
         <tbody id="itemsBody"></tbody>
       </table>
       <div class="items-footer">
-        <button type="button" class="btn-add-item" id="btnAddItem">+ Adicionar item</button>
+        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start;">
+          <button type="button" class="btn-add-item" id="btnAddItem">+ Adicionar item</button>
+          <a href="/parts.html?new=1" target="_blank" style="font-size:12px; color:var(--green); font-weight:700; text-decoration:none; padding-left:2px;">+ Criar nova peça no catálogo</a>
+        </div>
         <div class="total-display"><span>TOTAL</span><span id="totalDisplay">R$ 0,00</span></div>
       </div>
     </div>
@@ -537,22 +523,23 @@
     <!-- Responsável -->
     <div class="card">
       <div class="card-title">Responsável pela Proposta</div>
-      <div class="grid-2" style="margin-bottom:14px">
-        <div class="field" id="field-responsavel-nome">
-          <label>Nome *</label>
-          <input type="text" id="responsavel_nome" name="responsavel_nome" placeholder="Digite para buscar ou preencher..." required autocomplete="off" />
-          <!-- dropdown injetado aqui -->
-        </div>
-        <div class="field">
-          <label>Cargo *</label>
-          <input type="text" name="responsavel_cargo" placeholder="Engenheiro Comercial" required />
+      <div class="field" id="field-responsavel-nome" style="margin-bottom:10px">
+        <label>Selecionar Responsável *</label>
+        <input type="text" id="responsavel_nome" placeholder="Digite para buscar..." autocomplete="off" />
+        <!-- dropdown injetado aqui -->
+      </div>
+      <div id="resp-selecionado" style="display:none; background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; margin-bottom:10px; font-size:13px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <div style="min-width:0;">
+            <div id="rs-nome" style="font-weight:700;"></div>
+            <div id="rs-sub" style="font-size:11px; color:var(--muted); margin-top:2px;"></div>
+          </div>
+          <button type="button" id="btnTrocarResp" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted); white-space:nowrap;">Trocar</button>
         </div>
       </div>
-      <div class="grid-2">
-        <div class="field">
-          <label>Telefone *</label>
-          <input type="text" name="responsavel_telefone" placeholder="(11) 99999-9999" required />
-        </div>
+      <div style="font-size:12px; margin-top:4px;">
+        <a href="/responsaveis.html?new=1" target="_blank" style="color:var(--green); font-weight:700; text-decoration:none;">+ Criar novo responsável</a>
+        <span style="color:var(--muted); margin-left:6px;">(abre em nova aba)</span>
       </div>
     </div>
 
@@ -599,180 +586,165 @@
   // ─── State ────────────────────────────────────────────────────────────────
 
   let itemCount = 0;
-  let currentClientName = '';  // tracked for price lookups (fallback)
-  let currentClientId   = null; // id do cliente selecionado do autocomplete
+  let currentClientId   = null;
+  let currentClientData = null;
+  let currentRespId     = null;
+  let currentRespData   = null;
 
-  // ─── Client autocomplete ──────────────────────────────────────────────────
-
-  const clientNomeInput = document.getElementById('cliente_nome');
-  const clientField = document.getElementById('field-cliente-nome');
-
-  let clientDropdown = null;
-  let clientAcIndex = -1;
-
-  function closeClientDropdown() {
-    if (clientDropdown) { clientDropdown.remove(); clientDropdown = null; }
-    clientAcIndex = -1;
-  }
-
-  function openClientDropdown(clients) {
-    closeClientDropdown();
-    if (!clients.length) return;
-
-    clientDropdown = document.createElement('div');
-    clientDropdown.className = 'ac-dropdown';
-
-    clients.forEach((c, i) => {
-      const item = document.createElement('div');
-      item.className = 'ac-item';
-      item.dataset.idx = i;
-      const sub = [c.cnpj, c.cidade && c.estado ? `${c.cidade} - ${c.estado}` : c.cidade || c.estado].filter(Boolean).join(' · ');
-      item.innerHTML = `<div class="ac-main">${c.nome}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}`;
-      item.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        fillClientFields(c);
-        closeClientDropdown();
-      });
-      clientDropdown.appendChild(item);
-    });
-
-    clientField.appendChild(clientDropdown);
-  }
-
-  function fillClientFields(c) {
-    clientNomeInput.value = c.nome;
-    currentClientName = c.nome;
-    currentClientId   = c.id;
-    setField('cliente_razao_social', c.razao_social || '');
-    setField('cliente_cnpj', c.cnpj || '');
-    setField('cliente_cidade', c.cidade || '');
-    setField('cliente_estado', c.estado || '');
-    setField('cliente_endereco', c.endereco || '');
-    setField('cliente_cep', c.cep || '');
-  }
+  // ─── Helpers ──────────────────────────────────────────────────────────────
 
   function setField(name, value) {
     const el = document.querySelector(`[name="${name}"]`);
     if (el) el.value = value;
   }
 
+  // ─── Client autocomplete + painel ────────────────────────────────────────
+
+  const clientNomeInput = document.getElementById('cliente_nome');
+  const clientField     = document.getElementById('field-cliente-nome');
+  const clientPanel     = document.getElementById('cliente-selecionado');
+
+  let clientDropdown = null;
+  let clientAcIndex  = -1;
+
+  function closeClientDropdown() {
+    if (clientDropdown) { clientDropdown.remove(); clientDropdown = null; }
+    clientAcIndex = -1;
+  }
+
+  function selectClient(c) {
+    currentClientId   = c.id;
+    currentClientData = c;
+    clientNomeInput.style.display = 'none';
+    document.getElementById('cs-nome').textContent = c.nome;
+    const sub = [c.cnpj, c.cidade && c.estado ? `${c.cidade} — ${c.estado}` : c.cidade || c.estado].filter(Boolean).join(' · ');
+    document.getElementById('cs-sub').textContent = sub;
+    clientPanel.style.display = 'block';
+  }
+
+  function clearClientSelection() {
+    currentClientId   = null;
+    currentClientData = null;
+    clientNomeInput.value = '';
+    clientNomeInput.style.display = '';
+    clientPanel.style.display = 'none';
+    clientNomeInput.focus();
+  }
+
+  document.getElementById('btnTrocarCliente').addEventListener('click', clearClientSelection);
+
+  function openClientDropdown(clients) {
+    closeClientDropdown();
+    if (!clients.length) return;
+    clientDropdown = document.createElement('div');
+    clientDropdown.className = 'ac-dropdown';
+    clients.forEach((c) => {
+      const item = document.createElement('div');
+      item.className = 'ac-item';
+      const sub = [c.cnpj, c.cidade && c.estado ? `${c.cidade} - ${c.estado}` : c.cidade || c.estado].filter(Boolean).join(' · ');
+      item.innerHTML = `<div class="ac-main">${c.nome}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}`;
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        selectClient(c);
+        closeClientDropdown();
+      });
+      clientDropdown.appendChild(item);
+    });
+    clientField.appendChild(clientDropdown);
+  }
+
   const fetchClients = debounce(async (q) => {
     if (q.length < 2) { closeClientDropdown(); return; }
     try {
       const res = await fetch(`/clients/search?q=${encodeURIComponent(q)}`);
-      const clients = await res.json();
-      openClientDropdown(clients);
+      openClientDropdown(await res.json());
     } catch {}
   }, 280);
 
-  clientNomeInput.addEventListener('input', (e) => {
-    currentClientName = '';
-    currentClientId   = null;
-    fetchClients(e.target.value.trim());
-  });
-
-  clientNomeInput.addEventListener('blur', () => {
-    setTimeout(closeClientDropdown, 150);
-    if (!currentClientName) currentClientName = clientNomeInput.value.trim();
-  });
-
+  clientNomeInput.addEventListener('input', (e) => { fetchClients(e.target.value.trim()); });
+  clientNomeInput.addEventListener('blur',  () => { setTimeout(closeClientDropdown, 150); });
   clientNomeInput.addEventListener('keydown', (e) => {
     if (!clientDropdown) return;
     const items = clientDropdown.querySelectorAll('.ac-item');
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      clientAcIndex = Math.min(clientAcIndex + 1, items.length - 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      clientAcIndex = Math.max(clientAcIndex - 1, 0);
-    } else if (e.key === 'Enter' && clientAcIndex >= 0) {
-      e.preventDefault();
-      items[clientAcIndex].dispatchEvent(new Event('mousedown'));
-      return;
-    } else if (e.key === 'Escape') {
-      closeClientDropdown();
-      return;
-    }
+    if (e.key === 'ArrowDown')  { e.preventDefault(); clientAcIndex = Math.min(clientAcIndex + 1, items.length - 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); clientAcIndex = Math.max(clientAcIndex - 1, 0); }
+    else if (e.key === 'Enter' && clientAcIndex >= 0) { e.preventDefault(); items[clientAcIndex].dispatchEvent(new Event('mousedown')); return; }
+    else if (e.key === 'Escape') { closeClientDropdown(); return; }
     items.forEach((it, i) => it.classList.toggle('active', i === clientAcIndex));
   });
 
-  // ─── Responsável autocomplete ─────────────────────────────────────────────
+  // ─── Responsável autocomplete + painel ───────────────────────────────────
 
   const respNomeInput = document.getElementById('responsavel_nome');
-  const respField = document.getElementById('field-responsavel-nome');
+  const respField     = document.getElementById('field-responsavel-nome');
+  const respPanel     = document.getElementById('resp-selecionado');
 
   let respDropdown = null;
-  let respAcIndex = -1;
+  let respAcIndex  = -1;
 
   function closeRespDropdown() {
     if (respDropdown) { respDropdown.remove(); respDropdown = null; }
     respAcIndex = -1;
   }
 
+  function selectResp(r) {
+    currentRespId   = r.id;
+    currentRespData = r;
+    respNomeInput.style.display = 'none';
+    document.getElementById('rs-nome').textContent = r.nome;
+    const sub = [r.cargo, r.telefone].filter(Boolean).join(' · ');
+    document.getElementById('rs-sub').textContent = sub;
+    respPanel.style.display = 'block';
+  }
+
+  function clearRespSelection() {
+    currentRespId   = null;
+    currentRespData = null;
+    respNomeInput.value = '';
+    respNomeInput.style.display = '';
+    respPanel.style.display = 'none';
+    respNomeInput.focus();
+  }
+
+  document.getElementById('btnTrocarResp').addEventListener('click', clearRespSelection);
+
   function openRespDropdown(list) {
     closeRespDropdown();
     if (!list.length) return;
-
     respDropdown = document.createElement('div');
     respDropdown.className = 'ac-dropdown';
-
-    list.forEach((r, i) => {
+    list.forEach((r) => {
       const item = document.createElement('div');
       item.className = 'ac-item';
-      item.dataset.idx = i;
       const sub = [r.cargo, r.telefone].filter(Boolean).join(' · ');
       item.innerHTML = `<div class="ac-main">${r.nome}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}`;
       item.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        fillRespFields(r);
+        selectResp(r);
         closeRespDropdown();
       });
       respDropdown.appendChild(item);
     });
-
     respField.appendChild(respDropdown);
-  }
-
-  function fillRespFields(r) {
-    respNomeInput.value = r.nome;
-    setField('responsavel_cargo',    r.cargo    || '');
-    setField('responsavel_telefone', r.telefone || '');
   }
 
   const fetchResponsaveis = debounce(async (q) => {
     if (q.length < 2) { closeRespDropdown(); return; }
     try {
       const res = await fetch(`/responsaveis/search?q=${encodeURIComponent(q)}`);
-      const list = await res.json();
-      openRespDropdown(list);
+      openRespDropdown(await res.json());
     } catch {}
   }, 280);
 
-  respNomeInput.addEventListener('input', (e) => {
-    fetchResponsaveis(e.target.value.trim());
-  });
-
-  respNomeInput.addEventListener('blur', () => {
-    setTimeout(closeRespDropdown, 150);
-  });
-
+  respNomeInput.addEventListener('input',  (e) => { fetchResponsaveis(e.target.value.trim()); });
+  respNomeInput.addEventListener('blur',   () => { setTimeout(closeRespDropdown, 150); });
   respNomeInput.addEventListener('keydown', (e) => {
     if (!respDropdown) return;
     const items = respDropdown.querySelectorAll('.ac-item');
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      respAcIndex = Math.min(respAcIndex + 1, items.length - 1);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      respAcIndex = Math.max(respAcIndex - 1, 0);
-    } else if (e.key === 'Enter' && respAcIndex >= 0) {
-      e.preventDefault();
-      items[respAcIndex].dispatchEvent(new Event('mousedown'));
-      return;
-    } else if (e.key === 'Escape') {
-      closeRespDropdown();
-      return;
-    }
+    if (e.key === 'ArrowDown')  { e.preventDefault(); respAcIndex = Math.min(respAcIndex + 1, items.length - 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); respAcIndex = Math.max(respAcIndex - 1, 0); }
+    else if (e.key === 'Enter' && respAcIndex >= 0) { e.preventDefault(); items[respAcIndex].dispatchEvent(new Event('mousedown')); return; }
+    else if (e.key === 'Escape') { closeRespDropdown(); return; }
     items.forEach((it, i) => it.classList.toggle('active', i === respAcIndex));
   });
 
@@ -801,7 +773,8 @@
       </td>
       <td class="col-desc" style="overflow:visible">
         <div style="position:relative">
-          <input type="text" placeholder="Descrição do item..." data-field="descricao" data-row="${idx}" autocomplete="off" />
+          <input type="text" placeholder="Buscar peça cadastrada..." data-field="descricao" data-row="${idx}" autocomplete="off" />
+          <input type="hidden" data-field="part_id" data-row="${idx}" />
           <!-- ac dropdown for desc -->
         </div>
       </td>
@@ -810,7 +783,7 @@
         <div class="price-hint" data-row="${idx}"></div>
       </td>
       <td class="col-ncm">
-        <input type="text" placeholder="0000.00.00" data-field="ncm" data-row="${idx}" />
+        <input type="text" placeholder="—" data-field="ncm" data-row="${idx}" readonly style="background:#f5f5f5; color:var(--muted); cursor:default;" />
       </td>
       <td class="col-del">
         <button type="button" class="btn-del-row" data-row="${idx}" title="Remover">×</button>
@@ -821,11 +794,13 @@
   }
 
   function wireItemRow(tr, idx) {
-    const qtyInput   = tr.querySelector('[data-field="quantidade"]');
-    const descInput  = tr.querySelector('[data-field="descricao"]');
-    const priceInput = tr.querySelector('[data-field="valor_unitario"]');
-    const priceHint  = tr.querySelector('.price-hint');
-    const delBtn     = tr.querySelector('.btn-del-row');
+    const qtyInput    = tr.querySelector('[data-field="quantidade"]');
+    const descInput   = tr.querySelector('[data-field="descricao"]');
+    const partIdInput = tr.querySelector('[data-field="part_id"]');
+    const priceInput  = tr.querySelector('[data-field="valor_unitario"]');
+    const ncmInput    = tr.querySelector('[data-field="ncm"]');
+    const priceHint   = tr.querySelector('.price-hint');
+    const delBtn      = tr.querySelector('.btn-del-row');
     const descWrapper = tr.querySelector('.col-desc > div');
 
     qtyInput.addEventListener('input', updateTotal);
@@ -837,74 +812,64 @@
       updateTotal();
     });
 
-    // ── Description autocomplete ──
+    // ── Part search autocomplete ──
     let descDropdown = null;
-    let descAcIndex = -1;
+    let descAcIndex  = -1;
 
     function closeDescDropdown() {
       if (descDropdown) { descDropdown.remove(); descDropdown = null; }
       descAcIndex = -1;
     }
 
-    function openDescDropdown(suggestions) {
+    function selectPart(part) {
+      descInput.value   = part.nome;
+      partIdInput.value = part.id;
+      ncmInput.value    = part.ncm || '';
       closeDescDropdown();
-      if (!suggestions.length) return;
+      fetchPriceHint(part.nome, priceInput, priceHint);
+    }
+
+    function openDescDropdown(parts) {
+      closeDescDropdown();
+      if (!parts.length) return;
       descDropdown = document.createElement('div');
       descDropdown.className = 'ac-dropdown';
-
-      suggestions.forEach((s, i) => {
+      parts.forEach((p) => {
         const item = document.createElement('div');
         item.className = 'ac-item';
-        item.innerHTML = `<div class="ac-main">${s}</div>`;
-        item.addEventListener('mousedown', async (e) => {
-          e.preventDefault();
-          descInput.value = s;
-          closeDescDropdown();
-          await fetchPriceHint(s, priceInput, priceHint);
-        });
+        const sub = [p.marca, p.modelo, p.categoria].filter(Boolean).join(' · ');
+        item.innerHTML = `<div class="ac-main">${p.nome}</div>${sub ? `<div class="ac-sub">${sub}</div>` : ''}`;
+        item.addEventListener('mousedown', (e) => { e.preventDefault(); selectPart(p); });
         descDropdown.appendChild(item);
       });
-
       descWrapper.appendChild(descDropdown);
     }
 
-    const fetchDescSuggestions = debounce(async (q) => {
+    const fetchPartSuggestions = debounce(async (q) => {
       if (q.length < 2) { closeDescDropdown(); return; }
       try {
-        const res = await fetch(`/items/search?q=${encodeURIComponent(q)}`);
-        const items = await res.json();
-        openDescDropdown(items);
+        const res = await fetch(`/parts/search?q=${encodeURIComponent(q)}`);
+        openDescDropdown(await res.json());
       } catch {}
     }, 300);
 
     descInput.addEventListener('input', (e) => {
-      fetchDescSuggestions(e.target.value.trim());
+      // Limpa seleção anterior ao editar
+      partIdInput.value = '';
+      ncmInput.value    = '';
       priceHint.style.display = 'none';
+      fetchPartSuggestions(e.target.value.trim());
     });
 
-    descInput.addEventListener('blur', async () => {
-      setTimeout(closeDescDropdown, 150);
-      const desc = descInput.value.trim();
-      if (desc) await fetchPriceHint(desc, priceInput, priceHint);
-    });
+    descInput.addEventListener('blur', () => { setTimeout(closeDescDropdown, 150); });
 
     descInput.addEventListener('keydown', (e) => {
       if (!descDropdown) return;
       const items = descDropdown.querySelectorAll('.ac-item');
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        descAcIndex = Math.min(descAcIndex + 1, items.length - 1);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        descAcIndex = Math.max(descAcIndex - 1, 0);
-      } else if (e.key === 'Enter' && descAcIndex >= 0) {
-        e.preventDefault();
-        items[descAcIndex].dispatchEvent(new Event('mousedown'));
-        return;
-      } else if (e.key === 'Escape') {
-        closeDescDropdown();
-        return;
-      }
+      if (e.key === 'ArrowDown')  { e.preventDefault(); descAcIndex = Math.min(descAcIndex + 1, items.length - 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); descAcIndex = Math.max(descAcIndex - 1, 0); }
+      else if (e.key === 'Enter' && descAcIndex >= 0) { e.preventDefault(); items[descAcIndex].dispatchEvent(new Event('mousedown')); return; }
+      else if (e.key === 'Escape') { closeDescDropdown(); return; }
       items.forEach((it, i) => it.classList.toggle('active', i === descAcIndex));
     });
   }
@@ -912,18 +877,9 @@
   // ── Price hint ────────────────────────────────────────────────────────────
 
   async function fetchPriceHint(descricao, priceInput, priceHint) {
-    if (!descricao) { priceHint.style.display = 'none'; return; }
+    if (!descricao || !currentClientId) { priceHint.style.display = 'none'; return; }
 
-    // Monta parâmetros: prefere clientId (mais preciso), cai para nome como fallback
-    const clienteNome = currentClientName || clientNomeInput.value.trim();
-    if (!currentClientId && !clienteNome) { priceHint.style.display = 'none'; return; }
-
-    const params = new URLSearchParams({ descricao });
-    if (currentClientId) {
-      params.set('clientId', currentClientId);
-    } else {
-      params.set('clienteNome', clienteNome);
-    }
+    const params = new URLSearchParams({ descricao, clientId: currentClientId });
 
     try {
       const res  = await fetch(`/items/last-price?${params}`);
@@ -966,10 +922,11 @@
 
   function collectItems() {
     return Array.from(document.querySelectorAll('#itemsBody tr')).map(tr => ({
-      quantidade: parseFloat(tr.querySelector('[data-field="quantidade"]').value) || 1,
-      descricao:  tr.querySelector('[data-field="descricao"]').value.trim(),
+      quantidade:     parseFloat(tr.querySelector('[data-field="quantidade"]').value) || 1,
+      descricao:      tr.querySelector('[data-field="descricao"]').value.trim(),
+      part_id:        tr.querySelector('[data-field="part_id"]').value || null,
       valor_unitario: parseNumber(tr.querySelector('[data-field="valor_unitario"]').value),
-      ncm: tr.querySelector('[data-field="ncm"]').value.trim() || null
+      ncm:            tr.querySelector('[data-field="ncm"]').value.trim() || null
     }));
   }
 
@@ -979,16 +936,8 @@
       cidade_emissao:  getFieldValue('cidade_emissao'),
       data_emissao:    getFieldValue('data_emissao'),
       objeto_proposta: getFieldValue('objeto_proposta'),
-      cliente: {
-        nome:         getFieldValue('cliente_nome'),
-        razao_social: getFieldValue('cliente_razao_social') || null,
-        cnpj:         getFieldValue('cliente_cnpj') || null,
-        endereco:     getFieldValue('cliente_endereco') || null,
-        cidade:       getFieldValue('cliente_cidade'),
-        estado:       getFieldValue('cliente_estado'),
-        cep:          getFieldValue('cliente_cep') || null
-      },
-      items: collectItems(),
+      cliente_id:      currentClientId,
+      items:           collectItems(),
       condicoes: {
         forma_pagamento: getFieldValue('forma_pagamento'),
         prazo_pagamento: getFieldValue('prazo_pagamento'),
@@ -997,9 +946,9 @@
         validade:        getFieldValue('validade')
       },
       responsavel: {
-        nome:     getFieldValue('responsavel_nome'),
-        cargo:    getFieldValue('responsavel_cargo'),
-        telefone: getFieldValue('responsavel_telefone')
+        nome:     currentRespData?.nome     || '',
+        cargo:    currentRespData?.cargo    || '',
+        telefone: currentRespData?.telefone || ''
       }
     };
   }
@@ -1007,10 +956,24 @@
   document.getElementById('proposalForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    if (!currentClientId) {
+      showResult('error', 'Selecione um Hospital/Cliente cadastrado antes de gerar a proposta.');
+      document.getElementById('cliente_nome').focus();
+      return;
+    }
+
+    if (!currentRespId) {
+      showResult('error', 'Selecione um Responsável cadastrado antes de gerar a proposta.');
+      document.getElementById('responsavel_nome').focus();
+      return;
+    }
+
     const items = collectItems();
     if (!items.length) { showResult('error', 'Adicione pelo menos um item à proposta.'); return; }
     const bad = items.find(it => !it.descricao || it.valor_unitario <= 0);
     if (bad) { showResult('error', 'Preencha descrição e valor unitário em todos os itens.'); return; }
+    const semPeca = items.find(it => !it.part_id);
+    if (semPeca) { showResult('error', 'Selecione cada peça a partir do catálogo. Use o campo de busca para encontrar a peça ou clique em "Criar nova peça no catálogo".'); return; }
 
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true;
@@ -1072,137 +1035,7 @@
     el.innerHTML = '';
   }
 
-  async function showSuggestions(apiData) {
-    hideSuggestions();
-    const container = document.getElementById('suggestions');
-    const sections = [];
-
-    // Seção de cliente novo — exibe opção de completar cadastro
-    if (apiData.clienteIsNew) {
-      const clientSection = buildClientSection(
-        apiData.clienteId,
-        apiData.possibleDuplicateClients || []
-      );
-      sections.push(clientSection);
-    }
-
-    // Peças são cadastradas automaticamente pelo servidor — não há seção manual aqui.
-
-    if (!sections.length) return;
-
-    container.innerHTML = `<div class="card-title">Sugestões</div>`;
-    sections.forEach(s => container.appendChild(s));
-    container.style.display = 'block';
-    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  // ── Cliente ────────────────────────────────────────────────────────────────
-
-  function buildClientSection(clienteId, possibleDuplicates) {
-    const div = document.createElement('div');
-    div.className = 'sug-section';
-    div.innerHTML = `<div class="sug-label">Cliente</div>`;
-
-    if (possibleDuplicates.length > 0) {
-      const dupHtml = possibleDuplicates.map(c => {
-        const sub = [c.cnpj, c.cidade && c.estado ? `${c.cidade}/${c.estado}` : ''].filter(Boolean).join(' · ');
-        return `<li><strong>${c.nome}</strong>${sub ? ` — ${sub}` : ''}</li>`;
-      }).join('');
-
-      div.innerHTML += `
-        <div class="sug-info warn-dup">
-          Atenção: cliente salvo como novo registro. Encontramos clientes com nome similar:
-          <ul class="sug-dup-list">${dupHtml}</ul>
-          Verifique se é o mesmo cliente antes de continuar.
-        </div>`;
-    }
-
-    div.innerHTML += `
-      <div class="sug-info new-client">
-        Novo cliente criado automaticamente com os dados da proposta.
-        Complete o cadastro com e-mail, telefone e outras informações.
-        <div style="margin-top:8px">
-          <button class="btn-sug green" id="btnExpandClientForm">Completar cadastro</button>
-        </div>
-      </div>`;
-
-    // Mini-form para completar cadastro
-    const form = document.createElement('div');
-    form.className = 'sug-client-form';
-    form.id = 'sugClientForm';
-    form.innerHTML = `
-      <div class="grid-2">
-        <div class="field"><label>E-mail</label><input type="email" id="sug_email" placeholder="contato@empresa.com" /></div>
-        <div class="field"><label>Telefone</label><input type="text" id="sug_telefone" placeholder="(11) 99999-9999" /></div>
-      </div>
-      <div class="grid-2">
-        <div class="field"><label>Contato responsável</label><input type="text" id="sug_contato" placeholder="Nome do responsável" /></div>
-        <div class="field"><label>Nome fantasia</label><input type="text" id="sug_nome_fantasia" placeholder="Nome fantasia" /></div>
-      </div>
-      <div class="field" style="margin-bottom:10px">
-        <label>Observações</label>
-        <input type="text" id="sug_obs" placeholder="Observações sobre o cliente" />
-      </div>
-      <button class="btn-sug green" id="btnSaveClientExtra">Salvar</button>
-      <button class="btn-sug grey" id="btnCancelClientForm">Cancelar</button>
-      <span id="sugClientMsg" style="font-size:12px;margin-left:10px;"></span>`;
-    div.appendChild(form);
-
-    // Eventos (após inserção no DOM, via evento delegado no container)
-    setTimeout(() => {
-      const btnExpand = document.getElementById('btnExpandClientForm');
-      const btnSave   = document.getElementById('btnSaveClientExtra');
-      const btnCancel = document.getElementById('btnCancelClientForm');
-
-      if (btnExpand) btnExpand.addEventListener('click', () => {
-        form.style.display = form.style.display === 'none' ? 'block' : 'none';
-        btnExpand.textContent = form.style.display === 'block' ? 'Fechar' : 'Completar cadastro';
-      });
-
-      if (btnSave) btnSave.addEventListener('click', async () => {
-        const payload = {
-          nome:                getFieldValue('cliente_nome'),
-          razao_social:        getFieldValue('cliente_razao_social'),
-          cnpj:                getFieldValue('cliente_cnpj'),
-          cidade:              getFieldValue('cliente_cidade'),
-          estado:              getFieldValue('cliente_estado'),
-          endereco:            getFieldValue('cliente_endereco'),
-          cep:                 getFieldValue('cliente_cep'),
-          email:               document.getElementById('sug_email').value.trim() || null,
-          telefone:            document.getElementById('sug_telefone').value.trim() || null,
-          contato_responsavel: document.getElementById('sug_contato').value.trim() || null,
-          nome_fantasia:       document.getElementById('sug_nome_fantasia').value.trim() || null,
-          observacoes:         document.getElementById('sug_obs').value.trim() || null,
-        };
-
-        try {
-          const res  = await fetch(`/clients/${clienteId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          const msg = document.getElementById('sugClientMsg');
-          if (res.ok) {
-            msg.style.color = '#1b5e20';
-            msg.textContent = 'Cadastro atualizado com sucesso.';
-            btnSave.disabled = true;
-          } else {
-            msg.style.color = '#c62828';
-            msg.textContent = 'Erro ao salvar. Tente novamente.';
-          }
-        } catch {
-          document.getElementById('sugClientMsg').textContent = 'Erro de conexão.';
-        }
-      });
-
-      if (btnCancel) btnCancel.addEventListener('click', () => {
-        form.style.display = 'none';
-        document.getElementById('btnExpandClientForm').textContent = 'Completar cadastro';
-      });
-    }, 0);
-
-    return div;
-  }
+  function showSuggestions() { /* Clientes vêm sempre do cadastro — sem sugestões pós-criação. */ }
 
   // Start with one empty row
   addItem();

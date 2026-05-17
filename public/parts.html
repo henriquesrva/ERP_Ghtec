@@ -468,10 +468,15 @@
   });
 
   // ─── Init ────────────────────────────────────────────────────────────────────
-  const urlId = new URLSearchParams(location.search).get('id');
+  const _urlParams = new URLSearchParams(location.search);
+  const urlId = _urlParams.get('id');
   loadParts().then(() => {
     if (urlId) loadForEdit(Number(urlId));
   });
+  if (_urlParams.get('new') === '1') {
+    setCreateMode();
+    v('f_nome').focus();
+  }
 </script>
 </body>
 </html>
