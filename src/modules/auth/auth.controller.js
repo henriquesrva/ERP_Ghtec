@@ -40,6 +40,15 @@ async function createUserHandler(req, res) {
   }
 }
 
+async function changePasswordHandler(req, res) {
+  try {
+    await svc.changePassword(req.session.userId, req.body.currentPassword, req.body.newPassword);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });
+  }
+}
+
 function deleteUserHandler(req, res) {
   if (req.session.userRole !== "admin") {
     return res.status(403).json({ success: false, message: "Apenas administradores podem excluir usuários." });
@@ -52,4 +61,4 @@ function deleteUserHandler(req, res) {
   }
 }
 
-module.exports = { loginHandler, logoutHandler, getMeHandler, listUsersHandler, createUserHandler, deleteUserHandler };
+module.exports = { loginHandler, logoutHandler, getMeHandler, listUsersHandler, createUserHandler, changePasswordHandler, deleteUserHandler };

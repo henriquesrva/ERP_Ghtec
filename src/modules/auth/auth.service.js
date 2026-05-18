@@ -31,6 +31,21 @@ function getAllUsers() {
   return repo.listUsers();
 }
 
+async function changePassword(userId, currentPassword, newPassword) {
+  if (!currentPassword || !newPassword) throw { status: 400, message: "Preencha todos os campos." };
+  if (newPassword.length < 6) throw { status: 400, message: "A nova senha deve ter pelo menos 6 caracteres." };
+
+  const user = repo.findUserById(userId);
+  if (!user) throw { status: 404, message: "Usuário não encontrado." };
+
+  const full = repo.findUserByUsername(user.username);
+  const ok = await bcrypt.compare(currentPassword, full.password_hash);
+  if (!ok) throw { status: 401, message: "Senha atual incorreta." };
+
+  const newHash = await bcrypt.hash(newPassword, 10);
+  repo.updateUserPassword(userId, newHash);
+}
+
 function deleteUser(id, requestingUserId) {
   if (id === requestingUserId) throw { status: 400, message: "Você não pode excluir o próprio usuário." };
   const total = repo.countUsers();
@@ -38,4 +53,4 @@ function deleteUser(id, requestingUserId) {
   repo.deleteUserById(id);
 }
 
-module.exports = { loginUser, createNewUser, getAllUsers, deleteUser };
+module.exports = { loginUser, createNewUser, getAllUsers, changePassword, deleteUser };

@@ -109,6 +109,7 @@
     </div>
 
     <!-- ── Lista ── -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
     <div class="card">
       <div class="card-title">Usuários cadastrados</div>
       <table id="usersTable">
@@ -126,6 +127,30 @@
         </tbody>
       </table>
     </div>
+
+    <!-- ── Trocar senha ── -->
+    <div class="card">
+      <div class="card-title">Trocar minha senha</div>
+      <form id="pwdForm" novalidate>
+        <div class="field">
+          <label>Senha atual</label>
+          <input type="password" id="p_current" autocomplete="current-password" />
+        </div>
+        <div class="field">
+          <label>Nova senha</label>
+          <input type="password" id="p_new" autocomplete="new-password" placeholder="Mínimo 6 caracteres" />
+        </div>
+        <div class="field">
+          <label>Confirmar nova senha</label>
+          <input type="password" id="p_confirm" autocomplete="new-password" />
+        </div>
+        <div id="pwdMsg" style="display:none" class="msg"></div>
+        <div style="margin-top:16px;">
+          <button type="submit" class="btn btn-primary" id="btnPwd">Alterar senha</button>
+        </div>
+      </form>
+    </div>
+    </div><!-- fim coluna direita -->
 
   </div>
 </div>
@@ -267,6 +292,41 @@
     } catch { window.location.href = '/login.html'; }
     loadUsers();
   })();
+
+  document.getElementById('pwdForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msgEl = document.getElementById('pwdMsg');
+    msgEl.style.display = 'none';
+    const current = document.getElementById('p_current').value;
+    const novo    = document.getElementById('p_new').value;
+    const confirm = document.getElementById('p_confirm').value;
+    if (novo !== confirm) {
+      msgEl.className = 'msg error';
+      msgEl.textContent = 'A nova senha e a confirmação não coincidem.';
+      msgEl.style.display = 'block';
+      return;
+    }
+    const btn = document.getElementById('btnPwd');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    try {
+      const res = await fetch('/users/me/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: current, newPassword: novo }),
+      });
+      const data = await res.json();
+      msgEl.className = res.ok ? 'msg success' : 'msg error';
+      msgEl.textContent = res.ok ? 'Senha alterada com sucesso.' : (data.message || 'Erro ao alterar senha.');
+      msgEl.style.display = 'block';
+      if (res.ok) document.getElementById('pwdForm').reset();
+    } catch {
+      msgEl.className = 'msg error';
+      msgEl.textContent = 'Erro de conexão.';
+      msgEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Alterar senha';
+    }
+  });
 
   function logout() {
     fetch('/auth/logout', { method: 'POST' }).finally(() => { window.location.href = '/login.html'; });

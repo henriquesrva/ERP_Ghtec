@@ -29,6 +29,10 @@ function createUser(data) {
   return result.lastInsertRowid;
 }
 
+function updateUserPassword(id, newHash) {
+  db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(newHash, id);
+}
+
 function deleteUserById(id) {
   db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
 }
@@ -42,6 +46,7 @@ module.exports = {
   findUserById,
   listUsers,
   createUser,
+  updateUserPassword,
   deleteUserById,
   countUsers,
 };
