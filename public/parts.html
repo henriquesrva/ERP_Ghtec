@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GHTec — Peças</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     :root {
@@ -98,6 +99,49 @@
       text-transform: uppercase;
       margin: 0 0 10px;
     }
+    .ph-client-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .ph-client-row label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .ph-client-row select {
+      flex: 1;
+      min-width: 160px;
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+    }
+    .ph-client-row select:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .btn-compare {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--green-light);
+      background: var(--green-bg);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn-compare:hover { background: #dcedc8; }
     .ph-table {
       width: 100%;
       border-collapse: collapse;
@@ -126,6 +170,67 @@
       font-size: 12px;
       color: var(--muted);
       padding: 10px 0;
+    }
+    .ph-hint {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 10px 0;
+      font-style: italic;
+    }
+
+    /* ── Modal comparação ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 8px;
+      padding: 24px 28px;
+      max-width: 680px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .modal-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--muted);
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .modal-close:hover { color: var(--danger); }
+    .modal-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .chart-wrap { position: relative; width: 100%; }
+    .compare-empty {
+      font-size: 13px;
+      color: var(--muted);
+      padding: 20px 0;
+      text-align: center;
     }
   </style>
 </head>
@@ -234,16 +339,40 @@
       <!-- Histórico de preços por cliente — somente leitura -->
       <div id="priceHistoryCard">
         <div class="ph-title">Histórico de preços por cliente</div>
-        <div id="priceHistoryContent"></div>
+        <div class="ph-client-row">
+          <label for="clientSelect">Cliente:</label>
+          <select id="clientSelect">
+            <option value="">— Selecione um cliente —</option>
+          </select>
+          <button class="btn-compare" id="btnCompare" type="button">&#9654; Comparar preços</button>
+        </div>
+        <div id="priceHistoryContent">
+          <div class="ph-hint">Selecione um cliente para visualizar o histórico de preços desta peça.</div>
+        </div>
       </div>
     </div>
 
   </div>
 </div>
 
+<!-- Modal de comparação de preços -->
+<div class="modal-overlay" id="compareModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Comparação de preços por cliente</span>
+      <button class="modal-close" id="closeModal" type="button">&times;</button>
+    </div>
+    <div class="modal-subtitle" id="compareModalSubtitle"></div>
+    <div id="compareModalBody">
+      <div class="compare-empty">Carregando...</div>
+    </div>
+  </div>
+</div>
+
 <script>
   // ─── State ──────────────────────────────────────────────────────────────────
-  let editingId = null;
+  let editingId  = null;
+  let compareChart = null;
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
   function v(id)      { return document.getElementById(id); }
@@ -257,6 +386,10 @@
     el.style.display = 'block';
   }
   function hideMsg() { v('formMsg').style.display = 'none'; }
+
+  function formatBRL(value) {
+    return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
 
   // ─── List rendering ──────────────────────────────────────────────────────────
   function renderList(parts) {
@@ -297,26 +430,32 @@
     searchT = setTimeout(() => loadParts(e.target.value.trim()), 280);
   });
 
-  // ─── Histórico de preços ─────────────────────────────────────────────────────
-
-  function formatBRL(value) {
-    return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  // ─── Clientes — carrega o select uma vez ──────────────────────────────────────
+  async function loadClientSelect() {
+    try {
+      const res     = await fetch('/clients');
+      const clients = await res.json();
+      const sel     = v('clientSelect');
+      clients.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value       = c.id;
+        opt.textContent = c.nome;
+        sel.appendChild(opt);
+      });
+    } catch { /* silencioso */ }
   }
 
-  async function loadPriceHistory(partId) {
-    const card    = v('priceHistoryCard');
+  // ─── Histórico de preços (filtrado por cliente) ───────────────────────────────
+  async function loadPriceHistoryByClient(partId, clientId) {
     const content = v('priceHistoryContent');
-    card.style.display = 'none';
-    content.innerHTML  = '';
+    content.innerHTML = '<div class="ph-hint">Carregando...</div>';
 
     try {
-      const res  = await fetch(`/parts/${partId}/price-history`);
+      const res  = await fetch(`/parts/${partId}/price-history-client?client_id=${clientId}`);
       const rows = await res.json();
 
-      card.style.display = 'block';
-
       if (!rows.length) {
-        content.innerHTML = '<div class="ph-empty">Nenhum histórico de vendas registrado para esta peça.</div>';
+        content.innerHTML = '<div class="ph-empty">Nenhum histórico de vendas registrado para esta peça com este cliente.</div>';
         return;
       }
 
@@ -343,9 +482,107 @@
             </tr>
           `).join('')}
         </tbody>`;
+      content.innerHTML = '';
       content.appendChild(table);
     } catch {
-      card.style.display = 'none';
+      content.innerHTML = '<div class="ph-empty">Erro ao carregar histórico.</div>';
+    }
+  }
+
+  v('clientSelect').addEventListener('change', () => {
+    const clientId = v('clientSelect').value;
+    if (!clientId || !editingId) {
+      v('priceHistoryContent').innerHTML = '<div class="ph-hint">Selecione um cliente para visualizar o histórico de preços desta peça.</div>';
+      return;
+    }
+    loadPriceHistoryByClient(editingId, clientId);
+  });
+
+  // ─── Comparação de preços (modal + gráfico) ───────────────────────────────────
+  v('btnCompare').addEventListener('click', () => {
+    if (!editingId) return;
+    openCompareModal(editingId);
+  });
+
+  v('closeModal').addEventListener('click', closeCompareModal);
+  v('compareModal').addEventListener('click', e => {
+    if (e.target === v('compareModal')) closeCompareModal();
+  });
+
+  function closeCompareModal() {
+    v('compareModal').classList.remove('open');
+    if (compareChart) { compareChart.destroy(); compareChart = null; }
+  }
+
+  async function openCompareModal(partId) {
+    const modal = v('compareModal');
+    const body  = v('compareModalBody');
+    const sub   = v('compareModalSubtitle');
+
+    body.innerHTML = '<div class="compare-empty">Carregando...</div>';
+    sub.textContent = '';
+    modal.classList.add('open');
+
+    try {
+      const res  = await fetch(`/parts/${partId}/price-comparison`);
+      const rows = await res.json();
+
+      if (!rows.length) {
+        body.innerHTML = '<div class="compare-empty">Nenhuma venda registrada para esta peça.</div>';
+        return;
+      }
+
+      sub.textContent = `Último preço cobrado por cliente — ${rows.length} cliente(s)`;
+
+      const labels = rows.map(r => r.cliente_nome);
+      const values = rows.map(r => r.valor_unitario);
+      const dates  = rows.map(r => r.data_proposta);
+
+      body.innerHTML = '<div class="chart-wrap"><canvas id="compareCanvas" height="300"></canvas></div>';
+
+      if (compareChart) { compareChart.destroy(); compareChart = null; }
+
+      compareChart = new Chart(v('compareCanvas'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Último preço (R$)',
+            data: values,
+            backgroundColor: 'rgba(46,125,50,0.7)',
+            borderColor: '#2e7d32',
+            borderWidth: 1,
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          indexAxis: labels.length > 5 ? 'y' : 'x',
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const idx = ctx.dataIndex;
+                  return [
+                    `Preço: ${formatBRL(values[idx])}`,
+                    `Ref: ${dates[idx]}`,
+                  ];
+                },
+              },
+            },
+          },
+          scales: {
+            x: { ticks: { font: { size: 11 } } },
+            y: {
+              ticks: { font: { size: 11 } },
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    } catch {
+      body.innerHTML = '<div class="compare-empty">Erro ao carregar dados de comparação.</div>';
     }
   }
 
@@ -357,7 +594,9 @@
       if (!part.id) return;
       fillForm(part);
       setEditMode(part);
-      loadPriceHistory(id);
+      // Resetar select e conteúdo do histórico ao trocar de peça
+      v('clientSelect').value = '';
+      v('priceHistoryContent').innerHTML = '<div class="ph-hint">Selecione um cliente para visualizar o histórico de preços desta peça.</div>';
       v('partForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch { showMsg('error', 'Erro ao carregar peça.'); }
   }
@@ -379,6 +618,7 @@
     v('editBadge').style.display  = 'inline';
     v('btnSubmit').textContent   = 'Salvar alterações';
     v('btnCancel').style.display  = 'inline-flex';
+    v('priceHistoryCard').style.display = 'block';
     highlightSelected();
     hideMsg();
   }
@@ -391,7 +631,8 @@
     v('btnSubmit').textContent    = 'Criar peça';
     v('btnCancel').style.display  = 'none';
     v('priceHistoryCard').style.display = 'none';
-    v('priceHistoryContent').innerHTML  = '';
+    v('clientSelect').value = '';
+    v('priceHistoryContent').innerHTML = '<div class="ph-hint">Selecione um cliente para visualizar o histórico de preços desta peça.</div>';
     highlightSelected();
     hideMsg();
   }
@@ -471,6 +712,7 @@
   // ─── Init ────────────────────────────────────────────────────────────────────
   const _urlParams = new URLSearchParams(location.search);
   const urlId = _urlParams.get('id');
+  loadClientSelect();
   loadParts().then(() => {
     if (urlId) loadForEdit(Number(urlId));
   });

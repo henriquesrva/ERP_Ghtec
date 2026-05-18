@@ -6,6 +6,8 @@ const {
   createPart,
   updatePart,
   getPartPriceHistory,
+  getPartPriceHistoryByClient,
+  getPartLastPricePerClient,
 } = require("./part.repository");
 
 function getAllParts() {
@@ -75,6 +77,26 @@ function getPartPriceHistoryService(id) {
   return getPartPriceHistory(id);
 }
 
+function getPartPriceHistoryByClientService(partId, clientId) {
+  const part = findPartById(partId);
+  if (!part) {
+    const err = new Error("Peça não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  return getPartPriceHistoryByClient(partId, clientId);
+}
+
+function getPartPriceComparisonService(partId) {
+  const part = findPartById(partId);
+  if (!part) {
+    const err = new Error("Peça não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  return getPartLastPricePerClient(partId);
+}
+
 module.exports = {
   getAllParts,
   getPartById,
@@ -82,4 +104,6 @@ module.exports = {
   createNewPart,
   updateExistingPart,
   getPartPriceHistoryService,
+  getPartPriceHistoryByClientService,
+  getPartPriceComparisonService,
 };

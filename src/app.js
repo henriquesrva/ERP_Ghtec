@@ -26,6 +26,8 @@ const {
   createPartHandler,
   updatePartHandler,
   getPartPriceHistoryHandler,
+  getPartPriceHistoryByClientHandler,
+  getPartPriceComparisonHandler,
 } = require("./modules/part/part.controller");
 
 const {
@@ -61,12 +63,14 @@ app.put("/clients/:id",      updateClientHandler);
 app.delete("/clients/:id",   deleteClientHandler);
 
 // Peças — rotas específicas devem vir antes de /:id
-app.get("/parts",                    listPartsHandler);
-app.get("/parts/search",             searchPartsHandler);
-app.get("/parts/:id/price-history",  getPartPriceHistoryHandler);
-app.get("/parts/:id",                getPartByIdHandler);
-app.post("/parts",                   createPartHandler);
-app.put("/parts/:id",                updatePartHandler);
+app.get("/parts",                            listPartsHandler);
+app.get("/parts/search",                     searchPartsHandler);
+app.get("/parts/:id/price-history",          getPartPriceHistoryHandler);
+app.get("/parts/:id/price-history-client",   getPartPriceHistoryByClientHandler);
+app.get("/parts/:id/price-comparison",       getPartPriceComparisonHandler);
+app.get("/parts/:id",                        getPartByIdHandler);
+app.post("/parts",                           createPartHandler);
+app.put("/parts/:id",                        updatePartHandler);
 
 // Itens / preço histórico
 app.get("/items/search",     searchItemsHandler);

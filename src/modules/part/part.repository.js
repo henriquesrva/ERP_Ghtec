@@ -107,6 +107,42 @@ function getPartPriceHistory(partId) {
   `).all(partId);
 }
 
+// Histórico filtrado por peça + cliente específico.
+function getPartPriceHistoryByClient(partId, clientId) {
+  return db.prepare(`
+    SELECT
+      c.nome          AS cliente_nome,
+      ph.valor_unitario,
+      ph.numero_proposta,
+      ph.data_proposta,
+      ph.quantidade
+    FROM price_history ph
+    JOIN clients c ON c.id = ph.client_id
+    WHERE ph.part_id = ? AND ph.client_id = ?
+    ORDER BY ph.id DESC
+  `).all(partId, clientId);
+}
+
+// Último preço cobrado por cliente para comparação.
+function getPartLastPricePerClient(partId) {
+  return db.prepare(`
+    SELECT
+      c.id            AS client_id,
+      c.nome          AS cliente_nome,
+      ph.valor_unitario,
+      ph.data_proposta,
+      ph.numero_proposta
+    FROM price_history ph
+    JOIN clients c ON c.id = ph.client_id
+    WHERE ph.part_id = ?
+      AND ph.id = (
+        SELECT MAX(id) FROM price_history
+        WHERE part_id = ? AND client_id = ph.client_id
+      )
+    ORDER BY c.nome ASC
+  `).all(partId, partId);
+}
+
 module.exports = {
   listAllParts,
   findPartById,
@@ -115,4 +151,6 @@ module.exports = {
   createPart,
   updatePart,
   getPartPriceHistory,
+  getPartPriceHistoryByClient,
+  getPartLastPricePerClient,
 };

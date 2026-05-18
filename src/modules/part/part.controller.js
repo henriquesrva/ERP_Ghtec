@@ -5,6 +5,8 @@ const {
   createNewPart,
   updateExistingPart,
   getPartPriceHistoryService,
+  getPartPriceHistoryByClientService,
+  getPartPriceComparisonService,
 } = require("./part.service");
 
 function listPartsHandler(req, res) {
@@ -96,6 +98,37 @@ function getPartPriceHistoryHandler(req, res) {
   }
 }
 
+function getPartPriceHistoryByClientHandler(req, res) {
+  try {
+    const partId   = Number(req.params.id);
+    const clientId = Number(req.query.client_id);
+    if (!clientId) {
+      return res.status(400).json({ success: false, message: "client_id é obrigatório." });
+    }
+    const history = getPartPriceHistoryByClientService(partId, clientId);
+    return res.json(history);
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") {
+      return res.status(404).json({ success: false, message: err.message });
+    }
+    return res.status(500).json({ success: false, message: "Erro ao buscar histórico." });
+  }
+}
+
+function getPartPriceComparisonHandler(req, res) {
+  try {
+    const data = getPartPriceComparisonService(Number(req.params.id));
+    return res.json(data);
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") {
+      return res.status(404).json({ success: false, message: err.message });
+    }
+    return res.status(500).json({ success: false, message: "Erro ao buscar comparação de preços." });
+  }
+}
+
 module.exports = {
   listPartsHandler,
   getPartByIdHandler,
@@ -103,4 +136,6 @@ module.exports = {
   createPartHandler,
   updatePartHandler,
   getPartPriceHistoryHandler,
+  getPartPriceHistoryByClientHandler,
+  getPartPriceComparisonHandler,
 };
