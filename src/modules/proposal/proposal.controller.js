@@ -5,12 +5,15 @@ const {
   deleteProposalService,
   getKanbanProposals,
   updateKanbanStatus,
+  markProposalExecuted,
+  removeProposalExecution,
 } = require("./proposal.service");
 
 const {
   searchItemDescriptions,
   getLastItemPriceForClient,
   findClientsByName,
+  findProposalRowById,
 } = require("./proposal.repository");
 
 async function createProposal(req, res) {
@@ -147,10 +150,58 @@ function updateKanbanStatusHandler(req, res) {
     return res.json({ success: true });
   } catch (err) {
     console.error(err);
-    if (err.code === "NOT_FOUND")     return res.status(404).json({ success: false, message: err.message });
-    if (err.code === "INVALID_STATUS") return res.status(400).json({ success: false, message: err.message });
-    if (err.code === "FORBIDDEN")      return res.status(403).json({ success: false, message: err.message });
+    if (err.code === "NOT_FOUND")          return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "INVALID_STATUS")     return res.status(400).json({ success: false, message: err.message });
+    if (err.code === "FORBIDDEN")          return res.status(403).json({ success: false, message: err.message });
+    if (err.code === "EXECUTION_REQUIRED") return res.status(422).json({ success: false, message: err.message, code: err.code });
     return res.status(500).json({ success: false, message: "Erro ao atualizar status." });
+  }
+}
+
+function markExecutionHandler(req, res) {
+  try {
+    const id = Number(req.params.id);
+    markProposalExecuted(
+      id, req.body,
+      req.session.userRole || "user",
+      req.session.userId,
+      req.session.userName || "Usuário"
+    );
+    const row = findProposalRowById(id);
+    return res.json({
+      success: true,
+      execution: {
+        execution_completed:  row.execution_completed,
+        execution_date:       row.execution_date,
+        executed_by:          row.executed_by,
+        execution_os:         row.execution_os,
+        execution_details:    row.execution_details,
+        execution_marked_at:  row.execution_marked_at,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "FORBIDDEN") return res.status(403).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao marcar execução." });
+  }
+}
+
+function removeExecutionHandler(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const result = removeProposalExecution(
+      id,
+      req.session.userRole || "user",
+      req.session.userId,
+      req.session.userName || "Usuário"
+    );
+    return res.json({ success: true, autoMoved: result.autoMoved, newStatus: result.newStatus });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "FORBIDDEN") return res.status(403).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao remover execução." });
   }
 }
 
@@ -163,4 +214,6 @@ module.exports = {
   deleteProposalHandler,
   listKanbanProposalsHandler,
   updateKanbanStatusHandler,
+  markExecutionHandler,
+  removeExecutionHandler,
 };

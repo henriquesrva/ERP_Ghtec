@@ -23,6 +23,8 @@ const {
   deleteProposalHandler,
   listKanbanProposalsHandler,
   updateKanbanStatusHandler,
+  markExecutionHandler,
+  removeExecutionHandler,
 } = require("./modules/proposal/proposal.controller");
 
 const {
@@ -153,5 +155,7 @@ app.get("/proposals/:id",                  getProposal);
 app.post("/proposals",                     createProposal);
 app.delete("/proposals/:id",               deleteProposalHandler);
 app.put("/proposals/:id/kanban-status",    updateKanbanStatusHandler);
+app.put("/proposals/:id/execution",        markExecutionHandler);
+app.delete("/proposals/:id/execution",     removeExecutionHandler);
 
 module.exports = app;

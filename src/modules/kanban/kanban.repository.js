@@ -5,17 +5,23 @@ const db = require("../../db/connection");
 function listCards() {
   return db.prepare(`
     SELECT
-      'proposal'          AS card_type,
-      p.id                AS id,
-      p.numero_proposta   AS title,
-      NULL                AS description,
+      'proposal'                        AS card_type,
+      p.id                              AS id,
+      p.numero_proposta                 AS title,
+      NULL                              AS description,
       p.kanban_status,
       p.kanban_status_updated_at,
       p.created_at,
-      c.nome              AS cliente_nome,
-      p.valor_total       AS total,
+      c.nome                            AS cliente_nome,
+      p.valor_total                     AS total,
       p.pdf_path,
-      NULL                AS created_by
+      NULL                              AS created_by,
+      p.execution_completed,
+      p.execution_date,
+      p.executed_by,
+      p.execution_os,
+      p.execution_details,
+      p.execution_marked_at
     FROM proposals p
     LEFT JOIN clients c ON c.id = p.cliente_id
     UNION ALL
@@ -30,7 +36,13 @@ function listCards() {
       NULL                AS cliente_nome,
       NULL                AS total,
       NULL                AS pdf_path,
-      t.created_by
+      t.created_by,
+      NULL                AS execution_completed,
+      NULL                AS execution_date,
+      NULL                AS executed_by,
+      NULL                AS execution_os,
+      NULL                AS execution_details,
+      NULL                AS execution_marked_at
     FROM kanban_tasks t
     ORDER BY created_at ASC
   `).all();

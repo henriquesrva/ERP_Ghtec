@@ -16,10 +16,13 @@ const {
   updatePriceHistoryPartId,
   updateProposalPdfPath,
   findProposalById,
+  findProposalRowById,
   listProposals,
   deleteProposalAndRelated,
   listProposalsForKanban,
   setProposalKanbanStatus,
+  setProposalExecution,
+  clearProposalExecution,
   KANBAN_STATUSES,
 } = require("./proposal.repository");
 
@@ -27,6 +30,8 @@ const {
   findPartByComposition,
   createPart,
 } = require("../part/part.repository");
+
+const { addComment: addKanbanComment } = require("../kanban/kanban.repository");
 
 const { formatCurrency } = require("../../shared/utils/currency");
 const { normalizeText } = require("../../shared/utils/normalize");
@@ -481,7 +486,79 @@ function updateKanbanStatus(proposalId, newStatus, userRole) {
     err.code = "FORBIDDEN";
     throw err;
   }
+  // Proposta precisa estar marcada como executada para ir para "Faturar"
+  if (newStatus === "faturar" && !data.proposal.execution_completed) {
+    const err = new Error("Esta proposta precisa ser marcada como executada antes de ir para Faturar.");
+    err.code = "EXECUTION_REQUIRED";
+    throw err;
+  }
   setProposalKanbanStatus(proposalId, newStatus);
+}
+
+// ── Execução de proposta ──────────────────────────────────────────────────────
+
+function canMarkExecution(userRole) {
+  return userRole === "admin" || userRole === "tecnico";
+}
+
+function markProposalExecuted(proposalId, data, userRole, userId, userName) {
+  if (!canMarkExecution(userRole)) {
+    const err = new Error("Você não tem permissão para marcar propostas como executadas.");
+    err.code = "FORBIDDEN";
+    throw err;
+  }
+  const proposal = findProposalRowById(proposalId);
+  if (!proposal) {
+    const err = new Error("Proposta não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  setProposalExecution(proposalId, {
+    execution_date:              data.execution_date              || null,
+    executed_by:                 data.executed_by                 || null,
+    execution_os:                data.execution_os                || null,
+    execution_details:           data.execution_details           || null,
+    execution_marked_by_user_id: userId                          || null,
+  });
+  try {
+    const parts = ["Sistema: Proposta marcada como executada"];
+    if (data.executed_by)   parts.push(`por ${data.executed_by}`);
+    if (data.execution_date) parts.push(`em ${data.execution_date}`);
+    if (data.execution_os)   parts.push(`OS: ${data.execution_os}`);
+    parts.push(`(marcado por ${userName})`);
+    addKanbanComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
+  } catch (e) {
+    console.error("[markProposalExecuted] auto-comment falhou:", e.message);
+  }
+}
+
+function removeProposalExecution(proposalId, userRole, userId, userName) {
+  if (!canMarkExecution(userRole)) {
+    const err = new Error("Você não tem permissão para remover o selo de execução.");
+    err.code = "FORBIDDEN";
+    throw err;
+  }
+  const proposal = findProposalRowById(proposalId);
+  if (!proposal) {
+    const err = new Error("Proposta não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  clearProposalExecution(proposalId);
+  // Se estiver em "Faturar" ou "Faturado", volta automaticamente para "Pendente Execução"
+  const autoMovedStatuses = ["faturar", "faturado"];
+  const autoMoved = autoMovedStatuses.includes(proposal.kanban_status);
+  if (autoMoved) {
+    setProposalKanbanStatus(proposalId, "pendente_execucao");
+  }
+  try {
+    let comment = `Sistema: Selo de execução removido por ${userName}.`;
+    if (autoMoved) comment += " Proposta retornou automaticamente para Pendente Execução.";
+    addKanbanComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
+  } catch (e) {
+    console.error("[removeProposalExecution] auto-comment falhou:", e.message);
+  }
+  return { autoMoved, newStatus: autoMoved ? "pendente_execucao" : proposal.kanban_status };
 }
 
 module.exports = {
@@ -492,5 +569,8 @@ module.exports = {
   getKanbanProposals,
   updateKanbanStatus,
   canMoveKanban,
+  canMarkExecution,
+  markProposalExecuted,
+  removeProposalExecution,
   KANBAN_STATUSES,
 };

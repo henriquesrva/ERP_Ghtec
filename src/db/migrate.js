@@ -208,6 +208,24 @@ db.prepare(`
   WHERE kanban_status IS NULL
 `).run();
 
+// ── Colunas de execução em proposals ──────────────────────────────────────────
+
+const execCols = [
+  ["execution_completed",         "INTEGER DEFAULT 0"],
+  ["execution_date",              "TEXT"],
+  ["executed_by",                 "TEXT"],
+  ["execution_os",                "TEXT"],
+  ["execution_details",           "TEXT"],
+  ["execution_marked_by_user_id", "INTEGER"],
+  ["execution_marked_at",         "TEXT"],
+];
+for (const [col, type] of execCols) {
+  if (!proposalCols.includes(col)) {
+    db.exec(`ALTER TABLE proposals ADD COLUMN ${col} ${type}`);
+    console.log(`[migrate] proposals: coluna "${col}" adicionada.`);
+  }
+}
+
 // ── Tabela responsaveis ───────────────────────────────────────────────────────
 
 db.exec(`

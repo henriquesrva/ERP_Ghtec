@@ -67,8 +67,13 @@
     .btn-detail { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 8px; border-radius: var(--radius); border: 1px solid #c5cae9; background: var(--blue-bg); color: var(--blue); font-size: 11px; font-weight: 700; cursor: pointer; transition: background 0.12s; font-family: inherit; }
     .btn-detail:hover { background: #bbdefb; }
 
+    /* Execução */
+    .exec-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-bottom: 6px; }
+    .exec-done    { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .exec-pending { background: #fff8e1; color: #e65100; border: 1px solid #ffcc80; }
+
     /* Confirm modal */
-    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; display: flex; align-items: center; justify-content: center; }
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 900; display: flex; align-items: center; justify-content: center; }
     .confirm-box { background: #fff; border-radius: var(--radius); padding: 24px 28px; max-width: 420px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
     .confirm-box h3 { margin: 0 0 10px; font-size: 15px; }
     .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
@@ -236,6 +241,10 @@
     return false;
   }
 
+  function canMarkExecution(role) {
+    return role === 'admin' || role === 'tecnico';
+  }
+
   // ─── Toast ────────────────────────────────────────────────────────────────────
   function showToast(msg, type = 'error') {
     const t = document.createElement('div');
@@ -265,6 +274,11 @@
 
   // ─── Move card via API ────────────────────────────────────────────────────────
   async function doMoveCard(card, targetStatus) {
+    // Validação frontend: proposta precisa estar executada para ir para "Faturar"
+    if (card.card_type === 'proposal' && targetStatus === 'faturar' && !card.execution_completed) {
+      showToast('Esta proposta precisa ser marcada como executada antes de ir para Faturar.');
+      return;
+    }
     const url = card.card_type === 'proposal'
       ? `/proposals/${card.id}/kanban-status`
       : `/kanban/tasks/${card.id}/status`;
@@ -275,7 +289,14 @@
         body: JSON.stringify({ status: targetStatus }),
       });
       const data = await res.json();
-      if (!res.ok) { showToast(data.message || 'Erro ao mover card.'); return; }
+      if (!res.ok) {
+        if (data.code === 'EXECUTION_REQUIRED') {
+          showToast('Esta proposta precisa ser marcada como executada antes de ir para Faturar.');
+        } else {
+          showToast(data.message || 'Erro ao mover card.');
+        }
+        return;
+      }
       card.kanban_status = targetStatus;
       card.kanban_status_updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
       renderBoard();
@@ -305,9 +326,12 @@
         <p><strong>${label}</strong> — escolha o destino:</p>
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
           ${options.map(o => {
-            const ok = canMoveKanban(currentUserRole, 'enviado', o.key);
+            const hasPerm = canMoveKanban(currentUserRole, 'enviado', o.key);
+            const needsExec = o.key === 'faturar' && !card.execution_completed;
+            const ok = hasPerm && !needsExec;
+            const reason = !hasPerm ? '(sem permissão)' : needsExec ? '(execução necessária)' : '';
             return `<button class="btn-dest" data-key="${o.key}" ${ok ? '' : 'disabled'}>
-              ${o.label}${ok ? '' : ' <span style="font-weight:400;font-size:11px;">(sem permissão)</span>'}
+              ${o.label}${reason ? ` <span style="font-weight:400;font-size:11px;">${reason}</span>` : ''}
             </button>`;
           }).join('')}
         </div>
@@ -421,6 +445,9 @@
             <div class="card-meta">
               <span class="card-value">${formatBRL(card.total)}</span>
             </div>
+            <div class="${card.execution_completed ? 'exec-badge exec-done' : 'exec-badge exec-pending'}">
+              ${card.execution_completed ? '✓ Executada' : '⏳ Execução pendente'}
+            </div>
             <div class="card-footer">
               <button class="btn-move btn-prev" title="Voltar etapa" ${disablePrev ? 'disabled' : ''}>&#8592;</button>
               ${url
@@ -481,8 +508,8 @@
   }
 
   async function openDrawer(card) {
-    drawerCard = card;
-    closeDrawer(); // remove any existing drawer
+    closeDrawer(); // remove any existing drawer (também reseta drawerCard = null)
+    drawerCard = card; // re-define DEPOIS do closeDrawer
 
     const overlay = document.createElement('div');
     overlay.className = 'drawer-overlay';
@@ -582,6 +609,46 @@
                 : `<span style="font-size:12px;color:var(--muted)">PDF indisponível</span>`
               }
             </div>
+          </div>
+          <div>
+            <div class="drawer-section">Execução</div>
+            <div class="${card.execution_completed ? 'exec-badge exec-done' : 'exec-badge exec-pending'}" style="margin-bottom:10px;">
+              ${card.execution_completed ? '✓ Proposta Executada' : '⏳ Execução pendente'}
+            </div>
+            ${card.execution_completed ? `
+              <div class="drawer-field">
+                <div class="drawer-field-label">Executado em</div>
+                <div class="drawer-field-value">${escHtml(card.execution_date || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Executado por</div>
+                <div class="drawer-field-value">${escHtml(card.executed_by || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">OS</div>
+                <div class="drawer-field-value">${escHtml(card.execution_os || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Detalhes</div>
+                <div class="drawer-field-value" style="font-weight:400;white-space:pre-wrap;">${escHtml(card.execution_details || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Marcado em</div>
+                <div class="drawer-field-value">${fmtDatetime(card.execution_marked_at)}</div>
+              </div>
+            ` : `
+              <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+                Esta proposta ainda não foi marcada como executada. Somente propostas executadas podem avançar para <strong>Faturar</strong>.
+              </div>
+            `}
+            ${canMarkExecution(currentUserRole) ? `
+              <div style="margin-top:6px;">
+                ${card.execution_completed
+                  ? `<button class="btn-c btn-c-warn" onclick="showRemoveExecutionConfirm()">Remover execução</button>`
+                  : `<button class="btn-c btn-c-green" onclick="showMarkExecutionModal()">Marcar como executada</button>`
+                }
+              </div>
+            ` : ''}
           </div>
           <div>
             <div class="drawer-section">Comentários</div>
@@ -719,6 +786,106 @@
     } catch {
       showToast('Erro de conexão.');
     }
+  }
+
+  // ─── Execução de proposta ─────────────────────────────────────────────────────
+  function showMarkExecutionModal() {
+    if (!drawerCard || drawerCard.card_type !== 'proposal') return;
+    const card = drawerCard;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3>Marcar como executada</h3>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Proposta #${escHtml(card.title)}</p>
+        <div class="form-group">
+          <label>Executado em</label>
+          <input type="date" id="execDate" />
+        </div>
+        <div class="form-group">
+          <label>Executado por</label>
+          <input type="text" id="execBy" placeholder="Nome do responsável pela execução" />
+        </div>
+        <div class="form-group">
+          <label>OS</label>
+          <input type="text" id="execOs" placeholder="Número da Ordem de Serviço" />
+        </div>
+        <div class="form-group">
+          <label>Detalhes da execução</label>
+          <textarea id="execDetails" placeholder="Observações sobre a execução (opcional)"></textarea>
+        </div>
+        <div class="confirm-actions">
+          <button class="btn-c btn-c-ghost" id="_emCancel">Cancelar</button>
+          <button class="btn-c btn-c-green" id="_emSave">Confirmar execução</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_emCancel').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#_emSave').addEventListener('click', async () => {
+      const body = {
+        execution_date:    overlay.querySelector('#execDate').value    || null,
+        executed_by:       overlay.querySelector('#execBy').value.trim()    || null,
+        execution_os:      overlay.querySelector('#execOs').value.trim()    || null,
+        execution_details: overlay.querySelector('#execDetails').value.trim() || null,
+      };
+      try {
+        const res = await fetch(`/proposals/${card.id}/execution`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.message || 'Erro ao marcar execução.'); return; }
+        overlay.remove();
+        const idx = cards.findIndex(c => c.id === card.id && c.card_type === 'proposal');
+        if (idx >= 0) { Object.assign(cards[idx], data.execution); }
+        const updatedCard = cards[idx] || card;
+        renderBoard();
+        openDrawer(updatedCard);
+        showToast('Proposta marcada como executada.', 'success');
+      } catch { showToast('Erro de conexão.'); }
+    });
+    overlay.querySelector('#execDate').focus();
+  }
+
+  function showRemoveExecutionConfirm() {
+    if (!drawerCard || drawerCard.card_type !== 'proposal') return;
+    const card = drawerCard;
+    const willAutoMove = card.kanban_status === 'faturar' || card.kanban_status === 'faturado';
+    showConfirm(
+      'Remover execução',
+      'Tem certeza que deseja remover o selo de proposta executada?' +
+        (willAutoMove ? ' A proposta retornará automaticamente para <strong>Pendente Execução</strong>.' : ''),
+      () => doRemoveExecution(card),
+      'Remover',
+      'btn-c-warn'
+    );
+  }
+
+  async function doRemoveExecution(card) {
+    try {
+      const res = await fetch(`/proposals/${card.id}/execution`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.message || 'Erro ao remover execução.'); return; }
+      const idx = cards.findIndex(c => c.id === card.id && c.card_type === 'proposal');
+      if (idx >= 0) {
+        cards[idx].execution_completed  = 0;
+        cards[idx].execution_date       = null;
+        cards[idx].executed_by          = null;
+        cards[idx].execution_os         = null;
+        cards[idx].execution_details    = null;
+        cards[idx].execution_marked_at  = null;
+        if (data.autoMoved) {
+          cards[idx].kanban_status = data.newStatus;
+          cards[idx].kanban_status_updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        }
+      }
+      const updatedCard = cards[idx] || card;
+      renderBoard();
+      openDrawer(updatedCard);
+      showToast(data.autoMoved
+        ? 'Execução removida. Proposta retornou para Pendente Execução.'
+        : 'Selo de execução removido.',
+        'success');
+    } catch { showToast('Erro de conexão.'); }
   }
 
   // ─── Criar tarefa ─────────────────────────────────────────────────────────────

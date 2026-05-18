@@ -209,11 +209,57 @@ function listProposalsForKanban() {
       p.created_at,
       p.kanban_status,
       p.kanban_status_updated_at,
+      p.execution_completed,
+      p.execution_date,
+      p.executed_by,
+      p.execution_os,
+      p.execution_details,
+      p.execution_marked_by_user_id,
+      p.execution_marked_at,
       c.nome AS cliente_nome
     FROM proposals p
     JOIN clients c ON c.id = p.cliente_id
     ORDER BY p.kanban_status_updated_at ASC
   `).all();
+}
+
+function findProposalRowById(id) {
+  return db.prepare(`SELECT * FROM proposals WHERE id = ?`).get(id);
+}
+
+function setProposalExecution(proposalId, data) {
+  db.prepare(`
+    UPDATE proposals SET
+      execution_completed         = 1,
+      execution_date              = @execution_date,
+      executed_by                 = @executed_by,
+      execution_os                = @execution_os,
+      execution_details           = @execution_details,
+      execution_marked_by_user_id = @execution_marked_by_user_id,
+      execution_marked_at         = datetime('now')
+    WHERE id = @id
+  `).run({
+    id:                          proposalId,
+    execution_date:              data.execution_date              || null,
+    executed_by:                 data.executed_by                 || null,
+    execution_os:                data.execution_os                || null,
+    execution_details:           data.execution_details           || null,
+    execution_marked_by_user_id: data.execution_marked_by_user_id || null,
+  });
+}
+
+function clearProposalExecution(proposalId) {
+  db.prepare(`
+    UPDATE proposals SET
+      execution_completed         = 0,
+      execution_date              = NULL,
+      executed_by                 = NULL,
+      execution_os                = NULL,
+      execution_details           = NULL,
+      execution_marked_by_user_id = NULL,
+      execution_marked_at         = NULL
+    WHERE id = ?
+  `).run(proposalId);
 }
 
 function setProposalKanbanStatus(proposalId, newStatus) {
@@ -240,11 +286,14 @@ module.exports = {
   updatePriceHistoryPartId,
   updateProposalPdfPath,
   findProposalById,
+  findProposalRowById,
   listProposals,
   searchItemDescriptions,
   getLastItemPriceForClient,
   deleteProposalAndRelated,
   listProposalsForKanban,
   setProposalKanbanStatus,
+  setProposalExecution,
+  clearProposalExecution,
   KANBAN_STATUSES,
 };
