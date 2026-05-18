@@ -17,6 +17,7 @@ const {
   createClientHandler,
   updateClientHandler,
   deleteClientHandler,
+  getProfitAnalysisHandler,
 } = require("./modules/client/client.controller");
 
 const {
@@ -54,10 +55,11 @@ app.use("/files", express.static(path.resolve(__dirname, "../output/proposals"))
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-// Clientes — /search deve vir antes de /:id para não ser capturado como parâmetro
-app.get("/clients",          listClientsHandler);
-app.get("/clients/search",   searchClientsHandler);
-app.get("/clients/:id",      getClientByIdHandler);
+// Clientes — rotas específicas devem vir antes de /:id
+app.get("/clients",                  listClientsHandler);
+app.get("/clients/search",           searchClientsHandler);
+app.get("/clients/profit-analysis",  getProfitAnalysisHandler);
+app.get("/clients/:id",              getClientByIdHandler);
 app.post("/clients",         createClientHandler);
 app.put("/clients/:id",      updateClientHandler);
 app.delete("/clients/:id",   deleteClientHandler);

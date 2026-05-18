@@ -22,10 +22,24 @@ function searchPartsByQuery(q) {
   return searchParts(q);
 }
 
+function parsePrecoCompra(value) {
+  if (value === null || value === undefined || value === "") return null;
+  // Aceita "1.500,50" (pt-BR), "1500.50" (en), "1500" etc.
+  const str = String(value).trim().replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(str);
+  return isNaN(num) ? null : num;
+}
+
 function createNewPart(data) {
   if (!data.nome || !data.nome.trim()) {
     throw new Error("O campo 'nome' é obrigatório.");
   }
+
+  const preco = parsePrecoCompra(data.preco_compra);
+  if (preco === null || preco < 0) {
+    throw new Error("O campo 'preço de compra' é obrigatório e deve ser um valor válido.");
+  }
+  data = { ...data, preco_compra: preco };
 
   // Bloqueia duplicidade por nome + marca + modelo
   const existing = findPartByComposition(data.nome, data.marca, data.modelo);
@@ -52,6 +66,12 @@ function updateExistingPart(id, data) {
   if (!data.nome || !data.nome.trim()) {
     throw new Error("O campo 'nome' é obrigatório.");
   }
+
+  const preco = parsePrecoCompra(data.preco_compra);
+  if (preco === null || preco < 0) {
+    throw new Error("O campo 'preço de compra' é obrigatório e deve ser um valor válido.");
+  }
+  data = { ...data, preco_compra: preco };
 
   // Bloqueia conflito de composição com outra peça
   const conflict = findPartByComposition(data.nome, data.marca, data.modelo);

@@ -22,6 +22,14 @@ for (const [col, type] of newClientCols) {
   }
 }
 
+// ── Coluna preco_compra em parts ─────────────────────────────────────────────
+
+const partCols = db.pragma("table_info(parts)").map((c) => c.name);
+if (!partCols.includes("preco_compra")) {
+  db.exec(`ALTER TABLE parts ADD COLUMN preco_compra REAL`);
+  console.log(`[migrate] parts: coluna "preco_compra" adicionada.`);
+}
+
 // ── Tabela parts ─────────────────────────────────────────────────────────────
 
 db.exec(`

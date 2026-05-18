@@ -4,7 +4,7 @@ function listAllParts() {
   return db.prepare(`
     SELECT
       id, nome, descricao, marca, modelo, categoria,
-      ncm, codigo_interno, created_at, updated_at
+      ncm, codigo_interno, preco_compra, created_at, updated_at
     FROM parts
     ORDER BY nome ASC
   `).all();
@@ -47,10 +47,10 @@ function createPart(data) {
   const result = db.prepare(`
     INSERT INTO parts (
       nome, descricao, marca, modelo, categoria,
-      ncm, codigo_interno, observacoes
+      ncm, codigo_interno, observacoes, preco_compra
     ) VALUES (
       @nome, @descricao, @marca, @modelo, @categoria,
-      @ncm, @codigo_interno, @observacoes
+      @ncm, @codigo_interno, @observacoes, @preco_compra
     )
   `).run({
     nome:           data.nome           ?? null,
@@ -61,6 +61,7 @@ function createPart(data) {
     ncm:            data.ncm            ?? null,
     codigo_interno: data.codigo_interno ?? null,
     observacoes:    data.observacoes    ?? null,
+    preco_compra:   data.preco_compra   ?? null,
   });
   return result.lastInsertRowid;
 }
@@ -76,7 +77,8 @@ function updatePart(id, data) {
       categoria      = @categoria,
       ncm            = @ncm,
       codigo_interno = @codigo_interno,
-      observacoes    = @observacoes
+      observacoes    = @observacoes,
+      preco_compra   = @preco_compra
     WHERE id = @id
   `).run({
     id,
@@ -88,6 +90,7 @@ function updatePart(id, data) {
     ncm:            data.ncm            ?? null,
     codigo_interno: data.codigo_interno ?? null,
     observacoes:    data.observacoes    ?? null,
+    preco_compra:   data.preco_compra   ?? null,
   });
 }
 

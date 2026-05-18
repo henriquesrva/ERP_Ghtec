@@ -5,6 +5,7 @@ const {
   createNewClient,
   updateExistingClient,
   deleteClient,
+  getClientProfitAnalysis,
 } = require("./client.service");
 
 function listClientsHandler(req, res) {
@@ -103,6 +104,15 @@ function deleteClientHandler(req, res) {
   }
 }
 
+function getProfitAnalysisHandler(req, res) {
+  try {
+    return res.json(getClientProfitAnalysis());
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Erro ao calcular análise de lucro." });
+  }
+}
+
 module.exports = {
   listClientsHandler,
   getClientByIdHandler,
@@ -110,4 +120,5 @@ module.exports = {
   createClientHandler,
   updateClientHandler,
   deleteClientHandler,
+  getProfitAnalysisHandler,
 };

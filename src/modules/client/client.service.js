@@ -7,6 +7,7 @@ const {
   updateClient,
   countClientProposals,
   deleteClientById,
+  getProfitAnalysis,
 } = require("./client.repository");
 
 function getAllClients() {
@@ -90,6 +91,10 @@ function deleteClient(id) {
   deleteClientById(id);
 }
 
+function getClientProfitAnalysis() {
+  return getProfitAnalysis();
+}
+
 module.exports = {
   getAllClients,
   getClientById,
@@ -97,4 +102,5 @@ module.exports = {
   createNewClient,
   updateExistingClient,
   deleteClient,
+  getClientProfitAnalysis,
 };

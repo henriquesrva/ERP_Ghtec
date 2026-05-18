@@ -134,6 +134,35 @@ function updateClient(id, data) {
   });
 }
 
+// Calcula lucro por cliente com base nas propostas ativas (não excluídas).
+// Itens sem preco_compra na peça são contabilizados separadamente para aviso.
+function getProfitAnalysis() {
+  return db.prepare(`
+    SELECT
+      c.id AS client_id,
+      c.nome AS cliente_nome,
+      COUNT(DISTINCT p.id) AS num_propostas,
+      SUM(pi.quantidade * pi.valor_unitario) AS valor_total_venda,
+      SUM(CASE WHEN pt.preco_compra IS NOT NULL THEN pi.quantidade * pt.preco_compra END) AS custo_total,
+      SUM(CASE WHEN pt.preco_compra IS NOT NULL THEN pi.quantidade * (pi.valor_unitario - pt.preco_compra) END) AS lucro_calculavel,
+      SUM(CASE WHEN pt.preco_compra IS NOT NULL THEN pi.quantidade * pi.valor_unitario END) AS valor_venda_calculavel,
+      SUM(CASE WHEN pt.preco_compra IS NULL OR pt.id IS NULL THEN 1 ELSE 0 END) AS itens_sem_custo,
+      COUNT(pi.id) AS total_itens
+    FROM proposals p
+    JOIN clients c ON c.id = p.cliente_id
+    JOIN proposal_items pi ON pi.proposal_id = p.id
+    LEFT JOIN price_history ph ON ph.proposal_id = p.id
+      AND ph.descricao_original = pi.descricao
+      AND ph.id = (
+        SELECT MIN(id) FROM price_history
+        WHERE proposal_id = pi.proposal_id AND descricao_original = pi.descricao
+      )
+    LEFT JOIN parts pt ON pt.id = ph.part_id
+    GROUP BY c.id, c.nome
+    ORDER BY lucro_calculavel DESC
+  `).all();
+}
+
 module.exports = {
   listAllClients,
   findClientById,
@@ -145,4 +174,5 @@ module.exports = {
   updateClient,
   countClientProposals,
   deleteClientById,
+  getProfitAnalysis,
 };

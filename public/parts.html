@@ -308,7 +308,11 @@
         </div>
 
         <div class="grid-2">
-          <div class="field col-span-2">
+          <div class="field">
+            <label>Preço de Compra (R$) *</label>
+            <input type="text" id="f_preco_compra" placeholder="0,00" inputmode="decimal" />
+          </div>
+          <div class="field">
             <label>Código Interno</label>
             <input type="text" id="f_codigo" placeholder="Código interno, se houver" />
           </div>
@@ -602,14 +606,17 @@
   }
 
   function fillForm(p) {
-    set('f_nome',      p.nome);
-    set('f_marca',     p.marca);
-    set('f_modelo',    p.modelo);
-    set('f_categoria', p.categoria);
-    set('f_ncm',       p.ncm);
-    set('f_codigo',    p.codigo_interno);
-    set('f_descricao', p.descricao);
-    set('f_obs',       p.observacoes);
+    set('f_nome',        p.nome);
+    set('f_marca',       p.marca);
+    set('f_modelo',      p.modelo);
+    set('f_categoria',   p.categoria);
+    set('f_ncm',         p.ncm);
+    set('f_preco_compra', p.preco_compra != null
+      ? Number(p.preco_compra).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : '');
+    set('f_codigo',      p.codigo_interno);
+    set('f_descricao',   p.descricao);
+    set('f_obs',         p.observacoes);
   }
 
   function setEditMode(part) {
@@ -626,6 +633,7 @@
   function setCreateMode() {
     editingId = null;
     v('partForm').reset();
+    v('f_preco_compra').classList.remove('error');
     v('formTitle').textContent    = 'Nova Peça';
     v('editBadge').style.display  = 'none';
     v('btnSubmit').textContent    = 'Criar peça';
@@ -646,17 +654,24 @@
   v('btnNew').addEventListener('click', () => { setCreateMode(); v('f_nome').focus(); });
   v('btnCancel').addEventListener('click', setCreateMode);
 
+  function parsePrecoCompra(raw) {
+    if (!raw) return null;
+    const num = parseFloat(raw.trim().replace(/\./g, '').replace(',', '.'));
+    return isNaN(num) ? null : num;
+  }
+
   // ─── Form submit ──────────────────────────────────────────────────────────────
   function collect() {
     return {
-      nome:           val('f_nome')      || null,
-      marca:          val('f_marca')     || null,
-      modelo:         val('f_modelo')    || null,
-      categoria:      val('f_categoria') || null,
-      ncm:            val('f_ncm')       || null,
-      codigo_interno: val('f_codigo')    || null,
-      descricao:      val('f_descricao') || null,
-      observacoes:    val('f_obs')       || null,
+      nome:           val('f_nome')        || null,
+      marca:          val('f_marca')       || null,
+      modelo:         val('f_modelo')      || null,
+      categoria:      val('f_categoria')   || null,
+      ncm:            val('f_ncm')         || null,
+      preco_compra:   val('f_preco_compra')|| null,
+      codigo_interno: val('f_codigo')      || null,
+      descricao:      val('f_descricao')   || null,
+      observacoes:    val('f_obs')         || null,
     };
   }
 
@@ -664,13 +679,35 @@
     e.preventDefault();
     hideMsg();
 
+    let hasError = false;
     if (!val('f_nome')) {
       v('f_nome').classList.add('error');
-      showMsg('error', 'O campo Nome é obrigatório.');
-      v('f_nome').focus();
+      hasError = true;
+    } else {
+      v('f_nome').classList.remove('error');
+    }
+
+    const precoRaw = val('f_preco_compra');
+    const precoNum = parsePrecoCompra(precoRaw);
+    if (precoNum === null || precoNum < 0) {
+      v('f_preco_compra').classList.add('error');
+      hasError = true;
+    } else {
+      v('f_preco_compra').classList.remove('error');
+    }
+
+    if (hasError) {
+      if (!val('f_nome') && precoNum === null) {
+        showMsg('error', 'Os campos Nome e Preço de compra são obrigatórios.');
+      } else if (!val('f_nome')) {
+        showMsg('error', 'O campo Nome é obrigatório.');
+        v('f_nome').focus();
+      } else {
+        showMsg('error', 'O campo Preço de compra é obrigatório e deve ser um valor válido (ex: 150,00).');
+        v('f_preco_compra').focus();
+      }
       return;
     }
-    v('f_nome').classList.remove('error');
 
     const btn = v('btnSubmit');
     btn.disabled = true;
