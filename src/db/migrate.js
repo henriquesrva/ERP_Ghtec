@@ -187,6 +187,27 @@ if (orphanItems.length > 0) {
   console.log(`[migrate] parts: ${orphanItems.length} peça(s) sincronizada(s) a partir do histórico.`);
 }
 
+// ── Colunas Kanban em proposals ───────────────────────────────────────────────
+
+const proposalCols = db.pragma("table_info(proposals)").map((c) => c.name);
+
+if (!proposalCols.includes("kanban_status")) {
+  db.exec(`ALTER TABLE proposals ADD COLUMN kanban_status TEXT`);
+  console.log(`[migrate] proposals: coluna "kanban_status" adicionada.`);
+}
+if (!proposalCols.includes("kanban_status_updated_at")) {
+  db.exec(`ALTER TABLE proposals ADD COLUMN kanban_status_updated_at TEXT`);
+  console.log(`[migrate] proposals: coluna "kanban_status_updated_at" adicionada.`);
+}
+
+// Backfill: propostas existentes sem status entram em "pendente_envio"
+db.prepare(`
+  UPDATE proposals
+  SET kanban_status = 'pendente_envio',
+      kanban_status_updated_at = created_at
+  WHERE kanban_status IS NULL
+`).run();
+
 // ── Tabela responsaveis ───────────────────────────────────────────────────────
 
 db.exec(`

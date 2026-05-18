@@ -30,7 +30,9 @@ function createProposal(proposal) {
       responsavel_cargo,
       responsavel_email,
       responsavel_telefone,
-      pdf_path
+      pdf_path,
+      kanban_status,
+      kanban_status_updated_at
     ) VALUES (
       @numero_proposta,
       @cliente_id,
@@ -48,7 +50,9 @@ function createProposal(proposal) {
       @responsavel_cargo,
       @responsavel_email,
       @responsavel_telefone,
-      @pdf_path
+      @pdf_path,
+      'pendente_envio',
+      datetime('now')
     )
   `).run(proposal);
   return result.lastInsertRowid;
@@ -184,6 +188,45 @@ function deleteProposalAndRelated(proposalId) {
   })();
 }
 
+const KANBAN_STATUSES = [
+  'pendente_envio',
+  'enviado',
+  'aguardando_compra',
+  'comprado',
+  'pendente_execucao',
+  'faturar',
+  'faturado',
+];
+
+function listProposalsForKanban() {
+  return db.prepare(`
+    SELECT
+      p.id,
+      p.numero_proposta,
+      p.data_emissao,
+      p.valor_total,
+      p.pdf_path,
+      p.created_at,
+      p.kanban_status,
+      p.kanban_status_updated_at,
+      c.nome AS cliente_nome
+    FROM proposals p
+    JOIN clients c ON c.id = p.cliente_id
+    ORDER BY p.kanban_status_updated_at ASC
+  `).all();
+}
+
+function setProposalKanbanStatus(proposalId, newStatus) {
+  if (!KANBAN_STATUSES.includes(newStatus)) {
+    throw new Error(`Status inválido: ${newStatus}`);
+  }
+  db.prepare(`
+    UPDATE proposals
+    SET kanban_status = ?, kanban_status_updated_at = datetime('now')
+    WHERE id = ?
+  `).run(newStatus, proposalId);
+}
+
 module.exports = {
   findClientByCnpj,
   findClientsByName,
@@ -201,4 +244,7 @@ module.exports = {
   searchItemDescriptions,
   getLastItemPriceForClient,
   deleteProposalAndRelated,
+  listProposalsForKanban,
+  setProposalKanbanStatus,
+  KANBAN_STATUSES,
 };

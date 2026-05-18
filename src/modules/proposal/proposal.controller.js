@@ -3,6 +3,8 @@ const {
   getProposalById,
   getAllProposals,
   deleteProposalService,
+  getKanbanProposals,
+  updateKanbanStatus,
 } = require("./proposal.service");
 
 const {
@@ -125,6 +127,35 @@ function deleteProposalHandler(req, res) {
   }
 }
 
+function listKanbanProposalsHandler(req, res) {
+  try {
+    return res.json(getKanbanProposals());
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Erro ao carregar kanban." });
+  }
+}
+
+function updateKanbanStatusHandler(req, res) {
+  try {
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ success: false, message: "O campo 'status' é obrigatório." });
+    }
+    updateKanbanStatus(Number(req.params.id), status);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") {
+      return res.status(404).json({ success: false, message: err.message });
+    }
+    if (err.code === "INVALID_STATUS") {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    return res.status(500).json({ success: false, message: "Erro ao atualizar status." });
+  }
+}
+
 module.exports = {
   createProposal,
   listProposals,
@@ -132,4 +163,6 @@ module.exports = {
   searchItemsHandler,
   getItemPriceHandler,
   deleteProposalHandler,
+  listKanbanProposalsHandler,
+  updateKanbanStatusHandler,
 };

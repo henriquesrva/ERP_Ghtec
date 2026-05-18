@@ -18,6 +18,9 @@ const {
   findProposalById,
   listProposals,
   deleteProposalAndRelated,
+  listProposalsForKanban,
+  setProposalKanbanStatus,
+  KANBAN_STATUSES,
 } = require("./proposal.repository");
 
 const {
@@ -438,9 +441,30 @@ function deleteProposalService(proposalId) {
   deleteProposalAndRelated(proposalId);
 }
 
+function getKanbanProposals() {
+  return listProposalsForKanban();
+}
+
+function updateKanbanStatus(proposalId, newStatus) {
+  const proposal = findProposalById(proposalId);
+  if (!proposal) {
+    const err = new Error("Proposta não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  if (!KANBAN_STATUSES.includes(newStatus)) {
+    const err = new Error(`Status inválido: ${newStatus}. Valores aceitos: ${KANBAN_STATUSES.join(", ")}`);
+    err.code = "INVALID_STATUS";
+    throw err;
+  }
+  setProposalKanbanStatus(proposalId, newStatus);
+}
+
 module.exports = {
   createProposalFlow,
   getProposalById,
   getAllProposals,
   deleteProposalService,
+  getKanbanProposals,
+  updateKanbanStatus,
 };

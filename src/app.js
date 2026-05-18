@@ -8,6 +8,8 @@ const {
   searchItemsHandler,
   getItemPriceHandler,
   deleteProposalHandler,
+  listKanbanProposalsHandler,
+  updateKanbanStatusHandler,
 } = require("./modules/proposal/proposal.controller");
 
 const {
@@ -93,9 +95,11 @@ app.post("/objetos",        createObjetoHandler);
 app.delete("/objetos/:id",  deleteObjetoHandler);
 
 // Propostas
-app.get("/proposals",          listProposals);
-app.get("/proposals/:id",      getProposal);
-app.post("/proposals",         createProposal);
-app.delete("/proposals/:id",   deleteProposalHandler);
+app.get("/proposals",                      listProposals);
+app.get("/proposals/kanban",               listKanbanProposalsHandler);
+app.get("/proposals/:id",                  getProposal);
+app.post("/proposals",                     createProposal);
+app.delete("/proposals/:id",               deleteProposalHandler);
+app.put("/proposals/:id/kanban-status",    updateKanbanStatusHandler);
 
 module.exports = app;
