@@ -142,16 +142,14 @@ function updateKanbanStatusHandler(req, res) {
     if (!status) {
       return res.status(400).json({ success: false, message: "O campo 'status' é obrigatório." });
     }
-    updateKanbanStatus(Number(req.params.id), status);
+    const userRole = req.session.userRole || "user";
+    updateKanbanStatus(Number(req.params.id), status, userRole);
     return res.json({ success: true });
   } catch (err) {
     console.error(err);
-    if (err.code === "NOT_FOUND") {
-      return res.status(404).json({ success: false, message: err.message });
-    }
-    if (err.code === "INVALID_STATUS") {
-      return res.status(400).json({ success: false, message: err.message });
-    }
+    if (err.code === "NOT_FOUND")     return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "INVALID_STATUS") return res.status(400).json({ success: false, message: err.message });
+    if (err.code === "FORBIDDEN")      return res.status(403).json({ success: false, message: err.message });
     return res.status(500).json({ success: false, message: "Erro ao atualizar status." });
   }
 }

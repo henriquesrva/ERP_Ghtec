@@ -62,6 +62,16 @@ const {
   deleteObjetoHandler,
 } = require("./modules/objeto/objeto.controller");
 
+const {
+  listCardsHandler,
+  createTaskHandler,
+  updateTaskHandler,
+  moveTaskHandler,
+  deleteTaskHandler,
+  getCommentsHandler,
+  addCommentHandler,
+} = require("./modules/kanban/kanban.controller");
+
 const app = express();
 
 app.use(session({
@@ -126,6 +136,15 @@ app.get("/objetos/search",  searchObjetosHandler);
 app.get("/objetos/:id",     getObjetoByIdHandler);
 app.post("/objetos",        createObjetoHandler);
 app.delete("/objetos/:id",  deleteObjetoHandler);
+
+// Kanban — cards, tarefas e comentários
+app.get("/kanban/cards",                   listCardsHandler);
+app.post("/kanban/tasks",                  createTaskHandler);
+app.put("/kanban/tasks/:id",               updateTaskHandler);
+app.put("/kanban/tasks/:id/status",        moveTaskHandler);
+app.delete("/kanban/tasks/:id",            deleteTaskHandler);
+app.get("/kanban/comments/:type/:id",      getCommentsHandler);
+app.post("/kanban/comments",               addCommentHandler);
 
 // Propostas
 app.get("/proposals",                      listProposals);

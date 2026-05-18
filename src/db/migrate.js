@@ -264,4 +264,35 @@ if (userCount === 0) {
   console.log("[migrate] Usuário admin criado. Login: admin | Senha: admin123 — altere após o primeiro acesso.");
 }
 
+// ── Tabela kanban_tasks (tarefas manuais) ────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS kanban_tasks (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    title                    TEXT NOT NULL,
+    description              TEXT,
+    kanban_status            TEXT NOT NULL DEFAULT 'pendente_envio',
+    kanban_status_updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    created_by               INTEGER REFERENCES users(id),
+    created_at               TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at               TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+// ── Tabela kanban_comments ────────────────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS kanban_comments (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_type  TEXT NOT NULL,
+    card_id    INTEGER NOT NULL,
+    user_id    INTEGER NOT NULL,
+    user_nome  TEXT NOT NULL,
+    comment    TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_kc_card ON kanban_comments(card_type, card_id);
+`);
+
 console.log("[migrate] Banco de dados atualizado com sucesso.");

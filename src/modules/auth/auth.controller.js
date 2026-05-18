@@ -6,6 +6,7 @@ async function loginHandler(req, res) {
     const user = await svc.loginUser(req.body.username, req.body.password);
     req.session.userId   = user.id;
     req.session.userRole = user.role;
+    req.session.userName = user.nome;
     res.json({ success: true, user });
   } catch (e) {
     res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });
