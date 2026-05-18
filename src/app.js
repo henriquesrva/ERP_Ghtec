@@ -1,5 +1,16 @@
 const express = require("express");
 const path = require("path");
+const session = require("express-session");
+const requireAuth = require("./middleware/requireAuth");
+
+const {
+  loginHandler,
+  logoutHandler,
+  getMeHandler,
+  listUsersHandler,
+  createUserHandler,
+  deleteUserHandler,
+} = require("./modules/auth/auth.controller");
 
 const {
   createProposal,
@@ -51,9 +62,27 @@ const {
 
 const app = express();
 
+app.use(session({
+  secret: process.env.SESSION_SECRET || "ghtec-session-secret-2024",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, maxAge: 8 * 60 * 60 * 1000 },
+}));
+
+app.use(requireAuth);
 app.use(express.json());
 app.use(express.static(path.resolve(__dirname, "../public")));
 app.use("/files", express.static(path.resolve(__dirname, "../output/proposals")));
+
+// Auth
+app.post("/auth/login",  loginHandler);
+app.post("/auth/logout", logoutHandler);
+app.get("/auth/me",      getMeHandler);
+
+// Usuários
+app.get("/users",        listUsersHandler);
+app.post("/users",       createUserHandler);
+app.delete("/users/:id", deleteUserHandler);
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 

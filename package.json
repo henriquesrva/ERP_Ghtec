@@ -8,8 +8,10 @@
     "init-db": "node src/db/init.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.7.0",
     "express": "^4.21.2",
+    "express-session": "^1.19.0",
     "handlebars": "^4.7.8",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^24.7.1"

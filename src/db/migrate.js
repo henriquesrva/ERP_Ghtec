@@ -231,4 +231,37 @@ db.exec(`
   );
 `);
 
+// ── Tabela users ──────────────────────────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome          TEXT NOT NULL,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'user',
+    created_at    TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TRIGGER IF NOT EXISTS users_updated_at
+  AFTER UPDATE ON users
+  BEGIN
+    UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
+// Seed: cria usuário admin na primeira execução
+const userCount = db.prepare(`SELECT COUNT(*) AS n FROM users`).get().n;
+if (userCount === 0) {
+  const bcrypt = require("bcryptjs");
+  const defaultPassword = "admin123";
+  const hash = bcrypt.hashSync(defaultPassword, 10);
+  db.prepare(`
+    INSERT INTO users (nome, username, password_hash, role)
+    VALUES ('Administrador', 'admin', ?, 'admin')
+  `).run(hash);
+  console.log("[migrate] Usuário admin criado. Login: admin | Senha: admin123 — altere após o primeiro acesso.");
+}
+
 console.log("[migrate] Banco de dados atualizado com sucesso.");

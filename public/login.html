@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHTec — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --green: #2e7d32; --green-light: #43a047;
+      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
+      --danger: #c62828; --radius: 6px;
+    }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-wrap { width: 100%; max-width: 380px; padding: 16px; }
+    .brand { text-align: center; margin-bottom: 28px; }
+    .brand-name { font-size: 28px; font-weight: 800; color: var(--green); }
+    .brand-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; }
+    .card h2 { margin: 0 0 20px; font-size: 16px; font-weight: 700; color: var(--text); }
+    .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input { padding: 9px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 14px; font-family: inherit; }
+    .field input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .field input.error { border-color: var(--danger); }
+    .btn { width: 100%; padding: 10px; border-radius: var(--radius); border: none; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; background: var(--green); color: #fff; transition: background 0.15s; margin-top: 4px; }
+    .btn:hover:not(:disabled) { background: var(--green-light); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); margin-bottom: 14px; background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; display: none; }
+  </style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="brand">
+    <div class="brand-name">GHTec</div>
+    <div class="brand-sub">Sistema de Propostas Comerciais</div>
+  </div>
+  <div class="card">
+    <h2>Entrar</h2>
+    <div id="msg" class="msg"></div>
+    <form id="loginForm" novalidate>
+      <div class="field">
+        <label>Usuário</label>
+        <input type="text" id="username" autocomplete="username" autocapitalize="none" />
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="password" autocomplete="current-password" />
+      </div>
+      <button type="submit" class="btn" id="btnLogin">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.getElementById('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const msg = document.getElementById('msg');
+    const btn = document.getElementById('btnLogin');
+
+    msg.style.display = 'none';
+    if (!username || !password) {
+      msg.textContent = 'Preencha usuário e senha.';
+      msg.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.location.href = '/';
+      } else {
+        msg.textContent = data.message || 'Erro ao fazer login.';
+        msg.style.display = 'block';
+      }
+    } catch {
+      msg.textContent = 'Erro de conexão com o servidor.';
+      msg.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  });
+
+  document.getElementById('username').focus();
+</script>
+</body>
+</html>

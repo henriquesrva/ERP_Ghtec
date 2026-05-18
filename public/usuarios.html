@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHTec — Usuários</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
+      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
+      --danger: #c62828; --amber: #f57f17; --radius: 6px;
+    }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
+    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; }
+    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
+    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
+    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
+    .nav-link.active { color: #fff; border-bottom-color: #fff; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
+    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
+    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
+    .btn-logout:hover { background: rgba(255,255,255,0.2); }
+    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
+    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
+    .container { max-width: 1000px; margin: 28px auto; padding: 0 16px 60px; }
+    .split { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input { padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+    .field input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .field input.error { border-color: var(--danger); }
+    .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
+    .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); margin-top: 12px; }
+    .msg.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .msg.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: var(--green-bg); color: var(--green); text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 2px solid var(--border); }
+    td { padding: 10px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-admin { background: #e8f5e9; color: var(--green); }
+    .badge-user  { background: #e3f2fd; color: #1565c0; }
+    .btn-del { background: none; border: 1px solid #ef9a9a; color: var(--danger); border-radius: var(--radius); padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .btn-del:hover { background: #ffebee; }
+    .btn-del:disabled { opacity: 0.4; cursor: not-allowed; }
+    .empty-row td { text-align: center; color: var(--muted); padding: 24px; }
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: center; justify-content: center; }
+    .confirm-box { background: #fff; border-radius: var(--radius); padding: 24px 28px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .confirm-box h3 { margin: 0 0 10px; font-size: 15px; }
+    .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
+    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="/">GHTec</a>
+  <a class="nav-link" href="/">Nova Proposta</a>
+  <a class="nav-link" href="/proposals.html">Propostas</a>
+  <a class="nav-link" href="/clients.html">Clientes</a>
+  <a class="nav-link" href="/responsaveis.html">Responsáveis</a>
+  <a class="nav-link" href="/parts.html">Peças</a>
+  <a class="nav-link" href="/objetos.html">Objetos</a>
+  <a class="nav-link" href="/kanban.html">Kanban</a>
+  <div class="nav-right">
+    <a class="nav-link active" href="/usuarios.html">Usuários</a>
+    <span id="navUserLabel"></span>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
+</nav>
+<div class="page-bar">
+  <h1>Gerenciamento de Usuários</h1>
+  Cadastro e controle de acesso ao sistema
+</div>
+
+<div class="container">
+  <div class="split">
+
+    <!-- ── Formulário ── -->
+    <div class="card">
+      <div class="card-title">Novo Usuário</div>
+      <form id="userForm" novalidate>
+        <div class="field">
+          <label>Nome completo *</label>
+          <input type="text" id="f_nome" placeholder="Ex: João Silva" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Nome de usuário *</label>
+          <input type="text" id="f_username" placeholder="Ex: joao.silva" autocomplete="off" autocapitalize="none" />
+          <span class="hint">Sem espaços. Será usado para fazer login.</span>
+        </div>
+        <div class="field">
+          <label>Senha *</label>
+          <input type="password" id="f_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+        </div>
+        <div id="formMsg" style="display:none" class="msg"></div>
+        <div style="margin-top:16px;">
+          <button type="submit" class="btn btn-primary" id="btnSubmit">Criar usuário</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ── Lista ── -->
+    <div class="card">
+      <div class="card-title">Usuários cadastrados</div>
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Usuário</th>
+            <th>Perfil</th>
+            <th>Criado em</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="usersBody">
+          <tr class="empty-row"><td colspan="5">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let currentUserId = null;
+  let currentUserRole = null;
+
+  function showMsg(type, text) {
+    const el = document.getElementById('formMsg');
+    el.className = `msg ${type}`;
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+  function hideMsg() { document.getElementById('formMsg').style.display = 'none'; }
+
+  function formatDate(str) {
+    if (!str) return '—';
+    return str.substring(0, 10).split('-').reverse().join('/');
+  }
+
+  function showConfirm(nome, id) {
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.innerHTML = `
+      <div class="confirm-box">
+        <h3>Excluir usuário</h3>
+        <p>Deseja excluir <strong>${nome}</strong>? Esta ação não pode ser desfeita.</p>
+        <div class="confirm-actions">
+          <button class="btn" style="background:#eee;color:#444" id="_cancel">Cancelar</button>
+          <button class="btn btn-primary" style="background:var(--danger)" id="_ok">Excluir</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_cancel').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#_ok').addEventListener('click', async () => {
+      overlay.remove();
+      await deleteUser(id, nome);
+    });
+  }
+
+  async function deleteUser(id, nome) {
+    try {
+      const res = await fetch(`/users/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('success', `Usuário "${nome}" excluído.`);
+        loadUsers();
+      } else {
+        showMsg('error', data.message || 'Erro ao excluir.');
+      }
+    } catch {
+      showMsg('error', 'Erro de conexão.');
+    }
+  }
+
+  async function loadUsers() {
+    try {
+      const res = await fetch('/users');
+      const users = await res.json();
+      const tbody = document.getElementById('usersBody');
+      if (!users.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Nenhum usuário.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td>${u.nome}</td>
+          <td style="font-family:monospace">${u.username}</td>
+          <td><span class="badge badge-${u.role}">${u.role}</span></td>
+          <td>${formatDate(u.created_at)}</td>
+          <td>
+            ${currentUserRole === 'admin'
+              ? `<button class="btn-del" data-id="${u.id}" data-nome="${u.nome}"
+                  ${u.id === currentUserId ? 'disabled title="Não é possível excluir o próprio usuário"' : ''}>
+                  Excluir
+                </button>`
+              : '—'}
+          </td>
+        </tr>
+      `).join('');
+      tbody.querySelectorAll('.btn-del:not(:disabled)').forEach(btn => {
+        btn.addEventListener('click', () => showConfirm(btn.dataset.nome, Number(btn.dataset.id)));
+      });
+    } catch {
+      document.getElementById('usersBody').innerHTML = '<tr class="empty-row"><td colspan="5">Erro ao carregar.</td></tr>';
+    }
+  }
+
+  document.getElementById('userForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    hideMsg();
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    try {
+      const res = await fetch('/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome:     document.getElementById('f_nome').value.trim(),
+          username: document.getElementById('f_username').value.trim(),
+          password: document.getElementById('f_password').value,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('success', `Usuário "${data.user.nome}" criado com sucesso.`);
+        document.getElementById('userForm').reset();
+        loadUsers();
+      } else {
+        showMsg('error', data.message || 'Erro ao criar usuário.');
+      }
+    } catch {
+      showMsg('error', 'Erro de conexão.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Criar usuário';
+    }
+  });
+
+  // Init: get current user and load list
+  (async () => {
+    try {
+      const res = await fetch('/auth/me');
+      if (res.status === 401) { window.location.href = '/login.html'; return; }
+      const data = await res.json();
+      if (data.user) {
+        currentUserId   = data.user.id;
+        currentUserRole = data.user.role;
+        const label = document.getElementById('navUserLabel');
+        if (label) label.textContent = data.user.nome;
+        if (currentUserRole !== 'admin') {
+          document.querySelector('.split').style.gridTemplateColumns = '1fr';
+          const formCard = document.querySelector('.split .card');
+          formCard.innerHTML = '<div class="card-title">Novo Usuário</div><p style="color:var(--muted);font-size:13px;margin:0">Apenas administradores podem criar usuários.</p>';
+        }
+      }
+    } catch { window.location.href = '/login.html'; }
+    loadUsers();
+  })();
+
+  function logout() {
+    fetch('/auth/logout', { method: 'POST' }).finally(() => { window.location.href = '/login.html'; });
+  }
+</script>
+</body>
+</html>

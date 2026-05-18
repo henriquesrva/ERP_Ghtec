@@ -57,6 +57,10 @@
     }
     .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
     .nav-link.active { color: #fff; border-bottom-color: #fff; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
+    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
+    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
+    .btn-logout:hover { background: rgba(255,255,255,0.2); }
 
     .page-bar {
       background: #1b5e20;
@@ -494,6 +498,11 @@
   <a class="nav-link" href="/parts.html">Peças</a>
   <a class="nav-link" href="/objetos.html">Objetos</a>
   <a class="nav-link" href="/kanban.html">Kanban</a>
+  <div class="nav-right">
+    <a class="nav-link" href="/usuarios.html">Usuários</a>
+    <span id="navUserLabel"></span>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
 </nav>
 <div class="page-bar">
   <h1>Nova Proposta Comercial</h1>
@@ -1156,5 +1165,6 @@
   // Start with one empty row
   addItem();
 </script>
+<script src="/auth.js"></script>
 </body>
 </html>
