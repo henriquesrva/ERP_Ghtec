@@ -216,6 +216,11 @@ function listProposalsForKanban() {
       p.execution_details,
       p.execution_marked_by_user_id,
       p.execution_marked_at,
+      p.approval_date,
+      p.approval_notes,
+      p.approval_attachment_path,
+      p.approval_registered_by_user_id,
+      p.approval_registered_at,
       c.nome AS cliente_nome
     FROM proposals p
     JOIN clients c ON c.id = p.cliente_id
@@ -245,6 +250,24 @@ function setProposalExecution(proposalId, data) {
     execution_os:                data.execution_os                || null,
     execution_details:           data.execution_details           || null,
     execution_marked_by_user_id: data.execution_marked_by_user_id || null,
+  });
+}
+
+function setProposalApproval(proposalId, data) {
+  db.prepare(`
+    UPDATE proposals SET
+      approval_date                  = @approval_date,
+      approval_notes                 = @approval_notes,
+      approval_attachment_path       = @approval_attachment_path,
+      approval_registered_by_user_id = @approval_registered_by_user_id,
+      approval_registered_at         = datetime('now')
+    WHERE id = @id
+  `).run({
+    id:                             proposalId,
+    approval_date:                  data.approval_date                  || null,
+    approval_notes:                 data.approval_notes                 || null,
+    approval_attachment_path:       data.approval_attachment_path       || null,
+    approval_registered_by_user_id: data.approval_registered_by_user_id || null,
   });
 }
 
@@ -295,5 +318,6 @@ module.exports = {
   setProposalKanbanStatus,
   setProposalExecution,
   clearProposalExecution,
+  setProposalApproval,
   KANBAN_STATUSES,
 };

@@ -23,6 +23,7 @@ const {
   setProposalKanbanStatus,
   setProposalExecution,
   clearProposalExecution,
+  setProposalApproval,
   KANBAN_STATUSES,
 } = require("./proposal.repository");
 
@@ -561,6 +562,29 @@ function removeProposalExecution(proposalId, userRole, userId, userName) {
   return { autoMoved, newStatus: autoMoved ? "pendente_execucao" : proposal.kanban_status };
 }
 
+function registerApproval(proposalId, data, userId, userName) {
+  const proposal = findProposalRowById(proposalId);
+  if (!proposal) {
+    const err = new Error("Proposta não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  setProposalApproval(proposalId, {
+    approval_date:                  data.approval_date                  || null,
+    approval_notes:                 data.approval_notes                 || null,
+    approval_attachment_path:       data.approval_attachment_path       || null,
+    approval_registered_by_user_id: userId                              || null,
+  });
+  try {
+    let comment = `Sistema: Aprovação registrada por ${userName}`;
+    if (data.approval_date) comment += ` em ${data.approval_date}`;
+    comment += ".";
+    addKanbanComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
+  } catch (e) {
+    console.error("[registerApproval] auto-comment falhou:", e.message);
+  }
+}
+
 module.exports = {
   createProposalFlow,
   getProposalById,
@@ -572,5 +596,6 @@ module.exports = {
   canMarkExecution,
   markProposalExecuted,
   removeProposalExecution,
+  registerApproval,
   KANBAN_STATUSES,
 };

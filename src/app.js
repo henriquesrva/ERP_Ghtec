@@ -1,7 +1,29 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const session = require("express-session");
+const multer = require("multer");
 const requireAuth = require("./middleware/requireAuth");
+
+// ── Multer: upload de comprovantes de aprovação ───────────────────────────────
+const approvalDir = path.resolve(__dirname, "../output/approvals");
+fs.mkdirSync(approvalDir, { recursive: true });
+
+const approvalStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, approvalDir),
+  filename: (req, _file, cb) => {
+    const ext = path.extname(_file.originalname).toLowerCase() || ".jpg";
+    cb(null, `approval_${req.params.id}_${Date.now()}${ext}`);
+  },
+});
+const uploadApproval = multer({
+  storage: approvalStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    cb(null, allowed.includes(file.mimetype));
+  },
+});
 
 const {
   loginHandler,
@@ -25,6 +47,7 @@ const {
   updateKanbanStatusHandler,
   markExecutionHandler,
   removeExecutionHandler,
+  registerApprovalHandler,
 } = require("./modules/proposal/proposal.controller");
 
 const {
@@ -86,6 +109,7 @@ app.use(session({
 app.use(requireAuth);
 app.use(express.json());
 app.use(express.static(path.resolve(__dirname, "../public")));
+app.use("/files/approvals", express.static(path.resolve(__dirname, "../output/approvals")));
 app.use("/files", express.static(path.resolve(__dirname, "../output/proposals")));
 
 // Auth
@@ -157,5 +181,11 @@ app.delete("/proposals/:id",               deleteProposalHandler);
 app.put("/proposals/:id/kanban-status",    updateKanbanStatusHandler);
 app.put("/proposals/:id/execution",        markExecutionHandler);
 app.delete("/proposals/:id/execution",     removeExecutionHandler);
+app.put("/proposals/:id/approval", (req, res, next) => {
+  uploadApproval.single("attachment")(req, res, (err) => {
+    if (err) return res.status(400).json({ success: false, message: "Erro no upload: " + err.message });
+    next();
+  });
+}, registerApprovalHandler);
 
 module.exports = app;

@@ -7,6 +7,7 @@ const {
   updateKanbanStatus,
   markProposalExecuted,
   removeProposalExecution,
+  registerApproval,
 } = require("./proposal.service");
 
 const {
@@ -205,6 +206,36 @@ function removeExecutionHandler(req, res) {
   }
 }
 
+function registerApprovalHandler(req, res) {
+  try {
+    const id = Number(req.params.id);
+    registerApproval(
+      id,
+      {
+        approval_date:            req.body.approval_date            || null,
+        approval_notes:           req.body.approval_notes           || null,
+        approval_attachment_path: req.file ? req.file.filename : null,
+      },
+      req.session.userId,
+      req.session.userName || "Usuário"
+    );
+    const row = findProposalRowById(id);
+    return res.json({
+      success: true,
+      approval: {
+        approval_date:            row.approval_date,
+        approval_notes:           row.approval_notes,
+        approval_attachment_path: row.approval_attachment_path,
+        approval_registered_at:   row.approval_registered_at,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao registrar aprovação." });
+  }
+}
+
 module.exports = {
   createProposal,
   listProposals,
@@ -216,4 +247,5 @@ module.exports = {
   updateKanbanStatusHandler,
   markExecutionHandler,
   removeExecutionHandler,
+  registerApprovalHandler,
 };

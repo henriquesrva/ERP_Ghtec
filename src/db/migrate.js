@@ -226,6 +226,22 @@ for (const [col, type] of execCols) {
   }
 }
 
+// ── Colunas de aprovação em proposals ────────────────────────────────────────
+
+const approvalCols = [
+  ["approval_date",                   "TEXT"],
+  ["approval_notes",                  "TEXT"],
+  ["approval_attachment_path",        "TEXT"],
+  ["approval_registered_by_user_id",  "INTEGER"],
+  ["approval_registered_at",          "TEXT"],
+];
+for (const [col, type] of approvalCols) {
+  if (!proposalCols.includes(col)) {
+    db.exec(`ALTER TABLE proposals ADD COLUMN ${col} ${type}`);
+    console.log(`[migrate] proposals: coluna "${col}" adicionada.`);
+  }
+}
+
 // ── Tabela responsaveis ───────────────────────────────────────────────────────
 
 db.exec(`

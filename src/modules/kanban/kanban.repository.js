@@ -21,7 +21,11 @@ function listCards() {
       p.executed_by,
       p.execution_os,
       p.execution_details,
-      p.execution_marked_at
+      p.execution_marked_at,
+      p.approval_date,
+      p.approval_notes,
+      p.approval_attachment_path,
+      p.approval_registered_at
     FROM proposals p
     LEFT JOIN clients c ON c.id = p.cliente_id
     UNION ALL
@@ -42,7 +46,11 @@ function listCards() {
       NULL                AS executed_by,
       NULL                AS execution_os,
       NULL                AS execution_details,
-      NULL                AS execution_marked_at
+      NULL                AS execution_marked_at,
+      NULL                AS approval_date,
+      NULL                AS approval_notes,
+      NULL                AS approval_attachment_path,
+      NULL                AS approval_registered_at
     FROM kanban_tasks t
     ORDER BY created_at ASC
   `).all();

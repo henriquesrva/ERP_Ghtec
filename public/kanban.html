@@ -342,7 +342,61 @@
     document.body.appendChild(overlay);
     overlay.querySelector('#_envCancelar').addEventListener('click', () => overlay.remove());
     overlay.querySelectorAll('.btn-dest:not(:disabled)').forEach(btn => {
-      btn.addEventListener('click', () => { overlay.remove(); doMoveCard(card, btn.dataset.key); });
+      btn.addEventListener('click', () => {
+        overlay.remove();
+        if (card.card_type === 'proposal') {
+          showApprovalModal(card, btn.dataset.key);
+        } else {
+          doMoveCard(card, btn.dataset.key);
+        }
+      });
+    });
+  }
+
+  // ─── Modal de aprovação (ao sair de "Enviado" para propostas) ────────────────
+  function showApprovalModal(card, destination) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3>A proposta foi aprovada?</h3>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Proposta #${escHtml(card.title)} — informe os dados da aprovação antes de mover o card.</p>
+        <div class="form-group">
+          <label>Data de aprovação</label>
+          <input type="date" id="aprvDate" />
+        </div>
+        <div class="form-group">
+          <label>Informações sobre aprovação</label>
+          <textarea id="aprvNotes" placeholder="Detalhes da aprovação (opcional)"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Anexo / print (opcional)</label>
+          <input type="file" id="aprvFile" accept="image/*" />
+        </div>
+        <div class="confirm-actions">
+          <button class="btn-c btn-c-ghost" id="_aprvCancel">Cancelar</button>
+          <button class="btn-c btn-c-green" id="_aprvSave">Confirmar e mover</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_aprvCancel').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#_aprvSave').addEventListener('click', async () => {
+      const dateVal  = overlay.querySelector('#aprvDate').value;
+      const notesVal = overlay.querySelector('#aprvNotes').value.trim();
+      const fileEl   = overlay.querySelector('#aprvFile');
+      const fd = new FormData();
+      if (dateVal)         fd.append('approval_date',  dateVal);
+      if (notesVal)        fd.append('approval_notes', notesVal);
+      if (fileEl.files[0]) fd.append('attachment',     fileEl.files[0]);
+      try {
+        const res  = await fetch(`/proposals/${card.id}/approval`, { method: 'PUT', body: fd });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.message || 'Erro ao registrar aprovação.'); return; }
+        overlay.remove();
+        const idx = cards.findIndex(c => c.id === card.id && c.card_type === 'proposal');
+        if (idx >= 0) { Object.assign(cards[idx], data.approval); }
+        await doMoveCard(card, destination);
+      } catch { showToast('Erro de conexão.'); }
     });
   }
 
@@ -649,6 +703,33 @@
                 }
               </div>
             ` : ''}
+          </div>
+          <div>
+            <div class="drawer-section">Aprovação</div>
+            ${card.approval_registered_at ? `
+              <div class="drawer-field">
+                <div class="drawer-field-label">Data de aprovação</div>
+                <div class="drawer-field-value">${escHtml(card.approval_date || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Informações</div>
+                <div class="drawer-field-value" style="font-weight:400;white-space:pre-wrap;">${escHtml(card.approval_notes || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Registrado em</div>
+                <div class="drawer-field-value">${fmtDatetime(card.approval_registered_at)}</div>
+              </div>
+              ${card.approval_attachment_path ? `
+                <div class="drawer-field">
+                  <div class="drawer-field-label">Anexo</div>
+                  <div class="drawer-field-value">
+                    <a href="/files/approvals/${escHtml(card.approval_attachment_path)}" target="_blank" rel="noopener" style="color:var(--blue)">Ver anexo</a>
+                  </div>
+                </div>
+              ` : ''}
+            ` : `
+              <div style="font-size:12px;color:var(--muted);">Nenhuma aprovação registrada.</div>
+            `}
           </div>
           <div>
             <div class="drawer-section">Comentários</div>
