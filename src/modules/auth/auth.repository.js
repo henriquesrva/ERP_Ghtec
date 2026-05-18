@@ -33,6 +33,10 @@ function updateUserPassword(id, newHash) {
   db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(newHash, id);
 }
 
+function updateUserRole(id, role) {
+  db.prepare(`UPDATE users SET role = ? WHERE id = ?`).run(role, id);
+}
+
 function deleteUserById(id) {
   db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
 }
@@ -41,12 +45,18 @@ function countUsers() {
   return db.prepare(`SELECT COUNT(*) AS n FROM users`).get().n;
 }
 
+function countAdmins() {
+  return db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'admin'`).get().n;
+}
+
 module.exports = {
   findUserByUsername,
   findUserById,
   listUsers,
   createUser,
   updateUserPassword,
+  updateUserRole,
   deleteUserById,
   countUsers,
+  countAdmins,
 };

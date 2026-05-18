@@ -10,6 +10,7 @@ const {
   listUsersHandler,
   createUserHandler,
   changePasswordHandler,
+  changeUserRoleHandler,
   deleteUserHandler,
 } = require("./modules/auth/auth.controller");
 
@@ -84,6 +85,7 @@ app.get("/auth/me",      getMeHandler);
 app.get("/users",              listUsersHandler);
 app.post("/users",             createUserHandler);
 app.put("/users/me/password",  changePasswordHandler);
+app.put("/users/:id/role",     changeUserRoleHandler);
 app.delete("/users/:id",       deleteUserHandler);
 
 app.get("/health", (req, res) => res.json({ ok: true }));

@@ -45,9 +45,18 @@
     th { background: var(--green-bg); color: var(--green); text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-bottom: 2px solid var(--border); }
     td { padding: 10px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
     tr:last-child td { border-bottom: none; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-    .badge-admin { background: #e8f5e9; color: var(--green); }
-    .badge-user  { background: #e3f2fd; color: #1565c0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+    .badge-admin      { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .badge-user       { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+    .badge-comercial  { background: #fff8e1; color: #e65100; border: 1px solid #ffcc80; }
+    .badge-tecnico    { background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
+    .badge-financeiro { background: #e0f2f1; color: #00695c; border: 1px solid #80cbc4; }
+    .role-cell { display: flex; align-items: center; gap: 6px; }
+    .role-select { font-size: 12px; font-family: inherit; padding: 3px 6px; border: 1px solid #ccc; border-radius: var(--radius); background: #fff; cursor: pointer; }
+    .role-select:focus { outline: none; border-color: var(--green-light); }
+    .btn-save-role { font-size: 11px; font-weight: 700; padding: 3px 9px; border: 1px solid var(--green-light); border-radius: var(--radius); background: var(--green-bg); color: var(--green); cursor: pointer; display: none; }
+    .btn-save-role:hover { background: #dcedc8; }
+    .btn-save-role.visible { display: inline-block; }
     .btn-del { background: none; border: 1px solid #ef9a9a; color: var(--danger); border-radius: var(--radius); padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
     .btn-del:hover { background: #ffebee; }
     .btn-del:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -100,6 +109,16 @@
         <div class="field">
           <label>Senha *</label>
           <input type="password" id="f_password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+        </div>
+        <div class="field">
+          <label>Classe</label>
+          <select id="f_role" style="padding:8px 10px;border:1px solid #ccc;border-radius:var(--radius);font-size:13px;font-family:inherit;background:#fff;">
+            <option value="user">user — padrão</option>
+            <option value="comercial">comercial</option>
+            <option value="tecnico">tecnico</option>
+            <option value="financeiro">financeiro</option>
+            <option value="admin">admin</option>
+          </select>
         </div>
         <div id="formMsg" style="display:none" class="msg"></div>
         <div style="margin-top:16px;">
@@ -192,6 +211,31 @@
     });
   }
 
+  async function saveRole(id) {
+    const sel = document.querySelector(`.role-select[data-id="${id}"]`);
+    const newRole = sel.value;
+    try {
+      const res  = await fetch(`/users/${id}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        sel.dataset.orig = newRole;
+        sel.closest('.role-cell').querySelector('.btn-save-role').classList.remove('visible');
+        showMsg('success', 'Classe alterada com sucesso.');
+        loadUsers();
+      } else {
+        showMsg('error', data.message || 'Erro ao alterar classe.');
+        sel.value = sel.dataset.orig;
+        sel.closest('.role-cell').querySelector('.btn-save-role').classList.remove('visible');
+      }
+    } catch {
+      showMsg('error', 'Erro de conexão.');
+    }
+  }
+
   async function deleteUser(id, nome) {
     try {
       const res = await fetch(`/users/${id}`, { method: 'DELETE' });
@@ -216,11 +260,21 @@
         tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Nenhum usuário.</td></tr>';
         return;
       }
+      const ROLES = ['admin','user','comercial','tecnico','financeiro'];
+      const roleOptions = ROLES.map(r => `<option value="${r}">${r}</option>`).join('');
+
       tbody.innerHTML = users.map(u => `
-        <tr>
+        <tr data-uid="${u.id}">
           <td>${u.nome}</td>
           <td style="font-family:monospace">${u.username}</td>
-          <td><span class="badge badge-${u.role}">${u.role}</span></td>
+          <td>
+            ${currentUserRole === 'admin'
+              ? `<div class="role-cell">
+                  <select class="role-select" data-id="${u.id}" data-orig="${u.role}">${roleOptions}</select>
+                  <button class="btn-save-role" data-id="${u.id}">Salvar</button>
+                </div>`
+              : `<span class="badge badge-${u.role}">${u.role}</span>`}
+          </td>
           <td>${formatDate(u.created_at)}</td>
           <td>
             ${currentUserRole === 'admin'
@@ -232,6 +286,18 @@
           </td>
         </tr>
       `).join('');
+
+      // Pré-selecionar role atual em cada select
+      tbody.querySelectorAll('.role-select').forEach(sel => {
+        sel.value = sel.dataset.orig;
+        sel.addEventListener('change', () => {
+          const saveBtn = sel.closest('.role-cell').querySelector('.btn-save-role');
+          saveBtn.classList.toggle('visible', sel.value !== sel.dataset.orig);
+        });
+      });
+      tbody.querySelectorAll('.btn-save-role').forEach(btn => {
+        btn.addEventListener('click', () => saveRole(Number(btn.dataset.id)));
+      });
       tbody.querySelectorAll('.btn-del:not(:disabled)').forEach(btn => {
         btn.addEventListener('click', () => showConfirm(btn.dataset.nome, Number(btn.dataset.id)));
       });
@@ -254,6 +320,7 @@
           nome:     document.getElementById('f_nome').value.trim(),
           username: document.getElementById('f_username').value.trim(),
           password: document.getElementById('f_password').value,
+          role:     document.getElementById('f_role').value,
         }),
       });
       const data = await res.json();
@@ -283,11 +350,6 @@
         currentUserRole = data.user.role;
         const label = document.getElementById('navUserLabel');
         if (label) label.textContent = data.user.nome;
-        if (currentUserRole !== 'admin') {
-          document.querySelector('.split').style.gridTemplateColumns = '1fr';
-          const formCard = document.querySelector('.split .card');
-          formCard.innerHTML = '<div class="card-title">Novo Usuário</div><p style="color:var(--muted);font-size:13px;margin:0">Apenas administradores podem criar usuários.</p>';
-        }
       }
     } catch { window.location.href = '/login.html'; }
     loadUsers();

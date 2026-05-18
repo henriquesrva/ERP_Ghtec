@@ -49,6 +49,18 @@ async function changePasswordHandler(req, res) {
   }
 }
 
+function changeUserRoleHandler(req, res) {
+  if (req.session.userRole !== "admin") {
+    return res.status(403).json({ success: false, message: "Apenas administradores podem alterar classes." });
+  }
+  try {
+    svc.changeUserRole(Number(req.params.id), req.body.role, req.session.userId);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });
+  }
+}
+
 function deleteUserHandler(req, res) {
   if (req.session.userRole !== "admin") {
     return res.status(403).json({ success: false, message: "Apenas administradores podem excluir usuários." });
@@ -61,4 +73,4 @@ function deleteUserHandler(req, res) {
   }
 }
 
-module.exports = { loginHandler, logoutHandler, getMeHandler, listUsersHandler, createUserHandler, changePasswordHandler, deleteUserHandler };
+module.exports = { loginHandler, logoutHandler, getMeHandler, listUsersHandler, createUserHandler, changePasswordHandler, changeUserRoleHandler, deleteUserHandler };

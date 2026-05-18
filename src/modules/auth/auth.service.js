@@ -1,6 +1,8 @@
 const bcrypt = require("bcryptjs");
 const repo = require("./auth.repository");
 
+const ALLOWED_ROLES = ["admin", "user", "comercial", "tecnico", "financeiro"];
+
 async function loginUser(username, password) {
   if (!username || !password) throw { status: 400, message: "Usuário e senha são obrigatórios." };
   const user = repo.findUserByUsername(username);
@@ -22,9 +24,10 @@ async function createNewUser(data) {
   const existing = repo.findUserByUsername(username);
   if (existing) throw { status: 409, message: "Esse nome de usuário já está em uso." };
 
+  const role = ALLOWED_ROLES.includes(data.role) ? data.role : "user";
   const password_hash = await bcrypt.hash(password, 10);
-  const id = repo.createUser({ nome, username, password_hash, role: data.role || "user" });
-  return { id, nome, username, role: data.role || "user" };
+  const id = repo.createUser({ nome, username, password_hash, role });
+  return { id, nome, username, role };
 }
 
 function getAllUsers() {
@@ -46,11 +49,25 @@ async function changePassword(userId, currentPassword, newPassword) {
   repo.updateUserPassword(userId, newHash);
 }
 
+function changeUserRole(targetId, newRole, requestingUserId) {
+  if (!ALLOWED_ROLES.includes(newRole)) throw { status: 400, message: "Classe inválida." };
+  const target = repo.findUserById(targetId);
+  if (!target) throw { status: 404, message: "Usuário não encontrado." };
+  if (target.role === "admin" && newRole !== "admin" && repo.countAdmins() <= 1) {
+    throw { status: 400, message: "Não é possível remover ou alterar o último administrador do sistema." };
+  }
+  repo.updateUserRole(targetId, newRole);
+}
+
 function deleteUser(id, requestingUserId) {
   if (id === requestingUserId) throw { status: 400, message: "Você não pode excluir o próprio usuário." };
+  const target = repo.findUserById(id);
+  if (target && target.role === "admin" && repo.countAdmins() <= 1) {
+    throw { status: 400, message: "Não é possível remover ou alterar o último administrador do sistema." };
+  }
   const total = repo.countUsers();
   if (total <= 1) throw { status: 400, message: "Não é possível excluir o único usuário do sistema." };
   repo.deleteUserById(id);
 }
 
-module.exports = { loginUser, createNewUser, getAllUsers, changePassword, deleteUser };
+module.exports = { loginUser, createNewUser, getAllUsers, changePassword, changeUserRole, deleteUser, ALLOWED_ROLES };
