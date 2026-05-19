@@ -34,6 +34,7 @@ const {
   changePasswordHandler,
   changeUserRoleHandler,
   deleteUserHandler,
+  updateSignatureHandler,
 } = require("./modules/auth/auth.controller");
 
 const {
@@ -99,6 +100,19 @@ const {
   addCommentHandler,
 } = require("./modules/kanban/kanban.controller");
 
+const {
+  listStockPartsHandler,
+  listMovementsHandler,
+  createMovementHandler,
+} = require("./modules/stock/stock.controller");
+
+const {
+  listCategoriesHandler,
+  createCategoryHandler,
+  updateCategoryHandler,
+  deleteCategoryHandler,
+} = require("./modules/category/category.controller");
+
 const app = express();
 
 app.use(session({
@@ -122,7 +136,8 @@ app.get("/auth/me",      getMeHandler);
 // Usuários
 app.get("/users",              listUsersHandler);
 app.post("/users",             createUserHandler);
-app.put("/users/me/password",  changePasswordHandler);
+app.put("/users/me/password",   changePasswordHandler);
+app.put("/users/me/signature",  updateSignatureHandler);
 app.put("/users/:id/role",     changeUserRoleHandler);
 app.delete("/users/:id",       deleteUserHandler);
 
@@ -136,6 +151,12 @@ app.get("/clients/:id",              getClientByIdHandler);
 app.post("/clients",         createClientHandler);
 app.put("/clients/:id",      updateClientHandler);
 app.delete("/clients/:id",   deleteClientHandler);
+
+// Categorias de peças
+app.get("/part-categories",         listCategoriesHandler);
+app.post("/part-categories",        createCategoryHandler);
+app.put("/part-categories/:id",     updateCategoryHandler);
+app.delete("/part-categories/:id",  deleteCategoryHandler);
 
 // Peças — rotas específicas devem vir antes de /:id
 app.get("/parts",                            listPartsHandler);
@@ -174,6 +195,11 @@ app.delete("/kanban/tasks/:id",               deleteTaskHandler);
 app.post("/kanban/tasks/:id/link-proposal",   linkTaskToProposalHandler);
 app.get("/kanban/comments/:type/:id",         getCommentsHandler);
 app.post("/kanban/comments",                  addCommentHandler);
+
+// Estoque
+app.get("/stock",                listStockPartsHandler);
+app.get("/stock/movements",      listMovementsHandler);
+app.post("/stock/movements",     createMovementHandler);
 
 // Propostas
 app.get("/proposals",                      listProposals);

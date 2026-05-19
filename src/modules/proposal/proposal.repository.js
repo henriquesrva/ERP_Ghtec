@@ -30,6 +30,10 @@ function createProposal(proposal) {
       responsavel_cargo,
       responsavel_email,
       responsavel_telefone,
+      responsible_user_id,
+      responsible_name,
+      responsible_role,
+      responsible_phone,
       pdf_path,
       kanban_status,
       kanban_status_updated_at
@@ -50,6 +54,10 @@ function createProposal(proposal) {
       @responsavel_cargo,
       @responsavel_email,
       @responsavel_telefone,
+      @responsible_user_id,
+      @responsible_name,
+      @responsible_role,
+      @responsible_phone,
       @pdf_path,
       'pendente_envio',
       datetime('now')
@@ -141,6 +149,8 @@ function listProposals() {
       p.data_emissao,
       p.valor_total,
       p.pdf_path,
+      p.kanban_status,
+      p.billed_at,
       c.nome AS cliente_nome
     FROM proposals p
     INNER JOIN clients c ON c.id = p.cliente_id

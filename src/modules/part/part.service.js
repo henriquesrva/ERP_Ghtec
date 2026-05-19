@@ -1,7 +1,7 @@
 const {
   listAllParts,
   findPartById,
-  findPartByComposition,
+  findPartByInternalCode,
   searchParts,
   createPart,
   updatePart,
@@ -9,6 +9,8 @@ const {
   getPartPriceHistoryByClient,
   getPartLastPricePerClient,
 } = require("./part.repository");
+
+const { findCategoryById } = require("../category/category.repository");
 
 function getAllParts() {
   return listAllParts();
@@ -24,14 +26,24 @@ function searchPartsByQuery(q) {
 
 function parsePrecoCompra(value) {
   if (value === null || value === undefined || value === "") return null;
-  // Aceita "1.500,50" (pt-BR), "1500.50" (en), "1500" etc.
   const str = String(value).trim().replace(/\./g, "").replace(",", ".");
   const num = parseFloat(str);
   return isNaN(num) ? null : num;
 }
 
+function buildInternalCode(data) {
+  if (!data.category_id || !data.identity_code) return data.codigo_interno ?? null;
+  const cat = findCategoryById(Number(data.category_id));
+  if (!cat) {
+    const err = new Error("Categoria não encontrada.");
+    err.code = "VALIDATION";
+    throw err;
+  }
+  return `${cat.code}-${String(data.identity_code).trim()}`;
+}
+
 function createNewPart(data) {
-  if (!data.nome || !data.nome.trim()) {
+  if (!data.nome || !String(data.nome).trim()) {
     throw new Error("O campo 'nome' é obrigatório.");
   }
 
@@ -41,14 +53,19 @@ function createNewPart(data) {
   }
   data = { ...data, preco_compra: preco };
 
-  // Bloqueia duplicidade por nome + marca + modelo
-  const existing = findPartByComposition(data.nome, data.marca, data.modelo);
-  if (existing) {
-    const label = [data.nome, data.marca, data.modelo].filter(Boolean).join(" / ");
-    const err = new Error(`Já existe uma peça cadastrada com esta combinação nome/marca/modelo: "${label}" (id=${existing.id}).`);
-    err.code = "DUPLICATE_PART";
-    err.existingId = existing.id;
-    throw err;
+  // Gera código interno a partir da categoria + identity_code
+  const codigoInterno = buildInternalCode(data);
+  data = { ...data, codigo_interno: codigoInterno };
+
+  // Valida unicidade do código interno
+  if (codigoInterno) {
+    const dup = findPartByInternalCode(codigoInterno);
+    if (dup) {
+      const err = new Error(`Já existe uma peça cadastrada com o código interno "${codigoInterno}".`);
+      err.code = "DUPLICATE_INTERNAL_CODE";
+      err.existingId = dup.id;
+      throw err;
+    }
   }
 
   const id = createPart(data);
@@ -63,7 +80,7 @@ function updateExistingPart(id, data) {
     throw err;
   }
 
-  if (!data.nome || !data.nome.trim()) {
+  if (!data.nome || !String(data.nome).trim()) {
     throw new Error("O campo 'nome' é obrigatório.");
   }
 
@@ -73,14 +90,19 @@ function updateExistingPart(id, data) {
   }
   data = { ...data, preco_compra: preco };
 
-  // Bloqueia conflito de composição com outra peça
-  const conflict = findPartByComposition(data.nome, data.marca, data.modelo);
-  if (conflict && conflict.id !== id) {
-    const label = [data.nome, data.marca, data.modelo].filter(Boolean).join(" / ");
-    const err = new Error(`Já existe outra peça com esta combinação nome/marca/modelo: "${label}" (id=${conflict.id}).`);
-    err.code = "DUPLICATE_PART";
-    err.existingId = conflict.id;
-    throw err;
+  // Gera código interno a partir da categoria + identity_code
+  const codigoInterno = buildInternalCode(data);
+  data = { ...data, codigo_interno: codigoInterno };
+
+  // Valida unicidade do código interno (excluindo a própria peça)
+  if (codigoInterno) {
+    const dup = findPartByInternalCode(codigoInterno);
+    if (dup && dup.id !== id) {
+      const err = new Error(`Já existe outra peça com o código interno "${codigoInterno}".`);
+      err.code = "DUPLICATE_INTERNAL_CODE";
+      err.existingId = dup.id;
+      throw err;
+    }
   }
 
   updatePart(id, data);

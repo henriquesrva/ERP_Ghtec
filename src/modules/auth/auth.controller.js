@@ -74,4 +74,14 @@ function deleteUserHandler(req, res) {
   }
 }
 
-module.exports = { loginHandler, logoutHandler, getMeHandler, listUsersHandler, createUserHandler, changePasswordHandler, changeUserRoleHandler, deleteUserHandler };
+function updateSignatureHandler(req, res) {
+  try {
+    svc.updateSignature(req.session.userId, req.body);
+    const user = repo.findUserById(req.session.userId);
+    res.json({ success: true, signature_cargo: user.signature_cargo, signature_telefone: user.signature_telefone });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });
+  }
+}
+
+module.exports = { loginHandler, logoutHandler, getMeHandler, listUsersHandler, createUserHandler, changePasswordHandler, changeUserRoleHandler, deleteUserHandler, updateSignatureHandler };

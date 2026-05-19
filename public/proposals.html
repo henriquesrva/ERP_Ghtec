@@ -22,6 +22,7 @@
     #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
     .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
     .btn-logout:hover { background: rgba(255,255,255,0.2); }
+    .badge-faturado { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; white-space: nowrap; }
     .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
     .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
 
@@ -80,10 +81,10 @@
   <a class="nav-link" href="/">Nova Proposta</a>
   <a class="nav-link active" href="/proposals.html">Propostas</a>
   <a class="nav-link" href="/clients.html">Clientes</a>
-  <a class="nav-link" href="/responsaveis.html">Responsáveis</a>
   <a class="nav-link" href="/parts.html">Peças</a>
   <a class="nav-link" href="/objetos.html">Objetos</a>
   <a class="nav-link" href="/kanban.html">Kanban</a>
+  <a class="nav-link" href="/stock.html">Estoque</a>
   <div class="nav-right">
     <a class="nav-link" href="/usuarios.html">Usuários</a>
     <span id="navUserLabel"></span>
@@ -115,6 +116,7 @@
             <th>Cliente</th>
             <th>Data de Emissão</th>
             <th>Valor Total</th>
+            <th>Status</th>
             <th>PDF</th>
             <th></th>
           </tr>
@@ -174,11 +176,15 @@
       const pdfCell = p.pdf_path
         ? `<a class="btn btn-outline" href="/files/proposta-${p.numero_proposta}.pdf" target="_blank">Abrir PDF</a>`
         : `<span style="color:var(--muted);font-size:12px">—</span>`;
+      const statusCell = p.billed_at
+        ? `<span class="badge-faturado">&#10003; Faturado</span>`
+        : `<span style="color:var(--muted);font-size:12px">—</span>`;
       tr.innerHTML = `
         <td><strong>${p.numero_proposta}</strong></td>
         <td>${p.cliente_nome}</td>
         <td>${p.data_emissao}</td>
         <td>${fmt(p.valor_total)}</td>
+        <td>${statusCell}</td>
         <td>${pdfCell}</td>
         <td><button class="btn btn-danger btn-del-prop" data-id="${p.id}" data-num="${p.numero_proposta}" title="Excluir proposta">✕ Excluir</button></td>`;
       tbody.appendChild(tr);

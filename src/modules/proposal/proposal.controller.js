@@ -18,9 +18,36 @@ const {
   findProposalRowById,
 } = require("./proposal.repository");
 
+const { findUserById: findAuthUserById } = require("../auth/auth.repository");
+
 async function createProposal(req, res) {
   try {
-    const result = await createProposalFlow(req.body);
+    const user = findAuthUserById(req.session.userId);
+    if (!user) return res.status(401).json({ success: false, message: "Sessão inválida. Faça login novamente." });
+
+    if (!user.signature_cargo && !user.signature_telefone) {
+      return res.status(400).json({
+        success: false,
+        message: "Complete sua assinatura de usuário (cargo e/ou telefone) antes de gerar uma proposta. Acesse a aba Usuários para configurar.",
+        code: "SIGNATURE_REQUIRED",
+      });
+    }
+
+    const body = {
+      ...req.body,
+      responsavel: {
+        nome:     user.nome,
+        cargo:    user.signature_cargo    || "",
+        email:    "",
+        telefone: user.signature_telefone || "",
+      },
+      responsible_user_id: user.id,
+      responsible_name:    user.nome,
+      responsible_role:    user.signature_cargo    || "",
+      responsible_phone:   user.signature_telefone || "",
+    };
+
+    const result = await createProposalFlow(body);
 
     return res.status(201).json({
       success:                  true,

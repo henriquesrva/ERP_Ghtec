@@ -346,4 +346,101 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_kc_card ON kanban_comments(card_type, card_id);
 `);
 
+// ── Assinatura de usuário (cargo e telefone vinculados ao login) ──────────────
+
+const userCols = db.pragma("table_info(users)").map((c) => c.name);
+if (!userCols.includes("signature_cargo")) {
+  db.exec(`ALTER TABLE users ADD COLUMN signature_cargo TEXT`);
+  console.log(`[migrate] users: coluna "signature_cargo" adicionada.`);
+}
+if (!userCols.includes("signature_telefone")) {
+  db.exec(`ALTER TABLE users ADD COLUMN signature_telefone TEXT`);
+  console.log(`[migrate] users: coluna "signature_telefone" adicionada.`);
+}
+
+// ── Responsável automático em proposals (snapshot da assinatura do usuário) ───
+
+const proposalColsFull = db.pragma("table_info(proposals)").map((c) => c.name);
+const newResponsibleCols = [
+  ["responsible_user_id", "INTEGER"],
+  ["responsible_name",    "TEXT"],
+  ["responsible_role",    "TEXT"],
+  ["responsible_phone",   "TEXT"],
+];
+for (const [col, type] of newResponsibleCols) {
+  if (!proposalColsFull.includes(col)) {
+    db.exec(`ALTER TABLE proposals ADD COLUMN ${col} ${type}`);
+    console.log(`[migrate] proposals: coluna "${col}" adicionada.`);
+  }
+}
+
+// ── Coluna stock_quantity em parts ───────────────────────────────────────────
+
+const partColsStock = db.pragma("table_info(parts)").map((c) => c.name);
+if (!partColsStock.includes("stock_quantity")) {
+  db.exec(`ALTER TABLE parts ADD COLUMN stock_quantity INTEGER DEFAULT 0`);
+  console.log(`[migrate] parts: coluna "stock_quantity" adicionada.`);
+}
+
+// ── Tabela stock_movements ────────────────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS stock_movements (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    part_id              INTEGER NOT NULL,
+    movement_type        TEXT    NOT NULL,
+    quantity             INTEGER NOT NULL,
+    entry_type           TEXT,
+    proposal_id          INTEGER,
+    client_id            INTEGER,
+    returns_to_stock     INTEGER,
+    notes                TEXT,
+    created_by_user_id   INTEGER NOT NULL,
+    created_at           TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (part_id)            REFERENCES parts(id),
+    FOREIGN KEY (proposal_id)        REFERENCES proposals(id),
+    FOREIGN KEY (client_id)          REFERENCES clients(id),
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sm_part ON stock_movements(part_id);
+  CREATE INDEX IF NOT EXISTS idx_sm_type ON stock_movements(movement_type);
+`);
+
+// ── Tabela part_categories ────────────────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS part_categories (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    code       TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TRIGGER IF NOT EXISTS part_categories_updated_at
+  AFTER UPDATE ON part_categories
+  BEGIN
+    UPDATE part_categories SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
+// ── Colunas category_id e identity_code em parts ─────────────────────────────
+
+const partColsCat = db.pragma("table_info(parts)").map((c) => c.name);
+if (!partColsCat.includes("category_id")) {
+  db.exec(`ALTER TABLE parts ADD COLUMN category_id INTEGER REFERENCES part_categories(id)`);
+  console.log(`[migrate] parts: coluna "category_id" adicionada.`);
+}
+if (!partColsCat.includes("identity_code")) {
+  db.exec(`ALTER TABLE parts ADD COLUMN identity_code TEXT`);
+  console.log(`[migrate] parts: coluna "identity_code" adicionada.`);
+}
+
+// Índice único em codigo_interno (NULLs são excluídos — SQLite trata NULL como distinto)
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_parts_internal_code_unique
+    ON parts(codigo_interno) WHERE codigo_interno IS NOT NULL;
+`);
+
 console.log("[migrate] Banco de dados atualizado com sucesso.");

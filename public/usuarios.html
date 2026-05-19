@@ -75,10 +75,10 @@
   <a class="nav-link" href="/">Nova Proposta</a>
   <a class="nav-link" href="/proposals.html">Propostas</a>
   <a class="nav-link" href="/clients.html">Clientes</a>
-  <a class="nav-link" href="/responsaveis.html">Responsáveis</a>
   <a class="nav-link" href="/parts.html">Peças</a>
   <a class="nav-link" href="/objetos.html">Objetos</a>
   <a class="nav-link" href="/kanban.html">Kanban</a>
+  <a class="nav-link" href="/stock.html">Estoque</a>
   <div class="nav-right">
     <a class="nav-link active" href="/usuarios.html">Usuários</a>
     <span id="navUserLabel"></span>
@@ -166,6 +166,25 @@
         <div id="pwdMsg" style="display:none" class="msg"></div>
         <div style="margin-top:16px;">
           <button type="submit" class="btn btn-primary" id="btnPwd">Alterar senha</button>
+        </div>
+      </form>
+    </div>
+    <!-- ── Assinatura ── -->
+    <div class="card">
+      <div class="card-title">Minha Assinatura</div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Estes dados aparecem automaticamente nas propostas que você gerar.</p>
+      <form id="sigForm" novalidate>
+        <div class="field">
+          <label>Cargo</label>
+          <input type="text" id="sig_cargo" placeholder="Ex: Consultor Comercial" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label>Telefone</label>
+          <input type="text" id="sig_telefone" placeholder="Ex: (31) 99999-9999" autocomplete="off" />
+        </div>
+        <div id="sigMsg" style="display:none" class="msg"></div>
+        <div style="margin-top:16px;">
+          <button type="submit" class="btn btn-primary" id="btnSig">Salvar assinatura</button>
         </div>
       </form>
     </div>
@@ -393,6 +412,49 @@
   function logout() {
     fetch('/auth/logout', { method: 'POST' }).finally(() => { window.location.href = '/login.html'; });
   }
+
+  // ── Assinatura ────────────────────────────────────────────────────────────
+
+  async function loadSignature() {
+    try {
+      const res  = await fetch('/auth/me');
+      const data = await res.json();
+      if (data.user) {
+        document.getElementById('sig_cargo').value    = data.user.signature_cargo    || '';
+        document.getElementById('sig_telefone').value = data.user.signature_telefone || '';
+      }
+    } catch { /* silencioso */ }
+  }
+
+  document.getElementById('sigForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msgEl = document.getElementById('sigMsg');
+    msgEl.style.display = 'none';
+    const btn = document.getElementById('btnSig');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+    try {
+      const res = await fetch('/users/me/signature', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cargo:    document.getElementById('sig_cargo').value.trim(),
+          telefone: document.getElementById('sig_telefone').value.trim(),
+        }),
+      });
+      const data = await res.json();
+      msgEl.className = res.ok ? 'msg success' : 'msg error';
+      msgEl.textContent = res.ok ? 'Assinatura salva com sucesso.' : (data.message || 'Erro ao salvar.');
+      msgEl.style.display = 'block';
+    } catch {
+      msgEl.className = 'msg error';
+      msgEl.textContent = 'Erro de conexão.';
+      msgEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Salvar assinatura';
+    }
+  });
+
+  loadSignature();
 </script>
 </body>
 </html>

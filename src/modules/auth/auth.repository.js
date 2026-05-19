@@ -6,13 +6,15 @@ function findUserByUsername(username) {
 
 function findUserById(id) {
   return db.prepare(`
-    SELECT id, nome, username, role, created_at FROM users WHERE id = ?
+    SELECT id, nome, username, role, signature_cargo, signature_telefone, created_at
+    FROM users WHERE id = ?
   `).get(id);
 }
 
 function listUsers() {
   return db.prepare(`
-    SELECT id, nome, username, role, created_at FROM users ORDER BY created_at ASC
+    SELECT id, nome, username, role, signature_cargo, signature_telefone, created_at
+    FROM users ORDER BY created_at ASC
   `).all();
 }
 
@@ -37,6 +39,12 @@ function updateUserRole(id, role) {
   db.prepare(`UPDATE users SET role = ? WHERE id = ?`).run(role, id);
 }
 
+function updateUserSignature(id, { cargo, telefone }) {
+  db.prepare(`
+    UPDATE users SET signature_cargo = ?, signature_telefone = ? WHERE id = ?
+  `).run(cargo || null, telefone || null, id);
+}
+
 function deleteUserById(id) {
   db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
 }
@@ -56,6 +64,7 @@ module.exports = {
   createUser,
   updateUserPassword,
   updateUserRole,
+  updateUserSignature,
   deleteUserById,
   countUsers,
   countAdmins,

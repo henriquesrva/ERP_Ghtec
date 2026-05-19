@@ -70,4 +70,13 @@ function deleteUser(id, requestingUserId) {
   repo.deleteUserById(id);
 }
 
-module.exports = { loginUser, createNewUser, getAllUsers, changePassword, changeUserRole, deleteUser, ALLOWED_ROLES };
+function updateSignature(userId, { cargo, telefone }) {
+  const user = repo.findUserById(userId);
+  if (!user) throw { status: 404, message: "Usuário não encontrado." };
+  repo.updateUserSignature(userId, {
+    cargo:    (cargo    || "").trim() || null,
+    telefone: (telefone || "").trim() || null,
+  });
+}
+
+module.exports = { loginUser, createNewUser, getAllUsers, changePassword, changeUserRole, deleteUser, updateSignature, ALLOWED_ROLES };

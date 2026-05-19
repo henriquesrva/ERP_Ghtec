@@ -3,98 +3,106 @@ const db = require("../../db/connection");
 function listAllParts() {
   return db.prepare(`
     SELECT
-      id, nome, descricao, marca, modelo, categoria,
-      ncm, codigo_interno, preco_compra, created_at, updated_at
-    FROM parts
-    ORDER BY nome ASC
+      p.id, p.nome, p.descricao, p.categoria,
+      p.ncm, p.codigo_interno, p.preco_compra,
+      p.category_id, p.identity_code,
+      p.stock_quantity,
+      pc.name AS category_name, pc.code AS category_code,
+      p.created_at, p.updated_at
+    FROM parts p
+    LEFT JOIN part_categories pc ON pc.id = p.category_id
+    ORDER BY p.nome ASC
   `).all();
 }
 
 function findPartById(id) {
-  return db.prepare(`SELECT * FROM parts WHERE id = ?`).get(id);
+  return db.prepare(`
+    SELECT
+      p.*,
+      pc.name AS category_name, pc.code AS category_code
+    FROM parts p
+    LEFT JOIN part_categories pc ON pc.id = p.category_id
+    WHERE p.id = ?
+  `).get(id);
 }
 
-function findPartByComposition(nome, marca, modelo) {
+function findPartByInternalCode(codigo) {
+  if (!codigo) return null;
   return db.prepare(`
-    SELECT * FROM parts
-    WHERE nome    IS ?
-      AND marca   IS ?
-      AND modelo  IS ?
-    LIMIT 1
-  `).get(
-    nome   || null,
-    marca  || null,
-    modelo || null
-  );
+    SELECT id FROM parts WHERE codigo_interno = ? LIMIT 1
+  `).get(codigo);
 }
 
 function searchParts(q) {
   const term = `%${q}%`;
   return db.prepare(`
-    SELECT id, nome, descricao, marca, modelo, categoria, ncm, codigo_interno
-    FROM parts
-    WHERE nome           LIKE ?
-       OR marca          LIKE ?
-       OR modelo         LIKE ?
-       OR categoria      LIKE ?
-       OR codigo_interno LIKE ?
-    ORDER BY nome ASC
+    SELECT
+      p.id, p.nome, p.descricao, p.categoria,
+      p.ncm, p.codigo_interno, p.category_id, p.identity_code,
+      pc.name AS category_name, pc.code AS category_code
+    FROM parts p
+    LEFT JOIN part_categories pc ON pc.id = p.category_id
+    WHERE p.nome           LIKE ?
+       OR p.categoria      LIKE ?
+       OR p.codigo_interno LIKE ?
+       OR p.identity_code  LIKE ?
+    ORDER BY p.nome ASC
     LIMIT 10
-  `).all(term, term, term, term, term);
+  `).all(term, term, term, term);
 }
 
 function createPart(data) {
   const result = db.prepare(`
     INSERT INTO parts (
-      nome, descricao, marca, modelo, categoria,
-      ncm, codigo_interno, observacoes, preco_compra
+      nome, descricao, categoria,
+      ncm, codigo_interno, observacoes, preco_compra,
+      category_id, identity_code
     ) VALUES (
-      @nome, @descricao, @marca, @modelo, @categoria,
-      @ncm, @codigo_interno, @observacoes, @preco_compra
+      @nome, @descricao, @categoria,
+      @ncm, @codigo_interno, @observacoes, @preco_compra,
+      @category_id, @identity_code
     )
   `).run({
     nome:           data.nome           ?? null,
     descricao:      data.descricao      ?? null,
-    marca:          data.marca          ?? null,
-    modelo:         data.modelo         ?? null,
     categoria:      data.categoria      ?? null,
     ncm:            data.ncm            ?? null,
     codigo_interno: data.codigo_interno ?? null,
     observacoes:    data.observacoes    ?? null,
     preco_compra:   data.preco_compra   ?? null,
+    category_id:    data.category_id    ?? null,
+    identity_code:  data.identity_code  ?? null,
   });
   return result.lastInsertRowid;
 }
 
 function updatePart(id, data) {
-  // updated_at gerenciado pelo trigger parts_updated_at
   db.prepare(`
     UPDATE parts SET
       nome           = @nome,
       descricao      = @descricao,
-      marca          = @marca,
-      modelo         = @modelo,
       categoria      = @categoria,
       ncm            = @ncm,
       codigo_interno = @codigo_interno,
       observacoes    = @observacoes,
-      preco_compra   = @preco_compra
+      preco_compra   = @preco_compra,
+      category_id    = @category_id,
+      identity_code  = @identity_code
     WHERE id = @id
   `).run({
     id,
     nome:           data.nome           ?? null,
     descricao:      data.descricao      ?? null,
-    marca:          data.marca          ?? null,
-    modelo:         data.modelo         ?? null,
     categoria:      data.categoria      ?? null,
     ncm:            data.ncm            ?? null,
     codigo_interno: data.codigo_interno ?? null,
     observacoes:    data.observacoes    ?? null,
     preco_compra:   data.preco_compra   ?? null,
+    category_id:    data.category_id    ?? null,
+    identity_code:  data.identity_code  ?? null,
   });
 }
 
-// Retorna o histórico de preços de uma peça por cliente, do mais recente para o mais antigo.
 function getPartPriceHistory(partId) {
   return db.prepare(`
     SELECT
@@ -110,7 +118,6 @@ function getPartPriceHistory(partId) {
   `).all(partId);
 }
 
-// Histórico filtrado por peça + cliente específico.
 function getPartPriceHistoryByClient(partId, clientId) {
   return db.prepare(`
     SELECT
@@ -126,7 +133,6 @@ function getPartPriceHistoryByClient(partId, clientId) {
   `).all(partId, clientId);
 }
 
-// Último preço cobrado por cliente para comparação.
 function getPartLastPricePerClient(partId) {
   return db.prepare(`
     SELECT
@@ -146,9 +152,25 @@ function getPartLastPricePerClient(partId) {
   `).all(partId, partId);
 }
 
+// Mantida para compatibilidade com migrate.js backfill
+function findPartByComposition(nome, marca, modelo) {
+  return db.prepare(`
+    SELECT * FROM parts
+    WHERE nome    IS ?
+      AND marca   IS ?
+      AND modelo  IS ?
+    LIMIT 1
+  `).get(
+    nome   || null,
+    marca  || null,
+    modelo || null
+  );
+}
+
 module.exports = {
   listAllParts,
   findPartById,
+  findPartByInternalCode,
   findPartByComposition,
   searchParts,
   createPart,

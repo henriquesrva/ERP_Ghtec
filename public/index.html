@@ -494,10 +494,10 @@
   <a class="nav-link active" href="/">Nova Proposta</a>
   <a class="nav-link" href="/proposals.html">Propostas</a>
   <a class="nav-link" href="/clients.html">Clientes</a>
-  <a class="nav-link" href="/responsaveis.html">Responsáveis</a>
   <a class="nav-link" href="/parts.html">Peças</a>
   <a class="nav-link" href="/objetos.html">Objetos</a>
   <a class="nav-link" href="/kanban.html">Kanban</a>
+  <a class="nav-link" href="/stock.html">Estoque</a>
   <div class="nav-right">
     <a class="nav-link" href="/usuarios.html">Usuários</a>
     <span id="navUserLabel"></span>
@@ -618,22 +618,14 @@
       </div>
     </div>
 
-    <!-- Responsável -->
+    <!-- Responsável (assinatura automática do usuário logado) -->
     <div class="card">
       <div class="card-title">Responsável pela Proposta</div>
-      <div id="resp-buttons" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <button type="button" class="btn-procurar" id="btnProcurarResp">&#128269; Procurar responsável</button>
-        <a class="btn-criar-link" href="/responsaveis.html?new=1" target="_blank">+ Criar novo responsável</a>
+      <div id="resp-assinatura" style="background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; font-size:13px;">
+        <div style="font-weight:700;" id="sig-nome">Carregando...</div>
+        <div id="sig-preview" style="margin-top:4px; font-size:12px; color:var(--muted);"></div>
       </div>
-      <div id="resp-selecionado" style="display:none; background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; font-size:13px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <div style="min-width:0;">
-            <div id="rs-nome" style="font-weight:700;"></div>
-          </div>
-          <button type="button" id="btnTrocarResp" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted); white-space:nowrap;">Trocar</button>
-        </div>
-        <div id="rs-preview"></div>
-      </div>
+      <div style="font-size:11px; color:var(--muted); margin-top:6px;">A proposta será gerada em seu nome. Para alterar cargo ou telefone, acesse <a href="/usuarios.html" style="color:var(--green);">Usuários</a>.</div>
     </div>
 
     <div class="submit-area">
@@ -681,8 +673,6 @@
   let itemCount = 0;
   let currentClientId   = null;
   let currentClientData = null;
-  let currentRespId     = null;
-  let currentRespData   = null;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -810,46 +800,6 @@
       },
       filterFn: (c, q) => (c.nome||'').toLowerCase().includes(q) || (c.cnpj||'').includes(q) || (c.cidade||'').toLowerCase().includes(q),
       onSelect: selectClient
-    });
-  });
-
-  // ─── Responsável modal + painel ──────────────────────────────────────────
-
-  const respPanel = document.getElementById('resp-selecionado');
-
-  function selectResp(r) {
-    currentRespId   = r.id;
-    currentRespData = r;
-    document.getElementById('resp-buttons').style.display = 'none';
-    document.getElementById('rs-nome').textContent = r.nome;
-    const rows = [];
-    if (r.cargo)    rows.push(['Cargo', r.cargo]);
-    if (r.telefone) rows.push(['Telefone', r.telefone]);
-    document.getElementById('rs-preview').innerHTML = buildPreview(rows);
-    respPanel.style.display = 'block';
-  }
-
-  function clearRespSelection() {
-    currentRespId   = null;
-    currentRespData = null;
-    document.getElementById('resp-buttons').style.display = 'flex';
-    document.getElementById('rs-preview').innerHTML = '';
-    respPanel.style.display = 'none';
-  }
-
-  document.getElementById('btnTrocarResp').addEventListener('click', clearRespSelection);
-
-  document.getElementById('btnProcurarResp').addEventListener('click', () => {
-    openEntityModal({
-      title: 'Selecionar Responsável',
-      fetchUrl: '/responsaveis',
-      searchPlaceholder: 'Buscar por nome ou cargo...',
-      renderRow: r => {
-        const sub = [r.cargo, r.telefone].filter(Boolean).join(' · ');
-        return `<div class="mi-main">${r.nome}</div>${sub ? `<div class="mi-sub">${sub}</div>` : ''}`;
-      },
-      filterFn: (r, q) => (r.nome||'').toLowerCase().includes(q) || (r.cargo||'').toLowerCase().includes(q),
-      onSelect: selectResp
     });
   });
 
@@ -1063,11 +1013,6 @@
         prazo_entrega:   getFieldValue('prazo_entrega'),
         garantia:        getFieldValue('garantia'),
         validade:        getFieldValue('validade')
-      },
-      responsavel: {
-        nome:     currentRespData?.nome     || '',
-        cargo:    currentRespData?.cargo    || '',
-        telefone: currentRespData?.telefone || ''
       }
     };
   }
@@ -1078,12 +1023,6 @@
     if (!currentClientId) {
       showResult('error', 'Selecione um Hospital/Cliente cadastrado antes de gerar a proposta.');
       document.getElementById('btnProcurarCliente').focus();
-      return;
-    }
-
-    if (!currentRespId) {
-      showResult('error', 'Selecione um Responsável cadastrado antes de gerar a proposta.');
-      document.getElementById('btnProcurarResp').focus();
       return;
     }
 
@@ -1161,6 +1100,25 @@
   }
 
   function showSuggestions() { /* Clientes vêm sempre do cadastro — sem sugestões pós-criação. */ }
+
+  // ─── Assinatura do usuário logado ─────────────────────────────────────────
+  (async function loadSignaturePreview() {
+    try {
+      const res  = await fetch('/auth/me');
+      if (!res.ok) return;
+      const data = await res.json();
+      const user = data.user;
+      if (!user) return;
+      document.getElementById('sig-nome').textContent = user.nome;
+      const rows = [];
+      if (user.signature_cargo)    rows.push(`Cargo: ${user.signature_cargo}`);
+      if (user.signature_telefone) rows.push(`Telefone: ${user.signature_telefone}`);
+      document.getElementById('sig-preview').innerHTML =
+        rows.length
+          ? rows.join(' &middot; ')
+          : '<span style="color:var(--danger)">Assinatura incompleta — configure cargo e telefone em <a href="/usuarios.html" style="color:var(--danger)">Usuários</a> antes de gerar propostas.</span>';
+    } catch { /* silencioso */ }
+  })();
 
   // Start with one empty row
   addItem();

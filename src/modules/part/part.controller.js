@@ -48,14 +48,14 @@ function createPartHandler(req, res) {
     return res.status(201).json({ success: true, part });
   } catch (err) {
     console.error(err);
-    if (err.code === "DUPLICATE_PART") {
+    if (err.code === "DUPLICATE_PART" || err.code === "DUPLICATE_INTERNAL_CODE") {
       return res.status(409).json({
         success: false,
         message: err.message,
         existingId: err.existingId,
       });
     }
-    if (err.message.includes("obrigatório")) {
+    if (err.code === "VALIDATION" || err.message.includes("obrigatório")) {
       return res.status(400).json({ success: false, message: err.message });
     }
     return res.status(500).json({ success: false, message: "Erro ao criar peça." });
@@ -71,14 +71,14 @@ function updatePartHandler(req, res) {
     if (err.code === "NOT_FOUND") {
       return res.status(404).json({ success: false, message: err.message });
     }
-    if (err.code === "DUPLICATE_PART") {
+    if (err.code === "DUPLICATE_PART" || err.code === "DUPLICATE_INTERNAL_CODE") {
       return res.status(409).json({
         success: false,
         message: err.message,
         existingId: err.existingId,
       });
     }
-    if (err.message.includes("obrigatório")) {
+    if (err.code === "VALIDATION" || err.message.includes("obrigatório")) {
       return res.status(400).json({ success: false, message: err.message });
     }
     return res.status(500).json({ success: false, message: "Erro ao atualizar peça." });

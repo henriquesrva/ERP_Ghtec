@@ -38,6 +38,8 @@ function listCards() {
       (SELECT COUNT(*) FROM proposal_items pi3 WHERE pi3.proposal_id = p.id) AS items_count
     FROM proposals p
     LEFT JOIN clients c ON c.id = p.cliente_id
+    WHERE NOT (p.kanban_status = 'enviado'  AND julianday('now') - julianday(p.kanban_status_updated_at) > 30)
+      AND NOT (p.kanban_status = 'faturado' AND julianday('now') - julianday(p.kanban_status_updated_at) > 7)
     UNION ALL
     SELECT
       'task'              AS card_type,

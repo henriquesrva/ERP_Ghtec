@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHTec — Estoque</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
+      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
+      --danger: #c62828; --amber: #f57f17; --radius: 6px;
+      --blue: #1565c0; --blue-bg: #e3f2fd;
+    }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
+
+    /* Nav */
+    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; flex-wrap: wrap; }
+    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
+    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
+    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
+    .nav-link.active { color: #fff; border-bottom-color: #fff; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
+    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
+    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
+    .btn-logout:hover { background: rgba(255,255,255,0.2); }
+
+    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
+    .page-bar p  { margin: 0; }
+
+    /* Container */
+    .container { max-width: 1200px; margin: 28px auto; padding: 0 16px 60px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Card */
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
+    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
+    .btn-ghost { background: #eee; color: #444; }
+    .btn-ghost:hover:not(:disabled) { background: #ddd; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* Filtros */
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; }
+    .filters input { padding: 7px 11px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; min-width: 220px; }
+    .filters input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+
+    /* Tabela */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { background: var(--green-bg); color: var(--green); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 8px 10px; border: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    tbody td { padding: 8px 10px; border: 1px solid #eee; vertical-align: middle; }
+    tbody tr:nth-child(even) td { background: #fafafa; }
+    tbody tr:hover td { background: #f0f8f0; }
+    .tbl-empty { text-align: center; color: var(--muted); padding: 28px 0; font-size: 13px; }
+    .qty-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; }
+    .qty-ok   { background: #e8f5e9; color: #2e7d32; }
+    .qty-zero { background: #ffebee; color: #c62828; }
+    .qty-low  { background: #fff8e1; color: #f57f17; }
+    .btn-hist { background: none; border: 1px solid var(--border); border-radius: var(--radius); font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer; padding: 3px 8px; font-family: inherit; }
+    .btn-hist:hover { background: var(--green-bg); color: var(--green); border-color: var(--green-light); }
+
+    /* Badge tipo mov */
+    .badge-entrada { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-saida   { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 8px; padding: 28px; max-width: 560px; width: 100%; max-height: 92vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 15px; font-weight: 700; color: var(--green); }
+    .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); line-height: 1; padding: 0 4px; }
+    .modal-close:hover { color: var(--danger); }
+
+    /* Seleção entrada/saída */
+    .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 8px; }
+    .type-card { border: 2px solid var(--border); border-radius: 8px; padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.15s; user-select: none; }
+    .type-card:hover { border-color: var(--green-light); background: var(--green-bg); }
+    .type-card.selected { border-color: var(--green); background: var(--green-bg); }
+    .type-card-icon { font-size: 26px; margin-bottom: 8px; }
+    .type-card-label { font-size: 14px; font-weight: 700; color: var(--text); }
+    .type-card-desc  { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .type-card.entrada .type-card-icon { color: #2e7d32; }
+    .type-card.saida   .type-card-icon { color: #c62828; }
+
+    /* Formulário modal */
+    .mfield { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+    .mfield label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .mfield input, .mfield select, .mfield textarea {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius);
+      font-size: 13px; font-family: inherit; color: var(--text);
+    }
+    .mfield input:focus, .mfield select:focus, .mfield textarea:focus {
+      outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15);
+    }
+    .mfield input.error, .mfield select.error { border-color: var(--danger); }
+    .mfield textarea { resize: vertical; min-height: 58px; }
+    .mfield-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    /* Seleção de tipo de entrada */
+    .entry-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .entry-type-opt { border: 2px solid var(--border); border-radius: 6px; padding: 10px 12px; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text); transition: all 0.12s; text-align: center; user-select: none; }
+    .entry-type-opt:hover { border-color: var(--green-light); background: var(--green-bg); }
+    .entry-type-opt.selected { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+    .entry-type-opt.error-border { border-color: var(--danger); }
+
+    /* Retorno ao estoque */
+    .returns-row { display: flex; gap: 10px; }
+    .returns-opt { flex: 1; border: 2px solid var(--border); border-radius: 6px; padding: 10px; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--text); transition: all 0.12s; text-align: center; user-select: none; }
+    .returns-opt:hover { border-color: var(--green-light); background: var(--green-bg); }
+    .returns-opt.selected-yes { border-color: #2e7d32; background: #e8f5e9; color: #2e7d32; }
+    .returns-opt.selected-no  { border-color: #c62828; background: #ffebee; color: #c62828; }
+    .returns-opt.error-border { border-color: var(--danger); }
+
+    /* Pesquisa de peça */
+    .part-search-wrap { position: relative; }
+    .part-search-wrap input { width: 100%; }
+    .part-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-top: none; border-radius: 0 0 var(--radius) var(--radius); z-index: 10; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .part-opt { padding: 9px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+    .part-opt:hover { background: var(--green-bg); }
+    .part-opt .popt-name { font-weight: 700; }
+    .part-opt .popt-sub  { font-size: 11px; color: var(--muted); }
+    .part-opt.no-result  { color: var(--muted); font-style: italic; cursor: default; }
+    .part-opt.no-result:hover { background: none; }
+
+    /* Modal footer */
+    .modal-footer { display: flex; align-items: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
+    .msg.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .msg.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
+
+    /* Loading state */
+    .loading-text { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
+
+    /* Seção de histórico com filtro por peça */
+    .hist-filter { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .hist-filter label { font-size: 12px; font-weight: 700; color: var(--muted); }
+    .hist-filter select { padding: 6px 10px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+    .hist-filter select:focus { outline: none; border-color: var(--green-light); }
+    .btn-clear-filter { background: none; border: 1px solid var(--border); border-radius: var(--radius); font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer; padding: 5px 10px; font-family: inherit; }
+    .btn-clear-filter:hover { background: #f0f0f0; }
+
+    @media (max-width: 640px) {
+      .type-grid { grid-template-columns: 1fr; }
+      .entry-type-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="nav-brand" href="/">GHTec</a>
+  <a class="nav-link" href="/">Nova Proposta</a>
+  <a class="nav-link" href="/proposals.html">Propostas</a>
+  <a class="nav-link" href="/clients.html">Clientes</a>
+  <a class="nav-link" href="/parts.html">Peças</a>
+  <a class="nav-link" href="/objetos.html">Objetos</a>
+  <a class="nav-link" href="/kanban.html">Kanban</a>
+  <a class="nav-link active" href="/stock.html">Estoque</a>
+  <div class="nav-right">
+    <a class="nav-link" href="/usuarios.html">Usuários</a>
+    <span id="navUserLabel"></span>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
+</nav>
+
+<div class="page-bar">
+  <div>
+    <h1>Estoque</h1>
+    <p>Peças com código interno · movimentações de entrada e saída</p>
+  </div>
+  <button class="btn btn-primary" id="btnNewMovement">+ Nova movimentação</button>
+</div>
+
+<div class="container">
+
+  <!-- Tabela de estoque -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Peças em estoque</span>
+      <div class="filters">
+        <input type="text" id="stockSearch" placeholder="Buscar por código ou nome..." autocomplete="off" />
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="stockTable">
+        <thead>
+          <tr>
+            <th>Código Interno</th>
+            <th>Nome</th>
+            <th>Categoria</th>
+            <th style="text-align:center">Qtd. Estoque</th>
+            <th style="text-align:center">Histórico</th>
+          </tr>
+        </thead>
+        <tbody id="stockBody">
+          <tr><td colspan="5" class="loading-text">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Histórico de movimentações -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Histórico de movimentações</span>
+    </div>
+    <div class="hist-filter">
+      <label for="histPartFilter">Peça:</label>
+      <select id="histPartFilter">
+        <option value="">— Todas as peças —</option>
+      </select>
+      <button class="btn-clear-filter" id="btnClearFilter">Limpar filtro</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data/Hora</th>
+            <th>Tipo</th>
+            <th>Peça</th>
+            <th>Cód. Interno</th>
+            <th style="text-align:center">Qtd.</th>
+            <th>Detalhe</th>
+            <th>Proposta</th>
+            <th>Cliente</th>
+            <th>Usuário</th>
+            <th>Obs.</th>
+          </tr>
+        </thead>
+        <tbody id="histBody">
+          <tr><td colspan="10" class="loading-text">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal de nova movimentação -->
+<div class="modal-overlay" id="movModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="movModalTitle">Nova Movimentação</span>
+      <button class="modal-close" id="closeMovModal">&times;</button>
+    </div>
+
+    <!-- Passo 1: escolher tipo -->
+    <div id="stepType">
+      <p style="font-size:13px;color:var(--muted);margin:0 0 16px">Selecione o tipo de movimentação:</p>
+      <div class="type-grid">
+        <div class="type-card entrada" id="typeCardEntrada" onclick="selectMovType('entrada')">
+          <div class="type-card-icon">&#8681;</div>
+          <div class="type-card-label">Entrada</div>
+          <div class="type-card-desc">Compra, devolução ou guarda</div>
+        </div>
+        <div class="type-card saida" id="typeCardSaida" onclick="selectMovType('saida')">
+          <div class="type-card-icon">&#8679;</div>
+          <div class="type-card-label">Saída</div>
+          <div class="type-card-desc">Uso em proposta, empréstimo, técnico...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btnNextStep" onclick="goToStep2()" disabled>Continuar</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Passo 2: formulário -->
+    <div id="stepForm" style="display:none">
+
+      <!-- === FORMULÁRIO DE ENTRADA === -->
+      <div id="formEntrada" style="display:none">
+        <div class="mfield">
+          <label>Tipo de entrada *</label>
+          <div class="entry-type-grid" id="entryTypeGrid">
+            <div class="entry-type-opt" data-val="compra_nova"          onclick="selectEntryType(this)">Compra nova</div>
+            <div class="entry-type-opt" data-val="devolucao_tecnicos"   onclick="selectEntryType(this)">Devolução de técnicos</div>
+            <div class="entry-type-opt" data-val="devolucao_conserto"   onclick="selectEntryType(this)">Devolução conserto</div>
+            <div class="entry-type-opt" data-val="guardar_alguem"       onclick="selectEntryType(this)">Guardar para alguém</div>
+          </div>
+          <span class="mfield-hint" id="entryTypeHint" style="color:var(--danger);display:none">Selecione o tipo de entrada.</span>
+        </div>
+
+        <div class="mfield">
+          <label>Peça *</label>
+          <div class="part-search-wrap">
+            <input type="text" id="e_partSearch" placeholder="Buscar por nome ou código interno..." autocomplete="off" />
+            <div class="part-dropdown" id="e_partDropdown" style="display:none"></div>
+          </div>
+          <input type="hidden" id="e_partId" />
+          <span class="mfield-hint" id="e_partHint" style="color:var(--danger);display:none">Selecione uma peça.</span>
+        </div>
+
+        <div class="mfield">
+          <label>Quantidade *</label>
+          <input type="number" id="e_qty" min="1" step="1" placeholder="Ex: 2" />
+          <span class="mfield-hint" id="e_qtyHint" style="color:var(--danger);display:none">Informe a quantidade.</span>
+        </div>
+
+        <div class="mfield">
+          <label>Observações</label>
+          <textarea id="e_notes" placeholder="Informações adicionais..."></textarea>
+        </div>
+      </div>
+
+      <!-- === FORMULÁRIO DE SAÍDA === -->
+      <div id="formSaida" style="display:none">
+
+        <div class="mfield">
+          <label>Peça *</label>
+          <div class="part-search-wrap">
+            <input type="text" id="s_partSearch" placeholder="Buscar por nome ou código interno..." autocomplete="off" />
+            <div class="part-dropdown" id="s_partDropdown" style="display:none"></div>
+          </div>
+          <input type="hidden" id="s_partId" />
+          <span class="mfield-hint" id="s_partHint" style="color:var(--danger);display:none">Selecione uma peça.</span>
+          <span class="mfield-hint" id="s_stockInfo" style="display:none"></span>
+        </div>
+
+        <div class="mfield">
+          <label>Quantidade *</label>
+          <input type="number" id="s_qty" min="1" step="1" placeholder="Ex: 1" />
+          <span class="mfield-hint" id="s_qtyHint" style="color:var(--danger);display:none">Informe a quantidade.</span>
+        </div>
+
+        <div class="mfield">
+          <label>Proposta associada <span style="font-weight:400;text-transform:none">(opcional)</span></label>
+          <select id="s_proposalId">
+            <option value="">— Nenhuma —</option>
+          </select>
+        </div>
+
+        <div class="mfield">
+          <label>Cliente associado <span style="font-weight:400;text-transform:none">(opcional)</span></label>
+          <select id="s_clientId">
+            <option value="">— Nenhum —</option>
+          </select>
+        </div>
+
+        <div class="mfield">
+          <label>A peça volta para o estoque? *</label>
+          <div class="returns-row">
+            <div class="returns-opt" id="returnsYes" onclick="selectReturns(true)">Sim — volta</div>
+            <div class="returns-opt" id="returnsNo"  onclick="selectReturns(false)">Não — saída definitiva</div>
+          </div>
+          <span class="mfield-hint" id="returnsHint" style="color:var(--danger);display:none">Informe se a peça volta ao estoque.</span>
+        </div>
+
+        <div class="mfield">
+          <label>Observações</label>
+          <textarea id="s_notes" placeholder="Ex: Saída para técnico João, retorno previsto..." ></textarea>
+        </div>
+
+      </div>
+
+      <div id="movMsg" style="display:none" class="msg"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btnSubmitMov" onclick="submitMovement()">Registrar movimentação</button>
+        <button class="btn btn-ghost" onclick="goToStep1()">Voltar</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Estado ──────────────────────────────────────────────────────────────────
+let stockParts    = [];
+let allProposals  = [];
+let allClients    = [];
+let movType       = null;   // 'entrada' | 'saida'
+let entryType     = null;
+let returnsToStock = null;  // true | false | null
+let histFilterPartId = null;
+
+function v(id) { return document.getElementById(id); }
+
+// ─── Formatar data ────────────────────────────────────────────────────────────
+function fmtDate(dt) {
+  if (!dt) return '—';
+  const d = new Date(dt.replace(' ', 'T'));
+  if (isNaN(d)) return dt;
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Labels de tipo de entrada ────────────────────────────────────────────────
+const ENTRY_LABELS = {
+  compra_nova:          'Compra nova',
+  devolucao_tecnicos:   'Dev. técnicos',
+  devolucao_conserto:   'Dev. conserto',
+  guardar_alguem:       'Guardar p/ alguém',
+};
+
+// ─── Carregar estoque ─────────────────────────────────────────────────────────
+async function loadStock() {
+  try {
+    const res  = await fetch('/stock');
+    stockParts = await res.json();
+    renderStock(stockParts);
+    populateHistPartFilter(stockParts);
+  } catch {
+    v('stockBody').innerHTML = '<tr><td colspan="6" class="tbl-empty">Erro ao carregar estoque.</td></tr>';
+  }
+}
+
+function renderStock(parts) {
+  const q = v('stockSearch').value.toLowerCase();
+  const filtered = q
+    ? parts.filter(p => (p.nome || '').toLowerCase().includes(q) || (p.codigo_interno || '').toLowerCase().includes(q))
+    : parts;
+
+  if (!filtered.length) {
+    v('stockBody').innerHTML = '<tr><td colspan="6" class="tbl-empty">Nenhuma peça com código interno cadastrada.</td></tr>';
+    return;
+  }
+
+  v('stockBody').innerHTML = filtered.map(p => {
+    const qty = p.stock_quantity || 0;
+    const cls = qty <= 0 ? 'qty-zero' : qty <= 2 ? 'qty-low' : 'qty-ok';
+    const catLabel = p.category_name || p.categoria || '—';
+    return `
+      <tr>
+        <td><code style="background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:12px">${escHtml(p.codigo_interno)}</code></td>
+        <td style="font-weight:600">${escHtml(p.nome)}</td>
+        <td style="color:var(--muted);font-size:12px">${escHtml(catLabel)}</td>
+        <td style="text-align:center"><span class="qty-badge ${cls}">${qty}</span></td>
+        <td style="text-align:center">
+          <button class="btn-hist" onclick="filterHistByPart(${p.id})">Ver</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+v('stockSearch').addEventListener('input', () => renderStock(stockParts));
+
+function filterHistByPart(partId) {
+  histFilterPartId = partId;
+  v('histPartFilter').value = String(partId);
+  loadMovements(partId);
+  v('histBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function populateHistPartFilter(parts) {
+  const sel = v('histPartFilter');
+  parts.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value       = p.id;
+    opt.textContent = `${p.codigo_interno} — ${p.nome}`;
+    sel.appendChild(opt);
+  });
+}
+
+v('histPartFilter').addEventListener('change', () => {
+  const val = v('histPartFilter').value;
+  histFilterPartId = val ? Number(val) : null;
+  loadMovements(histFilterPartId);
+});
+
+v('btnClearFilter').addEventListener('click', () => {
+  v('histPartFilter').value = '';
+  histFilterPartId = null;
+  loadMovements(null);
+});
+
+// ─── Carregar histórico ───────────────────────────────────────────────────────
+async function loadMovements(partId) {
+  v('histBody').innerHTML = '<tr><td colspan="10" class="loading-text">Carregando...</td></tr>';
+  try {
+    const url = partId ? `/stock/movements?part_id=${partId}` : '/stock/movements';
+    const res  = await fetch(url);
+    const rows = await res.json();
+    renderMovements(rows);
+  } catch {
+    v('histBody').innerHTML = '<tr><td colspan="10" class="tbl-empty">Erro ao carregar histórico.</td></tr>';
+  }
+}
+
+function renderMovements(rows) {
+  if (!rows.length) {
+    v('histBody').innerHTML = '<tr><td colspan="10" class="tbl-empty">Nenhuma movimentação registrada.</td></tr>';
+    return;
+  }
+  v('histBody').innerHTML = rows.map(r => {
+    const badge   = r.movement_type === 'entrada'
+      ? '<span class="badge-entrada">Entrada</span>'
+      : '<span class="badge-saida">Saída</span>';
+    const detalhe = r.movement_type === 'entrada'
+      ? (ENTRY_LABELS[r.entry_type] || r.entry_type || '—')
+      : (r.returns_to_stock ? 'Volta ao estoque' : 'Saída definitiva');
+    return `
+      <tr>
+        <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${fmtDate(r.created_at)}</td>
+        <td>${badge}</td>
+        <td style="font-weight:600">${escHtml(r.part_nome)}</td>
+        <td style="font-size:12px;color:var(--muted)">
+          <code style="background:#f5f5f5;padding:1px 5px;border-radius:3px">${escHtml(r.codigo_interno || '—')}</code>
+        </td>
+        <td style="text-align:center;font-weight:700">${r.quantity}</td>
+        <td style="font-size:12px">${escHtml(detalhe)}</td>
+        <td style="font-size:12px;color:var(--muted)">${escHtml(r.numero_proposta || '—')}</td>
+        <td style="font-size:12px">${escHtml(r.client_nome || '—')}</td>
+        <td style="font-size:12px;color:var(--muted)">${escHtml(r.created_by_nome)}</td>
+        <td style="font-size:12px;color:var(--muted)">${escHtml(r.notes || '—')}</td>
+      </tr>`;
+  }).join('');
+}
+
+// ─── Modal de movimentação ────────────────────────────────────────────────────
+v('btnNewMovement').addEventListener('click', openModal);
+v('closeMovModal').addEventListener('click',  closeModal);
+v('movModal').addEventListener('click', e => { if (e.target === v('movModal')) closeModal(); });
+
+function openModal() {
+  resetModal();
+  v('movModal').classList.add('open');
+}
+
+function closeModal() {
+  v('movModal').classList.remove('open');
+}
+
+function resetModal() {
+  movType        = null;
+  entryType      = null;
+  returnsToStock = null;
+
+  v('stepType').style.display  = 'block';
+  v('stepForm').style.display  = 'none';
+  v('formEntrada').style.display = 'none';
+  v('formSaida').style.display   = 'none';
+  v('movModalTitle').textContent = 'Nova Movimentação';
+  v('btnNextStep').disabled = true;
+
+  // Resetar cards de tipo
+  v('typeCardEntrada').classList.remove('selected');
+  v('typeCardSaida').classList.remove('selected');
+
+  // Resetar formulário entrada
+  v('e_partSearch').value = '';
+  v('e_partId').value     = '';
+  v('e_qty').value        = '';
+  v('e_notes').value      = '';
+  document.querySelectorAll('.entry-type-opt').forEach(el => el.classList.remove('selected', 'error-border'));
+  v('entryTypeHint').style.display = 'none';
+  v('e_partHint').style.display    = 'none';
+  v('e_qtyHint').style.display     = 'none';
+  v('e_partDropdown').style.display = 'none';
+
+  // Resetar formulário saída
+  v('s_partSearch').value = '';
+  v('s_partId').value     = '';
+  v('s_qty').value        = '';
+  v('s_notes').value      = '';
+  v('s_proposalId').value = '';
+  v('s_clientId').value   = '';
+  v('returnsYes').className = 'returns-opt';
+  v('returnsNo').className  = 'returns-opt';
+  v('returnsHint').style.display  = 'none';
+  v('s_partHint').style.display   = 'none';
+  v('s_qtyHint').style.display    = 'none';
+  v('s_stockInfo').style.display  = 'none';
+  v('s_partDropdown').style.display = 'none';
+
+  v('movMsg').style.display = 'none';
+  v('btnSubmitMov').disabled = false;
+}
+
+function selectMovType(type) {
+  movType = type;
+  v('typeCardEntrada').classList.toggle('selected', type === 'entrada');
+  v('typeCardSaida').classList.toggle('selected',   type === 'saida');
+  v('btnNextStep').disabled = false;
+}
+
+function goToStep2() {
+  if (!movType) return;
+  v('stepType').style.display = 'none';
+  v('stepForm').style.display = 'block';
+  if (movType === 'entrada') {
+    v('formEntrada').style.display = 'block';
+    v('formSaida').style.display   = 'none';
+    v('movModalTitle').textContent = 'Movimentação · Entrada';
+  } else {
+    v('formSaida').style.display   = 'block';
+    v('formEntrada').style.display = 'none';
+    v('movModalTitle').textContent = 'Movimentação · Saída';
+  }
+}
+
+function goToStep1() {
+  v('stepForm').style.display = 'none';
+  v('stepType').style.display = 'block';
+  v('movModalTitle').textContent = 'Nova Movimentação';
+  v('movMsg').style.display = 'none';
+}
+
+// ─── Tipo de entrada ──────────────────────────────────────────────────────────
+function selectEntryType(el) {
+  document.querySelectorAll('.entry-type-opt').forEach(o => o.classList.remove('selected', 'error-border'));
+  el.classList.add('selected');
+  entryType = el.dataset.val;
+  v('entryTypeHint').style.display = 'none';
+}
+
+// ─── Volta ao estoque ─────────────────────────────────────────────────────────
+function selectReturns(val) {
+  returnsToStock = val;
+  v('returnsYes').className = 'returns-opt' + (val === true  ? ' selected-yes' : '');
+  v('returnsNo').className  = 'returns-opt' + (val === false ? ' selected-no'  : '');
+  v('returnsYes').classList.remove('error-border');
+  v('returnsNo').classList.remove('error-border');
+  v('returnsHint').style.display = 'none';
+}
+
+// ─── Busca de peças (campo pesquisável) ───────────────────────────────────────
+function setupPartSearch(inputId, dropdownId, hiddenId, hintId, extraCb) {
+  const input    = v(inputId);
+  const dropdown = v(dropdownId);
+  const hidden   = v(hiddenId);
+
+  let timer;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    hidden.value = '';
+    if (extraCb) extraCb(null);
+    const q = input.value.trim();
+    if (!q) { dropdown.style.display = 'none'; return; }
+    timer = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/parts/search?q=${encodeURIComponent(q)}`);
+        const list = await res.json();
+        const eligible = list.filter(p => p.codigo_interno && p.codigo_interno.trim());
+        renderPartDropdown(dropdown, eligible, (part) => {
+          input.value   = `${part.codigo_interno} — ${part.nome}`;
+          hidden.value  = part.id;
+          dropdown.style.display = 'none';
+          if (hintId) v(hintId).style.display = 'none';
+          if (extraCb) extraCb(part);
+        });
+      } catch { dropdown.style.display = 'none'; }
+    }, 250);
+  });
+
+  document.addEventListener('click', e => {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+}
+
+function renderPartDropdown(dropdown, parts, onSelect) {
+  dropdown.innerHTML = '';
+  if (!parts.length) {
+    dropdown.innerHTML = '<div class="part-opt no-result">Nenhuma peça encontrada com código interno.</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+  parts.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'part-opt';
+    const catLabel = p.category_name || p.categoria || null;
+    div.innerHTML = `<div class="popt-name">${escHtml(p.codigo_interno)} — ${escHtml(p.nome)}</div>${catLabel ? `<div class="popt-sub">${escHtml(catLabel)}</div>` : ''}`;
+    div.addEventListener('mousedown', e => { e.preventDefault(); onSelect(p); });
+    dropdown.appendChild(div);
+  });
+  dropdown.style.display = 'block';
+}
+
+// Callback extra para saída: mostra estoque disponível
+function onSaidaPartSelect(part) {
+  const info = v('s_stockInfo');
+  if (!part) { info.style.display = 'none'; return; }
+  const stockPart = stockParts.find(p => p.id === part.id);
+  const qty = stockPart ? stockPart.stock_quantity || 0 : 0;
+  info.textContent = `Estoque disponível: ${qty} unidade(s)`;
+  info.style.color = qty <= 0 ? 'var(--danger)' : qty <= 2 ? 'var(--amber)' : 'var(--green)';
+  info.style.display = 'block';
+}
+
+setupPartSearch('e_partSearch', 'e_partDropdown', 'e_partId', 'e_partHint', null);
+setupPartSearch('s_partSearch', 's_partDropdown', 's_partId', 's_partHint', onSaidaPartSelect);
+
+// ─── Propostas e Clientes para saída ─────────────────────────────────────────
+async function loadProposalsAndClients() {
+  try {
+    const [rP, rC] = await Promise.all([fetch('/proposals'), fetch('/clients')]);
+    allProposals = await rP.json();
+    allClients   = await rC.json();
+
+    const selP = v('s_proposalId');
+    allProposals.slice().reverse().forEach(p => {
+      const opt = document.createElement('option');
+      opt.value       = p.id;
+      opt.textContent = `${p.numero_proposta} — ${p.cliente_nome || ''}`;
+      opt.dataset.clientId = p.cliente_id || '';
+      selP.appendChild(opt);
+    });
+
+    const selC = v('s_clientId');
+    allClients.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value       = c.id;
+      opt.textContent = c.nome;
+      selC.appendChild(opt);
+    });
+  } catch { /* silencioso */ }
+}
+
+v('s_proposalId').addEventListener('change', () => {
+  const sel    = v('s_proposalId');
+  const chosen = sel.options[sel.selectedIndex];
+  if (chosen && chosen.dataset.clientId) {
+    v('s_clientId').value = chosen.dataset.clientId;
+  }
+});
+
+// ─── Submissão ────────────────────────────────────────────────────────────────
+async function submitMovement() {
+  v('movMsg').style.display = 'none';
+  let valid = true;
+
+  if (movType === 'entrada') {
+    if (!entryType) {
+      document.querySelectorAll('.entry-type-opt').forEach(o => o.classList.add('error-border'));
+      v('entryTypeHint').style.display = 'block';
+      valid = false;
+    }
+    if (!v('e_partId').value) {
+      v('e_partHint').style.display = 'block';
+      valid = false;
+    }
+    const qty = parseInt(v('e_qty').value, 10);
+    if (!qty || qty <= 0) {
+      v('e_qtyHint').style.display = 'block';
+      valid = false;
+    }
+    if (!valid) return;
+
+    await doSubmit({
+      movement_type: 'entrada',
+      entry_type:    entryType,
+      part_id:       Number(v('e_partId').value),
+      quantity:      qty,
+      notes:         v('e_notes').value.trim() || null,
+    });
+
+  } else {
+    if (!v('s_partId').value) {
+      v('s_partHint').style.display = 'block';
+      valid = false;
+    }
+    const qty = parseInt(v('s_qty').value, 10);
+    if (!qty || qty <= 0) {
+      v('s_qtyHint').style.display = 'block';
+      valid = false;
+    }
+    if (returnsToStock === null) {
+      v('returnsYes').classList.add('error-border');
+      v('returnsNo').classList.add('error-border');
+      v('returnsHint').style.display = 'block';
+      valid = false;
+    }
+    if (!valid) return;
+
+    await doSubmit({
+      movement_type:   'saida',
+      part_id:         Number(v('s_partId').value),
+      quantity:        qty,
+      proposal_id:     v('s_proposalId').value  ? Number(v('s_proposalId').value)  : null,
+      client_id:       v('s_clientId').value     ? Number(v('s_clientId').value)    : null,
+      returns_to_stock: returnsToStock,
+      notes:           v('s_notes').value.trim() || null,
+    });
+  }
+}
+
+async function doSubmit(payload) {
+  const btn = v('btnSubmitMov');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  try {
+    const res  = await fetch('/stock/movements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      showMovMsg('success', 'Movimentação registrada com sucesso!');
+      btn.textContent = 'Registrar movimentação';
+      await Promise.all([loadStock(), loadMovements(histFilterPartId)]);
+      setTimeout(closeModal, 1200);
+    } else {
+      showMovMsg('error', data.message || 'Erro ao registrar movimentação.');
+      btn.disabled = false;
+      btn.textContent = 'Registrar movimentação';
+    }
+  } catch {
+    showMovMsg('error', 'Erro de conexão com o servidor.');
+    btn.disabled = false;
+    btn.textContent = 'Registrar movimentação';
+  }
+}
+
+function showMovMsg(type, text) {
+  const el = v('movMsg');
+  el.className = `msg ${type}`;
+  el.textContent = text;
+  el.style.display = 'block';
+}
+
+// ─── Escape HTML ──────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadStock();
+loadMovements(null);
+loadProposalsAndClients();
+</script>
+<script src="/auth.js"></script>
+</body>
+</html>
