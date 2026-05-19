@@ -363,6 +363,13 @@
             <textarea name="observacoes" id="f_obs" placeholder="Observações internas sobre o cliente"></textarea>
           </div>
         </div>
+        <div style="margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text)">
+            <input type="checkbox" id="f_has_parts_contract" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green)" />
+            Possui contrato de peças
+          </label>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;margin-left:24px">Marca este cliente para análise de gasto com contratos no Estoque</div>
+        </div>
 
         <div id="formMsg" style="display:none" class="msg"></div>
 
@@ -532,6 +539,7 @@
     set('f_estado',       c.estado);
     set('f_cep',          c.cep);
     set('f_obs',          c.observacoes);
+    v('f_has_parts_contract').checked = !!c.has_parts_contract;
   }
 
   function setEditMode(client) {
@@ -580,6 +588,7 @@
       estado:              val('f_estado')       || null,
       cep:                 val('f_cep')          || null,
       observacoes:         val('f_obs')          || null,
+      has_parts_contract:  v('f_has_parts_contract').checked ? 1 : 0,
     };
   }
 

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GHTec — Estoque</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     :root {
@@ -25,7 +26,7 @@
     .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
     .btn-logout:hover { background: rgba(255,255,255,0.2); }
 
-    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
     .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
     .page-bar p  { margin: 0; }
 
@@ -37,6 +38,19 @@
     .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
     .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0; }
 
+    /* Home cards */
+    .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 680px; margin: 0 auto; }
+    @media (max-width: 560px) { .home-grid { grid-template-columns: 1fr; } }
+    .home-card {
+      background: #fff; border: 2px solid var(--border); border-radius: 10px;
+      padding: 36px 24px; text-align: center; cursor: pointer;
+      transition: all 0.15s; user-select: none;
+    }
+    .home-card:hover { border-color: var(--green-light); background: var(--green-bg); box-shadow: 0 4px 16px rgba(46,125,50,0.1); }
+    .home-card-icon { font-size: 36px; margin-bottom: 12px; }
+    .home-card-label { font-size: 16px; font-weight: 700; color: var(--text); }
+    .home-card-desc  { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
     /* Buttons */
     .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -45,6 +59,12 @@
     .btn-ghost { background: #eee; color: #444; }
     .btn-ghost:hover:not(:disabled) { background: #ddd; }
     .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-back { background: none; border: none; color: var(--green); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; padding: 0; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-back:hover { color: var(--green-light); }
+
+    /* Sub-view header */
+    .subview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .subview-title { font-size: 15px; font-weight: 700; color: var(--text); }
 
     /* Filtros */
     .filters { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -74,10 +94,12 @@
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
     .modal-overlay.open { display: flex; }
     .modal-box { background: #fff; border-radius: 8px; padding: 28px; max-width: 560px; width: 100%; max-height: 92vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .modal-box-wide { max-width: 820px; }
     .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
     .modal-title { font-size: 15px; font-weight: 700; color: var(--green); }
     .modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); line-height: 1; padding: 0 4px; }
     .modal-close:hover { color: var(--danger); }
+    .modal-subtitle { font-size: 12px; color: var(--muted); margin: -12px 0 18px; }
 
     /* Seleção entrada/saída */
     .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 8px; }
@@ -135,6 +157,7 @@
     .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
     .msg.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
     .msg.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
+    .msg.warn    { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; }
 
     /* Loading state */
     .loading-text { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
@@ -146,6 +169,16 @@
     .hist-filter select:focus { outline: none; border-color: var(--green-light); }
     .btn-clear-filter { background: none; border: 1px solid var(--border); border-radius: var(--radius); font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer; padding: 5px 10px; font-family: inherit; }
     .btn-clear-filter:hover { background: #f0f0f0; }
+
+    /* Gráfico contrato */
+    .chart-wrap { position: relative; width: 100%; margin-bottom: 20px; }
+    .spend-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 24px 0; }
+    .spend-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+    .spend-table th { background: var(--green-bg); color: var(--green); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 6px 10px; border: 1px solid var(--border); text-align: left; white-space: nowrap; }
+    .spend-table td { padding: 6px 10px; border: 1px solid #eee; vertical-align: middle; }
+    .spend-table tr:nth-child(even) td { background: #fafafa; }
+    .spend-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .spend-section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px; }
 
     @media (max-width: 640px) {
       .type-grid { grid-template-columns: 1fr; }
@@ -172,73 +205,104 @@
 </nav>
 
 <div class="page-bar">
-  <div>
-    <h1>Estoque</h1>
-    <p>Peças com código interno · movimentações de entrada e saída</p>
-  </div>
-  <button class="btn btn-primary" id="btnNewMovement">+ Nova movimentação</button>
+  <h1>Estoque</h1>
+  <p>Peças com código interno · movimentações de entrada e saída</p>
 </div>
 
 <div class="container">
 
-  <!-- Tabela de estoque -->
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">Peças em estoque</span>
-      <div class="filters">
-        <input type="text" id="stockSearch" placeholder="Buscar por código ou nome..." autocomplete="off" />
+  <!-- ── View: Home ──────────────────────────────────────────────────────── -->
+  <div id="viewHome">
+    <div class="home-grid">
+      <div class="home-card" onclick="showView('stock')">
+        <div class="home-card-icon">&#128230;</div>
+        <div class="home-card-label">Estoque</div>
+        <div class="home-card-desc">Visualizar quantidades e registrar movimentações</div>
       </div>
-    </div>
-    <div class="tbl-wrap">
-      <table id="stockTable">
-        <thead>
-          <tr>
-            <th>Código Interno</th>
-            <th>Nome</th>
-            <th>Categoria</th>
-            <th style="text-align:center">Qtd. Estoque</th>
-            <th style="text-align:center">Histórico</th>
-          </tr>
-        </thead>
-        <tbody id="stockBody">
-          <tr><td colspan="5" class="loading-text">Carregando...</td></tr>
-        </tbody>
-      </table>
+      <div class="home-card" onclick="showView('movements')">
+        <div class="home-card-icon">&#128203;</div>
+        <div class="home-card-label">Movimentações</div>
+        <div class="home-card-desc">Histórico completo de entradas e saídas</div>
+      </div>
     </div>
   </div>
 
-  <!-- Histórico de movimentações -->
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">Histórico de movimentações</span>
+  <!-- ── View: Estoque ──────────────────────────────────────────────────── -->
+  <div id="viewStock" style="display:none">
+    <div class="subview-header">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="btn-back" onclick="showView('home')">&#8592; Voltar</button>
+        <span class="subview-title">Estoque</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" id="btnContractSpend">&#9654; Gastos com contratos</button>
+        <button class="btn btn-primary btn-sm" id="btnNewMovement">+ Nova movimentação</button>
+      </div>
     </div>
-    <div class="hist-filter">
-      <label for="histPartFilter">Peça:</label>
-      <select id="histPartFilter">
-        <option value="">— Todas as peças —</option>
-      </select>
-      <button class="btn-clear-filter" id="btnClearFilter">Limpar filtro</button>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Peças em estoque</span>
+        <div class="filters">
+          <input type="text" id="stockSearch" placeholder="Buscar por código ou nome..." autocomplete="off" />
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table id="stockTable">
+          <thead>
+            <tr>
+              <th>Código Interno</th>
+              <th>Nome</th>
+              <th>Categoria</th>
+              <th style="text-align:center">Qtd. Estoque</th>
+              <th style="text-align:center">Histórico</th>
+            </tr>
+          </thead>
+          <tbody id="stockBody">
+            <tr><td colspan="5" class="loading-text">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Data/Hora</th>
-            <th>Tipo</th>
-            <th>Peça</th>
-            <th>Cód. Interno</th>
-            <th style="text-align:center">Qtd.</th>
-            <th>Detalhe</th>
-            <th>Proposta</th>
-            <th>Cliente</th>
-            <th>Usuário</th>
-            <th>Obs.</th>
-          </tr>
-        </thead>
-        <tbody id="histBody">
-          <tr><td colspan="10" class="loading-text">Carregando...</td></tr>
-        </tbody>
-      </table>
+  </div>
+
+  <!-- ── View: Movimentações ────────────────────────────────────────────── -->
+  <div id="viewMovements" style="display:none">
+    <div class="subview-header">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="btn-back" onclick="showView('home')">&#8592; Voltar</button>
+        <span class="subview-title">Histórico de Movimentações</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="hist-filter">
+        <label for="histPartFilter">Peça:</label>
+        <select id="histPartFilter">
+          <option value="">— Todas as peças —</option>
+        </select>
+        <button class="btn-clear-filter" id="btnClearFilter">Limpar filtro</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Tipo</th>
+              <th>Peça</th>
+              <th>Cód. Interno</th>
+              <th style="text-align:center">Qtd.</th>
+              <th style="text-align:center">Antes → Depois</th>
+              <th>Detalhe</th>
+              <th>Proposta</th>
+              <th>Cliente</th>
+              <th>Usuário</th>
+              <th>Obs.</th>
+            </tr>
+          </thead>
+          <tbody id="histBody">
+            <tr><td colspan="11" class="loading-text">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -372,17 +436,41 @@
   </div>
 </div>
 
+<!-- Modal de gastos com contratos -->
+<div class="modal-overlay" id="spendModal">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-header">
+      <span class="modal-title">Gastos com Contratos de Peças</span>
+      <button class="modal-close" id="closeSpendModal">&times;</button>
+    </div>
+    <div class="modal-subtitle">Clientes com contrato de peças · gasto calculado por saídas × preço de compra das peças.</div>
+    <div id="spendModalBody">
+      <div class="spend-empty">Carregando...</div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── Estado ──────────────────────────────────────────────────────────────────
 let stockParts    = [];
 let allProposals  = [];
 let allClients    = [];
-let movType       = null;   // 'entrada' | 'saida'
+let movType       = null;
 let entryType     = null;
-let returnsToStock = null;  // true | false | null
+let returnsToStock = null;
 let histFilterPartId = null;
+let spendChart    = null;
 
 function v(id) { return document.getElementById(id); }
+
+// ─── Navegação por views ──────────────────────────────────────────────────────
+function showView(name) {
+  v('viewHome').style.display      = name === 'home'      ? '' : 'none';
+  v('viewStock').style.display     = name === 'stock'     ? '' : 'none';
+  v('viewMovements').style.display = name === 'movements' ? '' : 'none';
+  if (name === 'stock' && !stockParts.length) loadStock();
+  if (name === 'movements') loadMovements(histFilterPartId);
+}
 
 // ─── Formatar data ────────────────────────────────────────────────────────────
 function fmtDate(dt) {
@@ -390,6 +478,11 @@ function fmtDate(dt) {
   const d = new Date(dt.replace(' ', 'T'));
   if (isNaN(d)) return dt;
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtBRL(val) {
+  if (val === null || val === undefined) return '—';
+  return Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 // ─── Labels de tipo de entrada ────────────────────────────────────────────────
@@ -408,7 +501,7 @@ async function loadStock() {
     renderStock(stockParts);
     populateHistPartFilter(stockParts);
   } catch {
-    v('stockBody').innerHTML = '<tr><td colspan="6" class="tbl-empty">Erro ao carregar estoque.</td></tr>';
+    v('stockBody').innerHTML = '<tr><td colspan="5" class="tbl-empty">Erro ao carregar estoque.</td></tr>';
   }
 }
 
@@ -419,7 +512,7 @@ function renderStock(parts) {
     : parts;
 
   if (!filtered.length) {
-    v('stockBody').innerHTML = '<tr><td colspan="6" class="tbl-empty">Nenhuma peça com código interno cadastrada.</td></tr>';
+    v('stockBody').innerHTML = '<tr><td colspan="5" class="tbl-empty">Nenhuma peça com código interno cadastrada.</td></tr>';
     return;
   }
 
@@ -434,7 +527,7 @@ function renderStock(parts) {
         <td style="color:var(--muted);font-size:12px">${escHtml(catLabel)}</td>
         <td style="text-align:center"><span class="qty-badge ${cls}">${qty}</span></td>
         <td style="text-align:center">
-          <button class="btn-hist" onclick="filterHistByPart(${p.id})">Ver</button>
+          <button class="btn-hist" onclick="goToMovementsFiltered(${p.id})">Ver</button>
         </td>
       </tr>`;
   }).join('');
@@ -442,15 +535,15 @@ function renderStock(parts) {
 
 v('stockSearch').addEventListener('input', () => renderStock(stockParts));
 
-function filterHistByPart(partId) {
+function goToMovementsFiltered(partId) {
   histFilterPartId = partId;
-  v('histPartFilter').value = String(partId);
-  loadMovements(partId);
-  v('histBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  showView('movements');
 }
 
 function populateHistPartFilter(parts) {
   const sel = v('histPartFilter');
+  // Remove opções antigas (exceto a primeira)
+  while (sel.options.length > 1) sel.remove(1);
   parts.forEach(p => {
     const opt = document.createElement('option');
     opt.value       = p.id;
@@ -473,20 +566,21 @@ v('btnClearFilter').addEventListener('click', () => {
 
 // ─── Carregar histórico ───────────────────────────────────────────────────────
 async function loadMovements(partId) {
-  v('histBody').innerHTML = '<tr><td colspan="10" class="loading-text">Carregando...</td></tr>';
+  if (partId) v('histPartFilter').value = String(partId);
+  v('histBody').innerHTML = '<tr><td colspan="11" class="loading-text">Carregando...</td></tr>';
   try {
     const url = partId ? `/stock/movements?part_id=${partId}` : '/stock/movements';
     const res  = await fetch(url);
     const rows = await res.json();
     renderMovements(rows);
   } catch {
-    v('histBody').innerHTML = '<tr><td colspan="10" class="tbl-empty">Erro ao carregar histórico.</td></tr>';
+    v('histBody').innerHTML = '<tr><td colspan="11" class="tbl-empty">Erro ao carregar histórico.</td></tr>';
   }
 }
 
 function renderMovements(rows) {
   if (!rows.length) {
-    v('histBody').innerHTML = '<tr><td colspan="10" class="tbl-empty">Nenhuma movimentação registrada.</td></tr>';
+    v('histBody').innerHTML = '<tr><td colspan="11" class="tbl-empty">Nenhuma movimentação registrada.</td></tr>';
     return;
   }
   v('histBody').innerHTML = rows.map(r => {
@@ -496,6 +590,9 @@ function renderMovements(rows) {
     const detalhe = r.movement_type === 'entrada'
       ? (ENTRY_LABELS[r.entry_type] || r.entry_type || '—')
       : (r.returns_to_stock ? 'Volta ao estoque' : 'Saída definitiva');
+    const prevNew = (r.previous_quantity !== null && r.previous_quantity !== undefined && r.new_quantity !== null && r.new_quantity !== undefined)
+      ? `<span style="color:var(--muted)">${r.previous_quantity}</span> → <strong>${r.new_quantity}</strong>`
+      : '—';
     return `
       <tr>
         <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${fmtDate(r.created_at)}</td>
@@ -505,6 +602,7 @@ function renderMovements(rows) {
           <code style="background:#f5f5f5;padding:1px 5px;border-radius:3px">${escHtml(r.codigo_interno || '—')}</code>
         </td>
         <td style="text-align:center;font-weight:700">${r.quantity}</td>
+        <td style="text-align:center;font-size:12px;white-space:nowrap">${prevNew}</td>
         <td style="font-size:12px">${escHtml(detalhe)}</td>
         <td style="font-size:12px;color:var(--muted)">${escHtml(r.numero_proposta || '—')}</td>
         <td style="font-size:12px">${escHtml(r.client_nome || '—')}</td>
@@ -540,11 +638,9 @@ function resetModal() {
   v('movModalTitle').textContent = 'Nova Movimentação';
   v('btnNextStep').disabled = true;
 
-  // Resetar cards de tipo
   v('typeCardEntrada').classList.remove('selected');
   v('typeCardSaida').classList.remove('selected');
 
-  // Resetar formulário entrada
   v('e_partSearch').value = '';
   v('e_partId').value     = '';
   v('e_qty').value        = '';
@@ -555,7 +651,6 @@ function resetModal() {
   v('e_qtyHint').style.display     = 'none';
   v('e_partDropdown').style.display = 'none';
 
-  // Resetar formulário saída
   v('s_partSearch').value = '';
   v('s_partId').value     = '';
   v('s_qty').value        = '';
@@ -675,7 +770,6 @@ function renderPartDropdown(dropdown, parts, onSelect) {
   dropdown.style.display = 'block';
 }
 
-// Callback extra para saída: mostra estoque disponível
 function onSaidaPartSelect(part) {
   const info = v('s_stockInfo');
   if (!part) { info.style.display = 'none'; return; }
@@ -772,13 +866,13 @@ async function submitMovement() {
     if (!valid) return;
 
     await doSubmit({
-      movement_type:   'saida',
-      part_id:         Number(v('s_partId').value),
-      quantity:        qty,
-      proposal_id:     v('s_proposalId').value  ? Number(v('s_proposalId').value)  : null,
-      client_id:       v('s_clientId').value     ? Number(v('s_clientId').value)    : null,
+      movement_type:    'saida',
+      part_id:          Number(v('s_partId').value),
+      quantity:         qty,
+      proposal_id:      v('s_proposalId').value ? Number(v('s_proposalId').value) : null,
+      client_id:        v('s_clientId').value   ? Number(v('s_clientId').value)   : null,
       returns_to_stock: returnsToStock,
-      notes:           v('s_notes').value.trim() || null,
+      notes:            v('s_notes').value.trim() || null,
     });
   }
 }
@@ -799,7 +893,7 @@ async function doSubmit(payload) {
     if (res.ok) {
       showMovMsg('success', 'Movimentação registrada com sucesso!');
       btn.textContent = 'Registrar movimentação';
-      await Promise.all([loadStock(), loadMovements(histFilterPartId)]);
+      await loadStock();
       setTimeout(closeModal, 1200);
     } else {
       showMovMsg('error', data.message || 'Erro ao registrar movimentação.');
@@ -820,6 +914,118 @@ function showMovMsg(type, text) {
   el.style.display = 'block';
 }
 
+// ─── Modal de gastos com contratos ────────────────────────────────────────────
+v('btnContractSpend').addEventListener('click', openSpendModal);
+v('closeSpendModal').addEventListener('click', closeSpendModal);
+v('spendModal').addEventListener('click', e => { if (e.target === v('spendModal')) closeSpendModal(); });
+
+function closeSpendModal() {
+  v('spendModal').classList.remove('open');
+  if (spendChart) { spendChart.destroy(); spendChart = null; }
+}
+
+async function openSpendModal() {
+  const body = v('spendModalBody');
+  body.innerHTML = '<div class="spend-empty">Carregando...</div>';
+  v('spendModal').classList.add('open');
+
+  try {
+    const res  = await fetch('/stock/contract-spend');
+    const rows = await res.json();
+
+    if (!rows.length) {
+      body.innerHTML = '<div class="spend-empty">Nenhum cliente com contrato de peças cadastrado. Marque clientes como "Possui contrato de peças" na tela de Clientes.</div>';
+      return;
+    }
+
+    const withSpend    = rows.filter(r => r.total_movements > 0);
+    const noMovements  = rows.filter(r => r.total_movements === 0);
+    const withMissing  = rows.filter(r => r.items_without_price > 0);
+
+    let html = '';
+
+    if (withMissing.length > 0) {
+      const names = withMissing.map(r => r.client_nome).join(', ');
+      html += `<div class="msg warn" style="margin-bottom:14px">
+        &#9888; Alguns itens não têm preço de compra cadastrado e foram excluídos do cálculo.
+        Clientes afetados: ${escHtml(names)}.
+      </div>`;
+    }
+
+    if (withSpend.length > 0) {
+      const labels  = withSpend.map(r => r.client_nome);
+      const values  = withSpend.map(r => r.total_spend);
+      const colors  = values.map(() => 'rgba(46,125,50,0.75)');
+      const borders = values.map(() => '#2e7d32');
+
+      html += `<div class="chart-wrap"><canvas id="spendCanvas" height="${Math.max(200, withSpend.length * 42)}"></canvas></div>`;
+      body.innerHTML = html;
+
+      if (spendChart) { spendChart.destroy(); spendChart = null; }
+      spendChart = new Chart(v('spendCanvas'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Gasto total (R$)',
+            data: values,
+            backgroundColor: colors,
+            borderColor: borders,
+            borderWidth: 1,
+            borderRadius: 4,
+          }],
+        },
+        options: {
+          indexAxis: withSpend.length > 4 ? 'y' : 'x',
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: ctx => `Gasto: ${fmtBRL(ctx.raw)}` },
+            },
+          },
+          scales: {
+            x: { ticks: { font: { size: 11 } } },
+            y: { ticks: { font: { size: 11 } }, beginAtZero: true },
+          },
+        },
+      });
+    } else {
+      html += '<div class="spend-empty">Nenhuma saída registrada ainda para clientes com contrato.</div>';
+      body.innerHTML = html;
+    }
+
+    const tableSection = document.createElement('div');
+    tableSection.innerHTML = `
+      <p class="spend-section-title">Detalhamento por cliente</p>
+      <table class="spend-table">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Movimentações</th>
+            <th>Gasto calculado</th>
+            <th>Itens s/ preço</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td>${escHtml(r.client_nome)}</td>
+              <td class="num">${r.total_movements}</td>
+              <td class="num" style="font-weight:700">${r.total_spend > 0 ? fmtBRL(r.total_spend) : '<span style="color:var(--muted)">—</span>'}</td>
+              <td class="num" style="${r.items_without_price > 0 ? 'color:var(--amber);font-style:italic' : ''}">
+                ${r.items_without_price > 0 ? r.items_without_price : '—'}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+    v('spendModalBody').appendChild(tableSection);
+
+  } catch {
+    v('spendModalBody').innerHTML = '<div class="spend-empty">Erro ao carregar gastos.</div>';
+  }
+}
+
 // ─── Escape HTML ──────────────────────────────────────────────────────────────
 function escHtml(str) {
   if (!str) return '';
@@ -831,9 +1037,8 @@ function escHtml(str) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-loadStock();
-loadMovements(null);
 loadProposalsAndClients();
+// Stock e movimentações são carregados ao entrar nas sub-views
 </script>
 <script src="/auth.js"></script>
 </body>

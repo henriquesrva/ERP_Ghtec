@@ -11,6 +11,7 @@ function listAllClients() {
     SELECT
       id, nome, razao_social, nome_fantasia, cnpj,
       cidade, estado, email, telefone, contato_responsavel,
+      has_parts_contract,
       created_at, updated_at
     FROM clients
     ORDER BY nome ASC
@@ -58,11 +59,13 @@ function createClient(data) {
     INSERT INTO clients (
       nome, razao_social, nome_fantasia, cnpj, inscricao_estadual,
       endereco, cidade, estado, cep,
-      email, telefone, contato_responsavel, observacoes
+      email, telefone, contato_responsavel, observacoes,
+      has_parts_contract
     ) VALUES (
       @nome, @razao_social, @nome_fantasia, @cnpj, @inscricao_estadual,
       @endereco, @cidade, @estado, @cep,
-      @email, @telefone, @contato_responsavel, @observacoes
+      @email, @telefone, @contato_responsavel, @observacoes,
+      @has_parts_contract
     )
   `).run({
     nome:                data.nome                ?? null,
@@ -78,6 +81,7 @@ function createClient(data) {
     telefone:            data.telefone            ?? null,
     contato_responsavel: data.contato_responsavel ?? null,
     observacoes:         data.observacoes         ?? null,
+    has_parts_contract:  data.has_parts_contract  ? 1 : 0,
   });
   return result.lastInsertRowid;
 }
@@ -114,7 +118,8 @@ function updateClient(id, data) {
       email               = @email,
       telefone            = @telefone,
       contato_responsavel = @contato_responsavel,
-      observacoes         = @observacoes
+      observacoes         = @observacoes,
+      has_parts_contract  = @has_parts_contract
     WHERE id = @id
   `).run({
     id,
@@ -131,6 +136,7 @@ function updateClient(id, data) {
     telefone:            data.telefone            ?? null,
     contato_responsavel: data.contato_responsavel ?? null,
     observacoes:         data.observacoes         ?? null,
+    has_parts_contract:  data.has_parts_contract  ? 1 : 0,
   });
 }
 

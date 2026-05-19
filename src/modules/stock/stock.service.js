@@ -4,6 +4,8 @@ const {
   listMovements,
   createMovement,
   getPartCurrentStock,
+  getPartQtyInProposal,
+  getContractClientSpend,
 } = require("./stock.repository");
 
 const VALID_ENTRY_TYPES = [
@@ -54,6 +56,21 @@ function registerMovement(data, userId) {
         { code: "INSUFFICIENT_STOCK", available: currentStock }
       );
     }
+    if (data.proposal_id) {
+      const qtyInProposal = getPartQtyInProposal(Number(part_id), Number(data.proposal_id));
+      if (qtyInProposal <= 0) {
+        throw Object.assign(
+          new Error("A proposta informada não contém esta peça."),
+          { code: "PART_NOT_IN_PROPOSAL" }
+        );
+      }
+      if (qty > qtyInProposal) {
+        throw Object.assign(
+          new Error(`Quantidade solicitada (${qty}) excede a quantidade desta peça na proposta (${qtyInProposal}).`),
+          { code: "EXCEEDS_PROPOSAL_QTY", available: qtyInProposal }
+        );
+      }
+    }
   }
 
   const id = createMovement({
@@ -73,8 +90,13 @@ function registerMovement(data, userId) {
   return id;
 }
 
+function getContractSpend() {
+  return getContractClientSpend();
+}
+
 module.exports = {
   getAllStockParts,
   getMovements,
   registerMovement,
+  getContractSpend,
 };

@@ -104,6 +104,7 @@ const {
   listStockPartsHandler,
   listMovementsHandler,
   createMovementHandler,
+  getContractSpendHandler,
 } = require("./modules/stock/stock.controller");
 
 const {
@@ -196,10 +197,11 @@ app.post("/kanban/tasks/:id/link-proposal",   linkTaskToProposalHandler);
 app.get("/kanban/comments/:type/:id",         getCommentsHandler);
 app.post("/kanban/comments",                  addCommentHandler);
 
-// Estoque
-app.get("/stock",                listStockPartsHandler);
-app.get("/stock/movements",      listMovementsHandler);
-app.post("/stock/movements",     createMovementHandler);
+// Estoque — /contract-spend e /movements devem vir antes de rotas genéricas
+app.get("/stock",                    listStockPartsHandler);
+app.get("/stock/contract-spend",     getContractSpendHandler);
+app.get("/stock/movements",          listMovementsHandler);
+app.post("/stock/movements",         createMovementHandler);
 
 // Propostas
 app.get("/proposals",                      listProposals);

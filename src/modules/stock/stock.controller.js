@@ -1,4 +1,4 @@
-const { getAllStockParts, getMovements, registerMovement } = require("./stock.service");
+const { getAllStockParts, getMovements, registerMovement, getContractSpend } = require("./stock.service");
 
 function listStockPartsHandler(req, res) {
   try {
@@ -40,7 +40,19 @@ function createMovementHandler(req, res) {
     if (err.code === "INSUFFICIENT_STOCK") {
       return res.status(422).json({ success: false, message: err.message, available: err.available });
     }
+    if (err.code === "PART_NOT_IN_PROPOSAL" || err.code === "EXCEEDS_PROPOSAL_QTY") {
+      return res.status(422).json({ success: false, message: err.message, available: err.available });
+    }
     return res.status(500).json({ success: false, message: "Erro ao registrar movimentação." });
+  }
+}
+
+function getContractSpendHandler(req, res) {
+  try {
+    return res.json(getContractSpend());
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Erro ao calcular gastos por contrato." });
   }
 }
 
@@ -48,4 +60,5 @@ module.exports = {
   listStockPartsHandler,
   listMovementsHandler,
   createMovementHandler,
+  getContractSpendHandler,
 };

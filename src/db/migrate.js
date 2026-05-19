@@ -407,6 +407,26 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sm_type ON stock_movements(movement_type);
 `);
 
+// ── Campo has_parts_contract em clients ──────────────────────────────────────
+
+const clientColsContract = db.pragma("table_info(clients)").map((c) => c.name);
+if (!clientColsContract.includes("has_parts_contract")) {
+  db.exec(`ALTER TABLE clients ADD COLUMN has_parts_contract INTEGER DEFAULT 0`);
+  console.log(`[migrate] clients: coluna "has_parts_contract" adicionada.`);
+}
+
+// ── Campos previous_quantity e new_quantity em stock_movements ────────────────
+
+const movCols = db.pragma("table_info(stock_movements)").map((c) => c.name);
+if (!movCols.includes("previous_quantity")) {
+  db.exec(`ALTER TABLE stock_movements ADD COLUMN previous_quantity INTEGER`);
+  console.log(`[migrate] stock_movements: coluna "previous_quantity" adicionada.`);
+}
+if (!movCols.includes("new_quantity")) {
+  db.exec(`ALTER TABLE stock_movements ADD COLUMN new_quantity INTEGER`);
+  console.log(`[migrate] stock_movements: coluna "new_quantity" adicionada.`);
+}
+
 // ── Tabela part_categories ────────────────────────────────────────────────────
 
 db.exec(`

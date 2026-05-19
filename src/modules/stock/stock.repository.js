@@ -46,6 +46,8 @@ function listMovements({ limit = 100, offset = 0, part_id } = {}) {
       p.codigo_interno,
       sm.movement_type,
       sm.quantity,
+      sm.previous_quantity,
+      sm.new_quantity,
       sm.entry_type,
       sm.proposal_id,
       pr.numero_proposta,
@@ -67,16 +69,50 @@ function listMovements({ limit = 100, offset = 0, part_id } = {}) {
   `).all(limit, offset);
 }
 
+function getPartQtyInProposal(partId, proposalId) {
+  const row = db.prepare(`
+    SELECT COALESCE(SUM(ph.quantidade), 0) AS total
+    FROM price_history ph
+    WHERE ph.proposal_id = ? AND ph.part_id = ?
+  `).get(proposalId, partId);
+  return row ? row.total : 0;
+}
+
+function getContractClientSpend() {
+  return db.prepare(`
+    SELECT
+      c.id   AS client_id,
+      c.nome AS client_nome,
+      COALESCE(SUM(
+        CASE WHEN p.preco_compra IS NOT NULL
+          THEN sm.quantity * p.preco_compra
+          ELSE NULL END
+      ), 0) AS total_spend,
+      SUM(CASE WHEN p.preco_compra IS NULL AND sm.id IS NOT NULL THEN 1 ELSE 0 END) AS items_without_price,
+      COUNT(sm.id) AS total_movements
+    FROM clients c
+    LEFT JOIN stock_movements sm ON sm.client_id = c.id AND sm.movement_type = 'saida'
+    LEFT JOIN parts p ON p.id = sm.part_id
+    WHERE c.has_parts_contract = 1
+    GROUP BY c.id, c.nome
+    ORDER BY total_spend DESC
+  `).all();
+}
+
 function createMovement(data) {
   const insert = db.prepare(`
     INSERT INTO stock_movements (
       part_id, movement_type, quantity, entry_type,
-      proposal_id, client_id, returns_to_stock, notes, created_by_user_id
+      proposal_id, client_id, returns_to_stock, notes, created_by_user_id,
+      previous_quantity, new_quantity
     ) VALUES (
       @part_id, @movement_type, @quantity, @entry_type,
-      @proposal_id, @client_id, @returns_to_stock, @notes, @created_by_user_id
+      @proposal_id, @client_id, @returns_to_stock, @notes, @created_by_user_id,
+      @previous_quantity, @new_quantity
     )
   `);
+
+  const getQty = db.prepare(`SELECT COALESCE(stock_quantity, 0) AS qty FROM parts WHERE id = ?`);
 
   const updateQty = db.prepare(`
     UPDATE parts
@@ -85,6 +121,11 @@ function createMovement(data) {
   `);
 
   const txn = db.transaction((d) => {
+    const prevRow = getQty.get(d.part_id);
+    const previous_quantity = prevRow ? prevRow.qty : 0;
+    const delta = d.movement_type === 'entrada' ? d.quantity : -d.quantity;
+    const new_quantity = previous_quantity + delta;
+
     const result = insert.run({
       part_id:            d.part_id,
       movement_type:      d.movement_type,
@@ -95,9 +136,10 @@ function createMovement(data) {
       returns_to_stock:   d.returns_to_stock   ?? null,
       notes:              d.notes              ?? null,
       created_by_user_id: d.created_by_user_id,
+      previous_quantity,
+      new_quantity,
     });
 
-    const delta = d.movement_type === 'entrada' ? d.quantity : -d.quantity;
     updateQty.run({ delta, id: d.part_id });
 
     return result.lastInsertRowid;
@@ -120,4 +162,6 @@ module.exports = {
   listMovements,
   createMovement,
   getPartCurrentStock,
+  getPartQtyInProposal,
+  getContractClientSpend,
 };
