@@ -1,5 +1,6 @@
 const repo = require("./kanban.repository");
 const { canMoveKanban, KANBAN_STATUSES } = require("../proposal/proposal.service");
+const proposalRepo = require("../proposal/proposal.repository");
 
 function getAllCards() {
   return repo.listCards();
@@ -47,6 +48,11 @@ function moveTask(id, newStatus, userRole) {
     err.code = "INVALID_STATUS";
     throw err;
   }
+  if (newStatus === "enviado") {
+    const err = new Error("Cards avulsos não podem ser enviados. Vincule este card a uma proposta antes de avançar.");
+    err.code = "FORBIDDEN";
+    throw err;
+  }
   if (!canMoveKanban(userRole, task.kanban_status, newStatus)) {
     const err = new Error("Você não tem permissão para mover esta tarefa.");
     err.code = "FORBIDDEN";
@@ -55,7 +61,12 @@ function moveTask(id, newStatus, userRole) {
   repo.setTaskKanbanStatus(id, newStatus);
 }
 
-function deleteTask(id) {
+function deleteTask(id, userRole) {
+  if (userRole !== "admin") {
+    const err = new Error("Você não tem permissão para excluir esta tarefa.");
+    err.code = "FORBIDDEN";
+    throw err;
+  }
   const task = repo.findTaskById(id);
   if (!task) {
     const err = new Error("Tarefa não encontrada.");
@@ -64,6 +75,39 @@ function deleteTask(id) {
   }
   repo.deleteCommentsByCard("task", id);
   repo.deleteTask(id);
+}
+
+function linkTaskToProposal(taskId, proposalId, user) {
+  const task = repo.findTaskById(taskId);
+  if (!task) {
+    const err = new Error("Tarefa não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+
+  const proposal = proposalRepo.findProposalRowById(proposalId);
+  if (!proposal) {
+    const err = new Error("Proposta não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+
+  const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  let commentText = `Tarefa avulsa "${task.title}" foi vinculada a esta proposta por ${user.nome} em ${now}.`;
+  if (task.description) {
+    commentText += `\nInformações da tarefa: ${task.description}`;
+  }
+
+  repo.addComment({
+    card_type: "proposal",
+    card_id: proposalId,
+    user_id: user.id,
+    user_nome: user.nome,
+    comment: commentText,
+  });
+
+  repo.deleteCommentsByCard("task", taskId);
+  repo.deleteTask(taskId);
 }
 
 function getComments(cardType, cardId) {
@@ -92,6 +136,7 @@ module.exports = {
   updateTask,
   moveTask,
   deleteTask,
+  linkTaskToProposal,
   getComments,
   addComment,
 };

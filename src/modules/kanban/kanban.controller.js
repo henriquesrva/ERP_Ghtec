@@ -49,12 +49,35 @@ function moveTaskHandler(req, res) {
 
 function deleteTaskHandler(req, res) {
   try {
-    svc.deleteTask(Number(req.params.id));
+    svc.deleteTask(Number(req.params.id), req.session.userRole || "user");
     return res.json({ success: true });
   } catch (err) {
     console.error(err);
     if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "FORBIDDEN") return res.status(403).json({ success: false, message: err.message });
     return res.status(500).json({ success: false, message: "Erro ao excluir tarefa." });
+  }
+}
+
+function linkTaskToProposalHandler(req, res) {
+  try {
+    const role = req.session.userRole || "user";
+    if (role !== "admin" && role !== "comercial") {
+      return res.status(403).json({ success: false, message: "Apenas admin e comercial podem vincular tarefas a propostas." });
+    }
+    const taskId = Number(req.params.id);
+    const { proposal_id } = req.body;
+    if (!proposal_id) return res.status(400).json({ success: false, message: "proposal_id é obrigatório." });
+    svc.linkTaskToProposal(taskId, Number(proposal_id), {
+      id: req.session.userId,
+      nome: req.session.userName || "Usuário",
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "FORBIDDEN") return res.status(403).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao vincular tarefa." });
   }
 }
 
@@ -93,6 +116,7 @@ module.exports = {
   updateTaskHandler,
   moveTaskHandler,
   deleteTaskHandler,
+  linkTaskToProposalHandler,
   getCommentsHandler,
   addCommentHandler,
 };

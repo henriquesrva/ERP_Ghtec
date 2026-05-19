@@ -221,6 +221,11 @@ function listProposalsForKanban() {
       p.approval_attachment_path,
       p.approval_registered_by_user_id,
       p.approval_registered_at,
+      p.billing_date,
+      p.invoice_number,
+      p.billing_notes,
+      p.billed_by_user_id,
+      p.billed_at,
       c.nome AS cliente_nome
     FROM proposals p
     JOIN clients c ON c.id = p.cliente_id
@@ -285,6 +290,24 @@ function clearProposalExecution(proposalId) {
   `).run(proposalId);
 }
 
+function setProposalBilling(proposalId, data) {
+  db.prepare(`
+    UPDATE proposals SET
+      billing_date      = @billing_date,
+      invoice_number    = @invoice_number,
+      billing_notes     = @billing_notes,
+      billed_by_user_id = @billed_by_user_id,
+      billed_at         = datetime('now')
+    WHERE id = @id
+  `).run({
+    id:               proposalId,
+    billing_date:     data.billing_date     || null,
+    invoice_number:   data.invoice_number   || null,
+    billing_notes:    data.billing_notes    || null,
+    billed_by_user_id: data.billed_by_user_id || null,
+  });
+}
+
 function setProposalKanbanStatus(proposalId, newStatus) {
   if (!KANBAN_STATUSES.includes(newStatus)) {
     throw new Error(`Status inválido: ${newStatus}`);
@@ -319,5 +342,6 @@ module.exports = {
   setProposalExecution,
   clearProposalExecution,
   setProposalApproval,
+  setProposalBilling,
   KANBAN_STATUSES,
 };

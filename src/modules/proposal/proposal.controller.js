@@ -8,6 +8,7 @@ const {
   markProposalExecuted,
   removeProposalExecution,
   registerApproval,
+  registerBilling,
 } = require("./proposal.service");
 
 const {
@@ -236,6 +237,40 @@ function registerApprovalHandler(req, res) {
   }
 }
 
+function registerBillingHandler(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const userRole = req.session.userRole || "user";
+    registerBilling(
+      id,
+      {
+        billing_date:  req.body.billing_date  || null,
+        invoice_number: req.body.invoice_number || null,
+        billing_notes: req.body.billing_notes || null,
+      },
+      req.session.userId,
+      req.session.userName || "Usuário"
+    );
+    updateKanbanStatus(id, "faturado", userRole);
+    const row = findProposalRowById(id);
+    return res.json({
+      success: true,
+      billing: {
+        billing_date:  row.billing_date,
+        invoice_number: row.invoice_number,
+        billing_notes: row.billing_notes,
+        billed_at:     row.billed_at,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND")      return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "VALIDATION")     return res.status(400).json({ success: false, message: err.message });
+    if (err.code === "FORBIDDEN")      return res.status(403).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao registrar faturamento." });
+  }
+}
+
 module.exports = {
   createProposal,
   listProposals,
@@ -248,4 +283,5 @@ module.exports = {
   markExecutionHandler,
   removeExecutionHandler,
   registerApprovalHandler,
+  registerBillingHandler,
 };

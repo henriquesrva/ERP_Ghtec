@@ -24,6 +24,7 @@ const {
   setProposalExecution,
   clearProposalExecution,
   setProposalApproval,
+  setProposalBilling,
   KANBAN_STATUSES,
 } = require("./proposal.repository");
 
@@ -585,6 +586,33 @@ function registerApproval(proposalId, data, userId, userName) {
   }
 }
 
+function registerBilling(proposalId, data, userId, userName) {
+  if (!data.invoice_number || !data.invoice_number.trim()) {
+    const err = new Error("O número da NF é obrigatório para faturar a proposta.");
+    err.code = "VALIDATION";
+    throw err;
+  }
+  const proposal = findProposalRowById(proposalId);
+  if (!proposal) {
+    const err = new Error("Proposta não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  setProposalBilling(proposalId, {
+    billing_date:     data.billing_date     || null,
+    invoice_number:   data.invoice_number.trim(),
+    billing_notes:    data.billing_notes    || null,
+    billed_by_user_id: userId              || null,
+  });
+  try {
+    const parts = [`Sistema: Faturamento registrado por ${userName}. NF: ${data.invoice_number.trim()}`];
+    if (data.billing_date) parts.push(`Data: ${data.billing_date}`);
+    addKanbanComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
+  } catch (e) {
+    console.error("[registerBilling] auto-comment falhou:", e.message);
+  }
+}
+
 module.exports = {
   createProposalFlow,
   getProposalById,
@@ -597,5 +625,6 @@ module.exports = {
   markProposalExecuted,
   removeProposalExecution,
   registerApproval,
+  registerBilling,
   KANBAN_STATUSES,
 };

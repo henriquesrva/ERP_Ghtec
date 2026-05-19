@@ -48,6 +48,7 @@ const {
   markExecutionHandler,
   removeExecutionHandler,
   registerApprovalHandler,
+  registerBillingHandler,
 } = require("./modules/proposal/proposal.controller");
 
 const {
@@ -93,6 +94,7 @@ const {
   updateTaskHandler,
   moveTaskHandler,
   deleteTaskHandler,
+  linkTaskToProposalHandler,
   getCommentsHandler,
   addCommentHandler,
 } = require("./modules/kanban/kanban.controller");
@@ -164,13 +166,14 @@ app.post("/objetos",        createObjetoHandler);
 app.delete("/objetos/:id",  deleteObjetoHandler);
 
 // Kanban — cards, tarefas e comentários
-app.get("/kanban/cards",                   listCardsHandler);
-app.post("/kanban/tasks",                  createTaskHandler);
-app.put("/kanban/tasks/:id",               updateTaskHandler);
-app.put("/kanban/tasks/:id/status",        moveTaskHandler);
-app.delete("/kanban/tasks/:id",            deleteTaskHandler);
-app.get("/kanban/comments/:type/:id",      getCommentsHandler);
-app.post("/kanban/comments",               addCommentHandler);
+app.get("/kanban/cards",                      listCardsHandler);
+app.post("/kanban/tasks",                     createTaskHandler);
+app.put("/kanban/tasks/:id",                  updateTaskHandler);
+app.put("/kanban/tasks/:id/status",           moveTaskHandler);
+app.delete("/kanban/tasks/:id",               deleteTaskHandler);
+app.post("/kanban/tasks/:id/link-proposal",   linkTaskToProposalHandler);
+app.get("/kanban/comments/:type/:id",         getCommentsHandler);
+app.post("/kanban/comments",                  addCommentHandler);
 
 // Propostas
 app.get("/proposals",                      listProposals);
@@ -181,6 +184,7 @@ app.delete("/proposals/:id",               deleteProposalHandler);
 app.put("/proposals/:id/kanban-status",    updateKanbanStatusHandler);
 app.put("/proposals/:id/execution",        markExecutionHandler);
 app.delete("/proposals/:id/execution",     removeExecutionHandler);
+app.put("/proposals/:id/billing",      registerBillingHandler);
 app.put("/proposals/:id/approval", (req, res, next) => {
   uploadApproval.single("attachment")(req, res, (err) => {
     if (err) return res.status(400).json({ success: false, message: "Erro no upload: " + err.message });

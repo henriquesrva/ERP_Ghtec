@@ -158,6 +158,7 @@ function getProfitAnalysis() {
         WHERE proposal_id = pi.proposal_id AND descricao_original = pi.descricao
       )
     LEFT JOIN parts pt ON pt.id = ph.part_id
+    WHERE p.kanban_status = 'faturado'
     GROUP BY c.id, c.nome
     ORDER BY lucro_calculavel DESC
   `).all();

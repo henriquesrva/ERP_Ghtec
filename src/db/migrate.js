@@ -242,6 +242,23 @@ for (const [col, type] of approvalCols) {
   }
 }
 
+// ── Colunas de faturamento em proposals ──────────────────────────────────────
+
+const billingCols = [
+  ["billing_date",      "TEXT"],
+  ["invoice_number",    "TEXT"],
+  ["billing_notes",     "TEXT"],
+  ["billed_by_user_id", "INTEGER"],
+  ["billed_at",         "TEXT"],
+];
+const currentProposalCols = db.pragma("table_info(proposals)").map((c) => c.name);
+for (const [col, type] of billingCols) {
+  if (!currentProposalCols.includes(col)) {
+    db.exec(`ALTER TABLE proposals ADD COLUMN ${col} ${type}`);
+    console.log(`[migrate] proposals: coluna "${col}" adicionada.`);
+  }
+}
+
 // ── Tabela responsaveis ───────────────────────────────────────────────────────
 
 db.exec(`

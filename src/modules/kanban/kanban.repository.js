@@ -25,7 +25,17 @@ function listCards() {
       p.approval_date,
       p.approval_notes,
       p.approval_attachment_path,
-      p.approval_registered_at
+      p.approval_registered_at,
+      p.billing_date,
+      p.invoice_number,
+      p.billing_notes,
+      p.billed_by_user_id,
+      p.billed_at,
+      (SELECT GROUP_CONCAT(pi.descricao, '|||')
+       FROM (SELECT pi2.descricao FROM proposal_items pi2
+             WHERE pi2.proposal_id = p.id
+             ORDER BY pi2.item_ordem ASC LIMIT 3) pi) AS items_preview,
+      (SELECT COUNT(*) FROM proposal_items pi3 WHERE pi3.proposal_id = p.id) AS items_count
     FROM proposals p
     LEFT JOIN clients c ON c.id = p.cliente_id
     UNION ALL
@@ -50,7 +60,14 @@ function listCards() {
       NULL                AS approval_date,
       NULL                AS approval_notes,
       NULL                AS approval_attachment_path,
-      NULL                AS approval_registered_at
+      NULL                AS approval_registered_at,
+      NULL                AS billing_date,
+      NULL                AS invoice_number,
+      NULL                AS billing_notes,
+      NULL                AS billed_by_user_id,
+      NULL                AS billed_at,
+      NULL                AS items_preview,
+      NULL                AS items_count
     FROM kanban_tasks t
     ORDER BY created_at ASC
   `).all();

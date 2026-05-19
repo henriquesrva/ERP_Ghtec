@@ -98,6 +98,9 @@
     .btn-dest:hover:not(:disabled) { background: var(--green-bg); border-color: var(--green-light); color: var(--green); }
     .btn-dest:disabled { opacity: 0.38; cursor: not-allowed; }
 
+    /* Faturamento */
+    .billing-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-bottom: 6px; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+
     /* Modal criar tarefa */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 600; display: flex; align-items: center; justify-content: center; }
     .modal-box { background: #fff; border-radius: var(--radius); padding: 24px 28px; max-width: 480px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
@@ -137,6 +140,14 @@
     .btn-send { align-self: flex-end; padding: 8px 16px; background: var(--green); color: #fff; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; flex-shrink: 0; }
     .btn-send:hover { background: var(--green-light); }
     .no-comments { font-size: 12px; color: var(--muted); font-style: italic; }
+
+    /* Peças no card de proposta */
+    .card-parts { font-size: 10px; color: var(--muted); font-style: italic; }
+
+    /* Modal de vincular proposta */
+    .link-prop-item { transition: background 0.1s; }
+    .link-prop-item:hover { background: var(--green-bg); }
+    .link-prop-item:last-child { border-bottom: none !important; }
 
     @media (max-width: 640px) {
       .drawer { width: 100%; }
@@ -400,11 +411,81 @@
     });
   }
 
+  // ─── Modal de faturamento (ao mover de "Faturar" para "Faturado") ─────────────
+  function showBillingModal(card) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box">
+        <h3>Registrar Faturamento</h3>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Proposta #${escHtml(card.title)} — preencha os dados do faturamento antes de mover o card.</p>
+        <div class="form-group">
+          <label>Número da NF <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="billingNF" placeholder="Número da Nota Fiscal (obrigatório)" />
+        </div>
+        <div class="form-group">
+          <label>Data de faturamento</label>
+          <input type="date" id="billingDate" />
+        </div>
+        <div class="form-group">
+          <label>Observações</label>
+          <textarea id="billingNotes" placeholder="Observações sobre o faturamento (opcional)"></textarea>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:14px;">(*) Campo obrigatório. A proposta não será movida sem o número da NF.</div>
+        <div class="confirm-actions">
+          <button class="btn-c btn-c-ghost" id="_bilCancel">Cancelar</button>
+          <button class="btn-c btn-c-green" id="_bilSave">Confirmar e faturar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_bilCancel').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#_bilSave').addEventListener('click', async () => {
+      const nf    = overlay.querySelector('#billingNF').value.trim();
+      const date  = overlay.querySelector('#billingDate').value;
+      const notes = overlay.querySelector('#billingNotes').value.trim();
+      if (!nf) {
+        overlay.querySelector('#billingNF').style.borderColor = 'var(--danger)';
+        overlay.querySelector('#billingNF').focus();
+        showToast('O número da NF é obrigatório.');
+        return;
+      }
+      try {
+        const res = await fetch(`/proposals/${card.id}/billing`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoice_number: nf, billing_date: date || null, billing_notes: notes || null }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showToast(data.message || 'Erro ao registrar faturamento.'); return; }
+        overlay.remove();
+        const idx = cards.findIndex(c => c.id === card.id && c.card_type === 'proposal');
+        if (idx >= 0) {
+          cards[idx].kanban_status = 'faturado';
+          cards[idx].kanban_status_updated_at = new Date().toISOString().replace('T', ' ').substring(0, 19);
+          Object.assign(cards[idx], data.billing);
+        }
+        renderBoard();
+        if (drawerCard && drawerCard.id === card.id && drawerCard.card_type === 'proposal') {
+          drawerCard = cards[idx] || card;
+          updateDrawerStatus();
+        }
+        showToast('Faturamento registrado. Proposta movida para Faturado.', 'success');
+      } catch { showToast('Erro de conexão. Tente novamente.'); }
+    });
+    overlay.querySelector('#billingNF').focus();
+  }
+
   // ─── Mover card (geral) ───────────────────────────────────────────────────────
   function moveCard(cardId, cardType, direction) {
     const card = cards.find(c => c.id === cardId && c.card_type === cardType);
     if (!card) return;
     const currentIdx = COL_INDEX[card.kanban_status] ?? 0;
+
+    // Cards avulsos não podem avançar para "Enviado"
+    if (card.card_type === 'task' && direction === +1) {
+      showToast('Cards avulsos não podem ser enviados. Vincule este card a uma proposta antes de avançar.');
+      return;
+    }
 
     if (card.kanban_status === 'enviado' && direction === +1) {
       if (!['aguardando_compra','comprado','pendente_execucao','faturar']
@@ -433,6 +514,8 @@
         `Deseja voltar a ${name} para <strong>${targetLabel}</strong>?`,
         () => doMoveCard(card, targetStatus)
       );
+    } else if (card.card_type === 'proposal' && targetStatus === 'faturado') {
+      showBillingModal(card);
     } else {
       doMoveCard(card, targetStatus);
     }
@@ -474,7 +557,10 @@
 
         const prevKey = isFirst ? null : COLUMNS[colIdx - 1].key;
         let canNext;
-        if (card.kanban_status === 'enviado') {
+        if (card.card_type === 'task') {
+          // Cards avulsos não podem avançar para "Enviado" nem além
+          canNext = false;
+        } else if (card.kanban_status === 'enviado') {
           canNext = ['aguardando_compra','comprado','pendente_execucao','faturar']
             .some(d => canMoveKanban(currentUserRole, 'enviado', d));
         } else {
@@ -490,6 +576,12 @@
 
         if (card.card_type === 'proposal') {
           const url = pdfUrl(card.pdf_path);
+          const partsHtml = (() => {
+            if (!card.items_preview) return '';
+            const items = card.items_preview.split('|||').filter(Boolean);
+            const hasMore = (card.items_count || 0) > 3;
+            return `<div class="card-meta"><span class="card-parts">Peças: ${items.join(', ')}${hasMore ? ' etc.' : ''}</span></div>`;
+          })();
           cardEl.innerHTML = `
             <div class="card-top">
               <span class="card-num">#${card.title}</span>
@@ -499,6 +591,7 @@
             <div class="card-meta">
               <span class="card-value">${formatBRL(card.total)}</span>
             </div>
+            ${partsHtml}
             <div class="${card.execution_completed ? 'exec-badge exec-done' : 'exec-badge exec-pending'}">
               ${card.execution_completed ? '✓ Executada' : '⏳ Execução pendente'}
             </div>
@@ -619,7 +712,8 @@
               <button class="btn-c btn-c-green" id="btnEditTask" onclick="toggleTaskEdit()">Editar</button>
               <button class="btn-c btn-c-green" id="btnSaveTask" style="display:none;" onclick="saveTaskEdit()">Salvar</button>
               <button class="btn-c btn-c-ghost" id="btnCancelEdit" style="display:none;" onclick="cancelTaskEdit()">Cancelar</button>
-              <button class="btn-c btn-c-danger" style="margin-left:auto;" onclick="confirmDeleteTask()">Excluir</button>
+              ${(currentUserRole === 'admin' || currentUserRole === 'comercial') ? `<button class="btn-c btn-c-green" onclick="showLinkProposalModal()" title="Vincular este card a uma proposta existente">Vincular à proposta</button>` : ''}
+              ${currentUserRole === 'admin' ? `<button class="btn-c btn-c-danger" style="margin-left:auto;" onclick="confirmDeleteTask()">Excluir</button>` : ''}
             </div>
           </div>
           <div>
@@ -729,6 +823,32 @@
               ` : ''}
             ` : `
               <div style="font-size:12px;color:var(--muted);">Nenhuma aprovação registrada.</div>
+            `}
+          </div>
+          <div>
+            <div class="drawer-section">Faturamento</div>
+            ${card.billed_at ? `
+              <div class="billing-badge">&#10003; Faturado</div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Número da NF</div>
+                <div class="drawer-field-value">${escHtml(card.invoice_number || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Data de faturamento</div>
+                <div class="drawer-field-value">${escHtml(card.billing_date || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Observações</div>
+                <div class="drawer-field-value" style="font-weight:400;white-space:pre-wrap;">${escHtml(card.billing_notes || '—')}</div>
+              </div>
+              <div class="drawer-field">
+                <div class="drawer-field-label">Registrado em</div>
+                <div class="drawer-field-value">${fmtDatetime(card.billed_at)}</div>
+              </div>
+            ` : card.kanban_status === 'faturado' ? `
+              <div style="font-size:12px;color:var(--muted);">Faturado sem dados de NF registrados.</div>
+            ` : `
+              <div style="font-size:12px;color:var(--muted);">Proposta ainda não faturada.</div>
             `}
           </div>
           <div>
@@ -1024,6 +1144,113 @@
       }
     });
     overlay.querySelector('#newTaskTitle').focus();
+  }
+
+  // ─── Vincular tarefa avulsa a uma proposta ────────────────────────────────────
+  function showLinkProposalModal() {
+    if (!drawerCard || drawerCard.card_type !== 'task') return;
+    const task = drawerCard;
+    const proposalCards = cards.filter(c => c.card_type === 'proposal');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box" style="max-width:600px;width:95%;">
+        <h3>Vincular à proposta</h3>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">
+          Selecione uma proposta para vincular a tarefa <strong>"${escHtml(task.title)}"</strong>.
+          O card avulso será removido e as informações serão registradas no chat da proposta selecionada.
+        </p>
+        <div class="form-group">
+          <label>Filtrar propostas</label>
+          <input type="text" id="linkFilter" placeholder="Digite número ou cliente para filtrar..." style="width:100%;" />
+        </div>
+        <div id="linkProposalList" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);background:#fff;"></div>
+        <div id="linkSelectedInfo" style="margin-top:10px;font-size:13px;color:var(--green);font-weight:700;min-height:20px;"></div>
+        <div class="confirm-actions" style="margin-top:14px;">
+          <button class="btn-c btn-c-ghost" id="_lpCancel">Cancelar</button>
+          <button class="btn-c btn-c-green" id="_lpConfirm" disabled>Confirmar vinculação</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    overlay.querySelector('#_lpCancel').addEventListener('click', () => overlay.remove());
+
+    let selectedProposalId = null;
+
+    function renderLinkList(filter) {
+      const list = overlay.querySelector('#linkProposalList');
+      const f = (filter || '').toLowerCase();
+      const filtered = proposalCards.filter(p =>
+        !f ||
+        (p.title || '').toLowerCase().includes(f) ||
+        (p.cliente_nome || '').toLowerCase().includes(f)
+      );
+      if (!filtered.length) {
+        list.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--muted);">Nenhuma proposta encontrada.</div>';
+        return;
+      }
+      list.innerHTML = filtered.map(p => {
+        const colLabel = (COLUMNS.find(c => c.key === p.kanban_status) || {}).label || p.kanban_status;
+        return `
+          <div class="link-prop-item" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;gap:10px;align-items:flex-start;">
+            <input type="radio" name="linkProp" value="${p.id}" id="lp_${p.id}" style="margin-top:3px;flex-shrink:0;" ${selectedProposalId === p.id ? 'checked' : ''} />
+            <label for="lp_${p.id}" style="cursor:pointer;flex:1;line-height:1.4;">
+              <div style="font-weight:700;color:var(--green);">#${escHtml(p.title)}</div>
+              <div style="font-size:12px;color:var(--text);">${escHtml(p.cliente_nome || '—')}</div>
+              <div style="font-size:11px;color:var(--muted);">${formatBRL(p.total)} &middot; ${escHtml(colLabel)}</div>
+            </label>
+          </div>`;
+      }).join('');
+
+      list.querySelectorAll('input[name="linkProp"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          selectedProposalId = Number(radio.value);
+          const p = proposalCards.find(x => x.id === selectedProposalId);
+          overlay.querySelector('#linkSelectedInfo').textContent =
+            p ? `Selecionada: Proposta #${p.title} — ${p.cliente_nome || '—'}` : '';
+          overlay.querySelector('#_lpConfirm').disabled = false;
+        });
+      });
+    }
+
+    renderLinkList('');
+    overlay.querySelector('#linkFilter').addEventListener('input', e => {
+      renderLinkList(e.target.value.trim());
+    });
+
+    overlay.querySelector('#_lpConfirm').addEventListener('click', () => {
+      if (!selectedProposalId) return;
+      const p = proposalCards.find(x => x.id === selectedProposalId);
+      overlay.remove();
+      showConfirm(
+        'Confirmar vinculação',
+        `Deseja vincular a tarefa <strong>"${escHtml(task.title)}"</strong> à proposta <strong>#${p ? escHtml(p.title) : selectedProposalId}</strong>?<br><br>O card avulso será removido e um registro será adicionado ao chat da proposta.`,
+        () => doLinkTaskToProposal(task.id, selectedProposalId),
+        'Vincular',
+        'btn-c-green'
+      );
+    });
+
+    overlay.querySelector('#linkFilter').focus();
+  }
+
+  async function doLinkTaskToProposal(taskId, proposalId) {
+    try {
+      const res = await fetch(`/kanban/tasks/${taskId}/link-proposal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposal_id: proposalId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.message || 'Erro ao vincular tarefa.'); return; }
+      cards = cards.filter(c => !(c.id === taskId && c.card_type === 'task'));
+      closeDrawer();
+      renderBoard();
+      showToast('Tarefa vinculada com sucesso. O chat da proposta foi atualizado.', 'success');
+    } catch {
+      showToast('Erro de conexão.');
+    }
   }
 
   // ─── Inicialização ────────────────────────────────────────────────────────────
