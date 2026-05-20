@@ -156,6 +156,60 @@ function getPartCurrentStock(partId) {
   return row ? row.stock_quantity : 0;
 }
 
+function getMovementsByDate({ days = 60 } = {}) {
+  const n = Math.max(1, Math.min(365, Number(days) || 60));
+  return db.prepare(`
+    SELECT
+      DATE(created_at)   AS date,
+      movement_type,
+      CAST(SUM(quantity) AS INTEGER) AS total_qty
+    FROM stock_movements
+    WHERE movement_type IN ('entrada', 'saida')
+      AND created_at >= DATE('now', '-${n} days')
+    GROUP BY DATE(created_at), movement_type
+    ORDER BY DATE(created_at) ASC
+  `).all();
+}
+
+function createInventoryCount(adjustments, userId) {
+  const getQty     = db.prepare(`SELECT COALESCE(stock_quantity, 0) AS qty FROM parts WHERE id = ?`);
+  const insertMov  = db.prepare(`
+    INSERT INTO stock_movements (
+      part_id, movement_type, quantity,
+      previous_quantity, new_quantity,
+      notes, created_by_user_id
+    ) VALUES (
+      @part_id, 'contagem', @quantity,
+      @previous_quantity, @new_quantity,
+      @notes, @created_by_user_id
+    )
+  `);
+  const updateQty  = db.prepare(`UPDATE parts SET stock_quantity = ? WHERE id = ?`);
+
+  const txn = db.transaction((items) => {
+    const ids = [];
+    for (const item of items) {
+      const prevRow = getQty.get(item.part_id);
+      const previous_quantity = prevRow ? prevRow.qty : 0;
+      const new_quantity = item.new_quantity;
+      if (new_quantity === previous_quantity) continue;
+      const id = insertMov.run({
+        part_id:            item.part_id,
+        quantity:           Math.abs(new_quantity - previous_quantity),
+        previous_quantity,
+        new_quantity,
+        notes:              item.notes || null,
+        created_by_user_id: userId,
+      }).lastInsertRowid;
+      updateQty.run(new_quantity, item.part_id);
+      ids.push(id);
+    }
+    return ids;
+  });
+
+  return txn(adjustments);
+}
+
 module.exports = {
   listStockParts,
   getStockPartById,
@@ -164,4 +218,6 @@ module.exports = {
   getPartCurrentStock,
   getPartQtyInProposal,
   getContractClientSpend,
+  getMovementsByDate,
+  createInventoryCount,
 };

@@ -1,4 +1,4 @@
-const { getAllStockParts, getMovements, registerMovement, getContractSpend } = require("./stock.service");
+const { getAllStockParts, getMovements, registerMovement, getContractSpend, getMovementsByDateData, registerInventoryCount } = require("./stock.service");
 
 function listStockPartsHandler(req, res) {
   try {
@@ -56,9 +56,37 @@ function getContractSpendHandler(req, res) {
   }
 }
 
+function getMovementsByDateHandler(req, res) {
+  try {
+    const days = req.query.days ? Math.min(Number(req.query.days) || 60, 365) : 60;
+    return res.json(getMovementsByDateData({ days }));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ success: false, message: "Erro ao carregar dados por data." });
+  }
+}
+
+function inventoryCountHandler(req, res) {
+  try {
+    const userId = req.session?.userId;
+    if (!userId) return res.status(401).json({ success: false, message: "Não autenticado." });
+    const { adjustments } = req.body;
+    const ids = registerInventoryCount(adjustments, userId);
+    return res.json({ success: true, count: ids.length });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "VALIDATION") {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    return res.status(500).json({ success: false, message: "Erro ao registrar contagem." });
+  }
+}
+
 module.exports = {
   listStockPartsHandler,
   listMovementsHandler,
   createMovementHandler,
   getContractSpendHandler,
+  getMovementsByDateHandler,
+  inventoryCountHandler,
 };

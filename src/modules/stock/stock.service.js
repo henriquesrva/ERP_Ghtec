@@ -6,6 +6,8 @@ const {
   getPartCurrentStock,
   getPartQtyInProposal,
   getContractClientSpend,
+  getMovementsByDate,
+  createInventoryCount,
 } = require("./stock.repository");
 
 const VALID_ENTRY_TYPES = [
@@ -94,9 +96,30 @@ function getContractSpend() {
   return getContractClientSpend();
 }
 
+function getMovementsByDateData({ days } = {}) {
+  return getMovementsByDate({ days });
+}
+
+function registerInventoryCount(adjustments, userId) {
+  if (!Array.isArray(adjustments) || adjustments.length === 0) {
+    throw Object.assign(new Error("Nenhum ajuste informado."), { code: "VALIDATION" });
+  }
+  for (const adj of adjustments) {
+    if (!adj.part_id) throw Object.assign(new Error("part_id é obrigatório."), { code: "VALIDATION" });
+    const qty = Number(adj.new_quantity);
+    if (isNaN(qty) || qty < 0 || !Number.isInteger(qty)) {
+      throw Object.assign(new Error("Quantidade inválida. Use número inteiro não negativo."), { code: "VALIDATION" });
+    }
+    adj.new_quantity = qty;
+  }
+  return createInventoryCount(adjustments, userId);
+}
+
 module.exports = {
   getAllStockParts,
   getMovements,
   registerMovement,
   getContractSpend,
+  getMovementsByDateData,
+  registerInventoryCount,
 };

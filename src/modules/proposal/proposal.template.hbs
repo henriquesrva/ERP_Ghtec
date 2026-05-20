@@ -28,6 +28,7 @@
           {{#if cliente.endereco}}<p>{{cliente.endereco}}</p>{{/if}}
           <p>{{cliente.cidade}} - {{cliente.estado}}</p>
           {{#if cliente.cep}}<p>CEP: {{cliente.cep}}</p>{{/if}}
+          {{#if cliente.email}}<p>E-mail: {{cliente.email}}</p>{{/if}}
         </div>
 
         <div>
@@ -51,20 +52,20 @@
 
         <table>
           <colgroup>
-            <col style="width: 9%">
             <col style="width: 8%">
-            <col style="width: 37%">
+            <col style="width: 7%">
+            <col style="width: 33%">
             <col style="width: 20%">
-            <col style="width: 17%">
-            <col style="width: 9%">
+            <col style="width: 18%">
+            <col style="width: 14%">
           </colgroup>
           <thead>
             <tr>
               <th class="col-center">ITEM</th>
               <th class="col-center">QTD</th>
-              <th class="col-left">DESCRIÇÃO</th>
-              <th class="col-right">VALOR UNITÁRIO</th>
-              <th class="col-right">SUBTOTAL</th>
+              <th class="col-center">DESCRIÇÃO</th>
+              <th class="col-center">VALOR UNITÁRIO</th>
+              <th class="col-center">SUBTOTAL</th>
               <th class="col-center">NCM</th>
             </tr>
           </thead>
@@ -73,9 +74,9 @@
               <tr>
                 <td class="col-center">{{item_label}}</td>
                 <td class="col-center">{{quantidade}}</td>
-                <td class="col-left">{{descricao}}</td>
-                <td class="col-right">{{valor_unitario}}</td>
-                <td class="col-right">{{subtotal}}</td>
+                <td class="col-center">{{descricao}}</td>
+                <td class="col-center">{{valor_unitario}}</td>
+                <td class="col-center">{{subtotal}}</td>
                 <td class="col-center">{{ncm}}</td>
               </tr>
             {{/each}}
@@ -94,7 +95,7 @@
           <li><strong>Forma de pagamento:</strong> {{condicoes.forma_pagamento}}</li>
           <li><strong>Prazo de pagamento:</strong> {{condicoes.prazo_pagamento}}</li>
           <li><strong>Prazo de entrega:</strong> {{condicoes.prazo_entrega}}</li>
-          <li><strong>Garantia:</strong> {{condicoes.garantia}}</li>
+          {{#if condicoes.garantia}}<li><strong>Garantia:</strong> {{condicoes.garantia}}</li>{{/if}}
           <li><strong>Validade da proposta:</strong> {{condicoes.validade}}</li>
         </ul>
       </section>

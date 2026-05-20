@@ -39,8 +39,9 @@
     .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0; }
 
     /* Home cards */
-    .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 680px; margin: 0 auto; }
-    @media (max-width: 560px) { .home-grid { grid-template-columns: 1fr; } }
+    .home-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; max-width: 900px; margin: 0 auto; }
+    @media (max-width: 680px) { .home-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) and (min-width: 681px) { .home-grid { grid-template-columns: 1fr 1fr; } }
     .home-card {
       background: #fff; border: 2px solid var(--border); border-radius: 10px;
       padding: 36px 24px; text-align: center; cursor: pointer;
@@ -67,9 +68,15 @@
     .subview-title { font-size: 15px; font-weight: 700; color: var(--text); }
 
     /* Filtros */
-    .filters { display: flex; gap: 10px; flex-wrap: wrap; }
-    .filters input { padding: 7px 11px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; min-width: 220px; }
-    .filters input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .filters input, .filters select {
+      padding: 7px 11px; border: 1px solid #ccc; border-radius: var(--radius);
+      font-size: 13px; font-family: inherit;
+    }
+    .filters input { min-width: 220px; }
+    .filters input:focus, .filters select:focus {
+      outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15);
+    }
 
     /* Tabela */
     .tbl-wrap { overflow-x: auto; }
@@ -87,8 +94,9 @@
     .btn-hist:hover { background: var(--green-bg); color: var(--green); border-color: var(--green-light); }
 
     /* Badge tipo mov */
-    .badge-entrada { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-    .badge-saida   { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-entrada  { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-saida    { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .badge-contagem { background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
 
     /* Modal */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
@@ -180,6 +188,17 @@
     .spend-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
     .spend-section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px; }
 
+    /* Contagem de estoque */
+    .count-input {
+      width: 84px; padding: 5px 6px; border: 1px solid #ccc; border-radius: 4px;
+      font-family: inherit; font-size: 13px; text-align: center;
+    }
+    .count-input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 2px rgba(67,160,71,0.15); }
+    .count-input.changed { border-color: var(--green); background: #f1f8f1; }
+
+    /* Period selector */
+    .period-btns { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+
     @media (max-width: 640px) {
       .type-grid { grid-template-columns: 1fr; }
       .entry-type-grid { grid-template-columns: 1fr; }
@@ -217,12 +236,17 @@
       <div class="home-card" onclick="showView('stock')">
         <div class="home-card-icon">&#128230;</div>
         <div class="home-card-label">Estoque</div>
-        <div class="home-card-desc">Visualizar quantidades e registrar movimentações</div>
+        <div class="home-card-desc">Visualizar peças, quantidades e contagem</div>
       </div>
       <div class="home-card" onclick="showView('movements')">
         <div class="home-card-icon">&#128203;</div>
         <div class="home-card-label">Movimentações</div>
-        <div class="home-card-desc">Histórico completo de entradas e saídas</div>
+        <div class="home-card-desc">Histórico e registro de entradas e saídas</div>
+      </div>
+      <div class="home-card" onclick="showView('charts')">
+        <div class="home-card-icon">&#128202;</div>
+        <div class="home-card-label">Gráficos</div>
+        <div class="home-card-desc">Análises visuais de gastos e movimentações</div>
       </div>
     </div>
   </div>
@@ -234,16 +258,16 @@
         <button class="btn-back" onclick="showView('home')">&#8592; Voltar</button>
         <span class="subview-title">Estoque</span>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" id="btnContractSpend">&#9654; Gastos com contratos</button>
-        <button class="btn btn-primary btn-sm" id="btnNewMovement">+ Nova movimentação</button>
-      </div>
+      <button class="btn btn-primary btn-sm" onclick="openCountModal()">&#9998; Contagem de estoque</button>
     </div>
     <div class="card">
       <div class="card-header">
         <span class="card-title">Peças em estoque</span>
         <div class="filters">
           <input type="text" id="stockSearch" placeholder="Buscar por código ou nome..." autocomplete="off" />
+          <select id="stockCatFilter">
+            <option value="">Todas as categorias</option>
+          </select>
         </div>
       </div>
       <div class="tbl-wrap">
@@ -270,8 +294,9 @@
     <div class="subview-header">
       <div style="display:flex;align-items:center;gap:14px">
         <button class="btn-back" onclick="showView('home')">&#8592; Voltar</button>
-        <span class="subview-title">Histórico de Movimentações</span>
+        <span class="subview-title">Movimentações</span>
       </div>
+      <button class="btn btn-primary btn-sm" id="btnNewMovement">+ Nova movimentação</button>
     </div>
     <div class="card">
       <div class="hist-filter">
@@ -306,9 +331,33 @@
     </div>
   </div>
 
+  <!-- ── View: Gráficos ─────────────────────────────────────────────────── -->
+  <div id="viewCharts" style="display:none">
+    <div class="subview-header">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="btn-back" onclick="showView('home')">&#8592; Voltar</button>
+        <span class="subview-title">Gráficos</span>
+      </div>
+    </div>
+    <div class="home-grid">
+      <div class="home-card" onclick="openSpendModal()">
+        <div class="home-card-icon">&#128200;</div>
+        <div class="home-card-label">Gastos com Contratos</div>
+        <div class="home-card-desc">Gasto por cliente com contrato de peças</div>
+      </div>
+      <div class="home-card" onclick="openMovDateModal(60)">
+        <div class="home-card-icon">&#128202;</div>
+        <div class="home-card-label">Movimentações por Data</div>
+        <div class="home-card-desc">Entradas e saídas ao longo do tempo</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<!-- Modal de nova movimentação -->
+<!-- ─────────────────────────────────────────────────────────────────────────
+     Modal: Nova Movimentação
+──────────────────────────────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="movModal">
   <div class="modal-box">
     <div class="modal-header">
@@ -436,7 +485,9 @@
   </div>
 </div>
 
-<!-- Modal de gastos com contratos -->
+<!-- ─────────────────────────────────────────────────────────────────────────
+     Modal: Gastos com Contratos
+──────────────────────────────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="spendModal">
   <div class="modal-box modal-box-wide">
     <div class="modal-header">
@@ -450,16 +501,78 @@
   </div>
 </div>
 
+<!-- ─────────────────────────────────────────────────────────────────────────
+     Modal: Contagem de Estoque
+──────────────────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="countModal">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-header">
+      <span class="modal-title">Contagem de Estoque</span>
+      <button class="modal-close" onclick="closeCountModal()">&times;</button>
+    </div>
+    <p class="modal-subtitle">Informe a quantidade contada de cada peça. Apenas as peças com valor alterado serão registradas no histórico.</p>
+    <div class="mfield">
+      <label>Observação geral <span style="font-weight:400;text-transform:none">(opcional)</span></label>
+      <input type="text" id="countNotes" placeholder="Ex: Contagem mensal — maio/2026" />
+    </div>
+    <div class="tbl-wrap" style="max-height:400px;overflow-y:auto;margin-bottom:14px">
+      <table>
+        <thead>
+          <tr>
+            <th>Código Interno</th>
+            <th>Nome</th>
+            <th style="text-align:center">Qtd. Sistema</th>
+            <th style="text-align:center">Qtd. Contada</th>
+          </tr>
+        </thead>
+        <tbody id="countBody">
+          <tr><td colspan="4" class="loading-text">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="countMsg" style="display:none" class="msg"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="btnSubmitCount" onclick="submitInventoryCount()">Salvar contagem</button>
+      <button class="btn btn-ghost" onclick="closeCountModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     Modal: Movimentações por Data
+──────────────────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="movDateModal">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-header">
+      <span class="modal-title">Movimentações por Data</span>
+      <button class="modal-close" onclick="closeMovDateModal()">&times;</button>
+    </div>
+    <div class="modal-subtitle">Comparação de entradas e saídas por data.</div>
+    <div class="period-btns">
+      <button class="btn btn-sm btn-ghost" onclick="openMovDateModal(30)">Últimos 30 dias</button>
+      <button class="btn btn-sm btn-ghost" onclick="openMovDateModal(60)">Últimos 60 dias</button>
+      <button class="btn btn-sm btn-ghost" onclick="openMovDateModal(90)">Últimos 90 dias</button>
+    </div>
+    <div id="movDateBody">
+      <div class="spend-empty">Carregando...</div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── Estado ──────────────────────────────────────────────────────────────────
-let stockParts    = [];
-let allProposals  = [];
-let allClients    = [];
-let movType       = null;
-let entryType     = null;
-let returnsToStock = null;
+let stockParts       = [];
+let allProposals     = [];
+let allClients       = [];
+let allCategories    = [];
+let stockCategoryFilter = null;
+let movType          = null;
+let entryType        = null;
+let returnsToStock   = null;
 let histFilterPartId = null;
-let spendChart    = null;
+let spendChart       = null;
+let movDateChartInst = null;
+let countPartsCache  = [];
 
 function v(id) { return document.getElementById(id); }
 
@@ -468,16 +581,24 @@ function showView(name) {
   v('viewHome').style.display      = name === 'home'      ? '' : 'none';
   v('viewStock').style.display     = name === 'stock'     ? '' : 'none';
   v('viewMovements').style.display = name === 'movements' ? '' : 'none';
-  if (name === 'stock' && !stockParts.length) loadStock();
+  v('viewCharts').style.display    = name === 'charts'    ? '' : 'none';
+  if (name === 'stock') {
+    if (!stockParts.length) loadStock();
+    else renderStock(stockParts);
+  }
   if (name === 'movements') loadMovements(histFilterPartId);
 }
 
-// ─── Formatar data ────────────────────────────────────────────────────────────
+// ─── Formatar data (fuso Brasília) ────────────────────────────────────────────
 function fmtDate(dt) {
   if (!dt) return '—';
   const d = new Date(dt.replace(' ', 'T'));
   if (isNaN(d)) return dt;
-  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
 }
 
 function fmtBRL(val) {
@@ -500,19 +621,41 @@ async function loadStock() {
     stockParts = await res.json();
     renderStock(stockParts);
     populateHistPartFilter(stockParts);
+    if (!allCategories.length) loadCategoriesForFilter();
   } catch {
     v('stockBody').innerHTML = '<tr><td colspan="5" class="tbl-empty">Erro ao carregar estoque.</td></tr>';
   }
 }
 
+async function loadCategoriesForFilter() {
+  try {
+    const res   = await fetch('/part-categories');
+    allCategories = await res.json();
+    renderCategoryFilter();
+  } catch { /* silencioso */ }
+}
+
+function renderCategoryFilter() {
+  const sel = v('stockCatFilter');
+  while (sel.options.length > 1) sel.remove(1);
+  allCategories.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value       = c.id;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  });
+}
+
 function renderStock(parts) {
-  const q = v('stockSearch').value.toLowerCase();
-  const filtered = q
-    ? parts.filter(p => (p.nome || '').toLowerCase().includes(q) || (p.codigo_interno || '').toLowerCase().includes(q))
-    : parts;
+  const q    = v('stockSearch').value.toLowerCase();
+  const catId = stockCategoryFilter;
+
+  let filtered = parts;
+  if (q)     filtered = filtered.filter(p => (p.nome || '').toLowerCase().includes(q) || (p.codigo_interno || '').toLowerCase().includes(q));
+  if (catId) filtered = filtered.filter(p => p.category_id === catId);
 
   if (!filtered.length) {
-    v('stockBody').innerHTML = '<tr><td colspan="5" class="tbl-empty">Nenhuma peça com código interno cadastrada.</td></tr>';
+    v('stockBody').innerHTML = '<tr><td colspan="5" class="tbl-empty">Nenhuma peça encontrada.</td></tr>';
     return;
   }
 
@@ -535,6 +678,12 @@ function renderStock(parts) {
 
 v('stockSearch').addEventListener('input', () => renderStock(stockParts));
 
+v('stockCatFilter').addEventListener('change', () => {
+  const val = v('stockCatFilter').value;
+  stockCategoryFilter = val ? Number(val) : null;
+  renderStock(stockParts);
+});
+
 function goToMovementsFiltered(partId) {
   histFilterPartId = partId;
   showView('movements');
@@ -542,7 +691,6 @@ function goToMovementsFiltered(partId) {
 
 function populateHistPartFilter(parts) {
   const sel = v('histPartFilter');
-  // Remove opções antigas (exceto a primeira)
   while (sel.options.length > 1) sel.remove(1);
   parts.forEach(p => {
     const opt = document.createElement('option');
@@ -584,12 +732,17 @@ function renderMovements(rows) {
     return;
   }
   v('histBody').innerHTML = rows.map(r => {
-    const badge   = r.movement_type === 'entrada'
-      ? '<span class="badge-entrada">Entrada</span>'
-      : '<span class="badge-saida">Saída</span>';
-    const detalhe = r.movement_type === 'entrada'
-      ? (ENTRY_LABELS[r.entry_type] || r.entry_type || '—')
-      : (r.returns_to_stock ? 'Volta ao estoque' : 'Saída definitiva');
+    let badge, detalhe;
+    if (r.movement_type === 'entrada') {
+      badge   = '<span class="badge-entrada">Entrada</span>';
+      detalhe = ENTRY_LABELS[r.entry_type] || r.entry_type || '—';
+    } else if (r.movement_type === 'contagem') {
+      badge   = '<span class="badge-contagem">Contagem</span>';
+      detalhe = 'Contagem de estoque';
+    } else {
+      badge   = '<span class="badge-saida">Saída</span>';
+      detalhe = r.returns_to_stock ? 'Volta ao estoque' : 'Saída definitiva';
+    }
     const prevNew = (r.previous_quantity !== null && r.previous_quantity !== undefined && r.new_quantity !== null && r.new_quantity !== undefined)
       ? `<span style="color:var(--muted)">${r.previous_quantity}</span> → <strong>${r.new_quantity}</strong>`
       : '—';
@@ -817,7 +970,7 @@ v('s_proposalId').addEventListener('change', () => {
   }
 });
 
-// ─── Submissão ────────────────────────────────────────────────────────────────
+// ─── Submissão de movimentação ────────────────────────────────────────────────
 async function submitMovement() {
   v('movMsg').style.display = 'none';
   let valid = true;
@@ -914,8 +1067,7 @@ function showMovMsg(type, text) {
   el.style.display = 'block';
 }
 
-// ─── Modal de gastos com contratos ────────────────────────────────────────────
-v('btnContractSpend').addEventListener('click', openSpendModal);
+// ─── Modal: Gastos com contratos ──────────────────────────────────────────────
 v('closeSpendModal').addEventListener('click', closeSpendModal);
 v('spendModal').addEventListener('click', e => { if (e.target === v('spendModal')) closeSpendModal(); });
 
@@ -938,9 +1090,8 @@ async function openSpendModal() {
       return;
     }
 
-    const withSpend    = rows.filter(r => r.total_movements > 0);
-    const noMovements  = rows.filter(r => r.total_movements === 0);
-    const withMissing  = rows.filter(r => r.items_without_price > 0);
+    const withSpend   = rows.filter(r => r.total_movements > 0);
+    const withMissing = rows.filter(r => r.items_without_price > 0);
 
     let html = '';
 
@@ -955,8 +1106,6 @@ async function openSpendModal() {
     if (withSpend.length > 0) {
       const labels  = withSpend.map(r => r.client_nome);
       const values  = withSpend.map(r => r.total_spend);
-      const colors  = values.map(() => 'rgba(46,125,50,0.75)');
-      const borders = values.map(() => '#2e7d32');
 
       html += `<div class="chart-wrap"><canvas id="spendCanvas" height="${Math.max(200, withSpend.length * 42)}"></canvas></div>`;
       body.innerHTML = html;
@@ -969,8 +1118,8 @@ async function openSpendModal() {
           datasets: [{
             label: 'Gasto total (R$)',
             data: values,
-            backgroundColor: colors,
-            borderColor: borders,
+            backgroundColor: 'rgba(46,125,50,0.75)',
+            borderColor: '#2e7d32',
             borderWidth: 1,
             borderRadius: 4,
           }],
@@ -980,9 +1129,7 @@ async function openSpendModal() {
           responsive: true,
           plugins: {
             legend: { display: false },
-            tooltip: {
-              callbacks: { label: ctx => `Gasto: ${fmtBRL(ctx.raw)}` },
-            },
+            tooltip: { callbacks: { label: ctx => `Gasto: ${fmtBRL(ctx.raw)}` } },
           },
           scales: {
             x: { ticks: { font: { size: 11 } } },
@@ -1026,6 +1173,195 @@ async function openSpendModal() {
   }
 }
 
+// ─── Modal: Contagem de Estoque ───────────────────────────────────────────────
+v('countModal').addEventListener('click', e => { if (e.target === v('countModal')) closeCountModal(); });
+
+async function openCountModal() {
+  v('countNotes').value        = '';
+  v('countMsg').style.display  = 'none';
+  v('btnSubmitCount').disabled = false;
+  v('btnSubmitCount').textContent = 'Salvar contagem';
+  v('countBody').innerHTML = '<tr><td colspan="4" class="loading-text">Carregando...</td></tr>';
+  v('countModal').classList.add('open');
+
+  try {
+    const res = await fetch('/stock');
+    countPartsCache = await res.json();
+    renderCountTable(countPartsCache);
+  } catch {
+    v('countBody').innerHTML = '<tr><td colspan="4" class="tbl-empty">Erro ao carregar peças.</td></tr>';
+  }
+}
+
+function renderCountTable(parts) {
+  if (!parts.length) {
+    v('countBody').innerHTML = '<tr><td colspan="4" class="tbl-empty">Nenhuma peça com código interno cadastrada.</td></tr>';
+    return;
+  }
+  v('countBody').innerHTML = parts.map(p => `
+    <tr>
+      <td><code style="background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:12px">${escHtml(p.codigo_interno)}</code></td>
+      <td style="font-weight:600">${escHtml(p.nome)}</td>
+      <td style="text-align:center"><span class="qty-badge ${(p.stock_quantity||0) <= 0 ? 'qty-zero' : 'qty-ok'}">${p.stock_quantity || 0}</span></td>
+      <td style="text-align:center">
+        <input type="number" class="count-input" min="0" step="1" placeholder="—"
+               data-part-id="${p.id}" data-current="${p.stock_quantity || 0}" />
+      </td>
+    </tr>
+  `).join('');
+
+  document.querySelectorAll('.count-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const val = inp.value.trim();
+      inp.classList.toggle('changed', val !== '' && val !== inp.dataset.current);
+    });
+  });
+}
+
+function closeCountModal() {
+  v('countModal').classList.remove('open');
+}
+
+async function submitInventoryCount() {
+  const inputs  = document.querySelectorAll('.count-input');
+  const notes   = v('countNotes').value.trim() || null;
+  const adjustments = [];
+
+  inputs.forEach(inp => {
+    const val = inp.value.trim();
+    if (!val) return;
+    const newQty     = parseInt(val, 10);
+    const currentQty = parseInt(inp.dataset.current, 10);
+    if (isNaN(newQty) || newQty < 0) return;
+    if (newQty === currentQty) return;
+    adjustments.push({ part_id: Number(inp.dataset.partId), new_quantity: newQty, notes });
+  });
+
+  if (!adjustments.length) {
+    showCountMsg('warn', 'Nenhuma quantidade foi alterada.');
+    return;
+  }
+
+  const btn = v('btnSubmitCount');
+  btn.disabled    = true;
+  btn.textContent = 'Salvando...';
+
+  try {
+    const res  = await fetch('/stock/inventory-count', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ adjustments }),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      showCountMsg('success', `${data.count} peça(s) atualizada(s) com sucesso!`);
+      btn.textContent = 'Salvar contagem';
+      await loadStock();
+      setTimeout(closeCountModal, 1500);
+    } else {
+      showCountMsg('error', data.message || 'Erro ao salvar contagem.');
+      btn.disabled    = false;
+      btn.textContent = 'Salvar contagem';
+    }
+  } catch {
+    showCountMsg('error', 'Erro de conexão com o servidor.');
+    btn.disabled    = false;
+    btn.textContent = 'Salvar contagem';
+  }
+}
+
+function showCountMsg(type, text) {
+  const el = v('countMsg');
+  el.className   = `msg ${type}`;
+  el.textContent = text;
+  el.style.display = 'block';
+}
+
+// ─── Modal: Movimentações por Data ────────────────────────────────────────────
+v('movDateModal').addEventListener('click', e => { if (e.target === v('movDateModal')) closeMovDateModal(); });
+
+function closeMovDateModal() {
+  v('movDateModal').classList.remove('open');
+  if (movDateChartInst) { movDateChartInst.destroy(); movDateChartInst = null; }
+}
+
+async function openMovDateModal(days) {
+  v('movDateBody').innerHTML = '<div class="spend-empty">Carregando...</div>';
+  v('movDateModal').classList.add('open');
+
+  try {
+    const res  = await fetch(`/stock/movements-by-date?days=${days || 60}`);
+    const rows = await res.json();
+    renderMovDateChart(rows, days || 60);
+  } catch {
+    v('movDateBody').innerHTML = '<div class="spend-empty">Erro ao carregar dados.</div>';
+  }
+}
+
+function renderMovDateChart(rows, days) {
+  const body = v('movDateBody');
+
+  if (!rows.length) {
+    body.innerHTML = `<div class="spend-empty">Nenhuma movimentação nos últimos ${days} dias.</div>`;
+    return;
+  }
+
+  // Agrupa por data
+  const dateMap = {};
+  rows.forEach(r => {
+    if (!dateMap[r.date]) dateMap[r.date] = { entrada: 0, saida: 0 };
+    dateMap[r.date][r.movement_type] = r.total_qty;
+  });
+
+  const dates   = Object.keys(dateMap).sort();
+  const entradas = dates.map(d => dateMap[d].entrada || 0);
+  const saidas   = dates.map(d => dateMap[d].saida   || 0);
+  const labels   = dates.map(d => {
+    const [, m, day] = d.split('-');
+    return `${day}/${m}`;
+  });
+
+  body.innerHTML = '<div class="chart-wrap"><canvas id="movDateCanvas" height="200"></canvas></div>';
+
+  if (movDateChartInst) { movDateChartInst.destroy(); movDateChartInst = null; }
+  movDateChartInst = new Chart(v('movDateCanvas'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Entradas',
+          data: entradas,
+          backgroundColor: 'rgba(46,125,50,0.75)',
+          borderColor: '#2e7d32',
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+        {
+          label: 'Saídas',
+          data: saidas,
+          backgroundColor: 'rgba(198,40,40,0.7)',
+          borderColor: '#c62828',
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: 'top' },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw} pç` } },
+      },
+      scales: {
+        x: { ticks: { font: { size: 11 } } },
+        y: { beginAtZero: true, ticks: { font: { size: 11 }, stepSize: 1 } },
+      },
+    },
+  });
+}
+
 // ─── Escape HTML ──────────────────────────────────────────────────────────────
 function escHtml(str) {
   if (!str) return '';
@@ -1038,7 +1374,6 @@ function escHtml(str) {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 loadProposalsAndClients();
-// Stock e movimentações são carregados ao entrar nas sub-views
 </script>
 <script src="/auth.js"></script>
 </body>

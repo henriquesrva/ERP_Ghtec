@@ -29,8 +29,6 @@
 
     /* Layout */
     .container { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
-    .split { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
-    @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
 
     /* Card */
     .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
@@ -45,11 +43,12 @@
     .home-card-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
     .home-card-desc  { font-size: 12px; color: var(--muted); }
 
-    /* Botão voltar + barra de view */
-    .view-topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    /* Barra de sub-view */
+    .view-topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
     .btn-back { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; background: #eee; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 700; color: #444; cursor: pointer; font-family: inherit; transition: background 0.12s; }
     .btn-back:hover { background: #ddd; }
-    .view-topbar-title { font-size: 15px; font-weight: 700; color: var(--green); }
+    .view-topbar-title { font-size: 15px; font-weight: 700; color: var(--green); flex: 1; }
+    .btn-sm { padding: 5px 14px; font-size: 12px; }
 
     /* Search + list */
     .search-wrap { margin-bottom: 12px; }
@@ -67,6 +66,7 @@
     #listLoading { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
 
     /* Form */
+    .form-card { max-width: 760px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
     .field { display: flex; flex-direction: column; gap: 4px; }
     .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
@@ -96,8 +96,6 @@
     .btn-primary:hover:not(:disabled) { background: var(--green-light); }
     .btn-ghost { background: #eee; color: #444; }
     .btn-ghost:hover:not(:disabled) { background: #ddd; }
-    .btn-new { padding: 5px 12px; font-size: 12px; background: var(--green-bg); color: var(--green); border: 1px dashed var(--green-light); border-radius: var(--radius); cursor: pointer; font-weight: 700; font-family: inherit; transition: background 0.15s; }
-    .btn-new:hover { background: #dcedc8; }
 
     /* Status message */
     .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
@@ -126,6 +124,7 @@
 
     /* ── Categorias ── */
     .cat-list { max-height: 520px; overflow-y: auto; }
+    .cat-form-card { max-width: 520px; }
     .cat-item { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; margin-bottom: 4px; transition: all 0.12s; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .cat-item:hover { background: var(--green-bg); border-color: var(--border); }
     .cat-item.selected { background: var(--green-bg); border-color: var(--green-light); }
@@ -175,12 +174,12 @@
   <!-- ══ HOME ══════════════════════════════════════════════════════════════ -->
   <div id="viewHome">
     <div class="home-grid">
-      <div class="home-card" onclick="showView('parts')">
+      <div class="home-card" onclick="showView('partsMenu')">
         <div class="home-card-icon">&#9881;</div>
         <div class="home-card-title">Peças</div>
         <div class="home-card-desc">Cadastro e edição do catálogo de peças</div>
       </div>
-      <div class="home-card" onclick="showView('cats')">
+      <div class="home-card" onclick="showView('catsMenu')">
         <div class="home-card-icon">&#9776;</div>
         <div class="home-card-title">Categorias</div>
         <div class="home-card-desc">Gerenciar categorias e seus códigos</div>
@@ -188,166 +187,196 @@
     </div>
   </div>
 
-  <!-- ══ PEÇAS ═════════════════════════════════════════════════════════════ -->
-  <div id="viewParts" style="display:none">
+  <!-- ══ MENU PEÇAS ═══════════════════════════════════════════════════════ -->
+  <div id="viewPartsMenu" style="display:none">
     <div class="view-topbar">
       <button class="btn-back" onclick="showView('home')">&#8592; Voltar</button>
       <span class="view-topbar-title">Peças</span>
     </div>
-    <div class="split">
-
-      <!-- Lista -->
-      <div class="card">
-        <div class="card-title">
-          Catálogo de peças
-          <button class="btn-new" id="btnNew">+ Nova</button>
-        </div>
-        <div class="search-wrap">
-          <input type="text" id="searchInput" placeholder="Buscar por nome, categoria, código..." autocomplete="off" />
-        </div>
-        <div id="listLoading">Carregando...</div>
-        <div class="part-list" id="partList"></div>
+    <div class="home-grid">
+      <div class="home-card" onclick="goToPartCreate()">
+        <div class="home-card-icon">&#43;</div>
+        <div class="home-card-title">Cadastrar nova peça</div>
+        <div class="home-card-desc">Preencher formulário e criar peça no catálogo</div>
       </div>
-
-      <!-- Formulário -->
-      <div class="card">
-        <div class="card-title">
-          <span id="formTitle">Nova Peça</span>
-          <span class="edit-badge" id="editBadge" style="display:none">Editando</span>
-        </div>
-
-        <form id="partForm" novalidate>
-
-          <div class="grid-2">
-            <div class="field col-span-2">
-              <label>Nome técnico da peça *</label>
-              <input type="text" id="f_nome" placeholder="Ex: Filtro de 3 micras" />
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field">
-              <label>Categoria *</label>
-              <select id="f_category_id">
-                <option value="">— Selecione —</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Código identitário *</label>
-              <input type="text" id="f_identity_code" placeholder="Ex: 1, 12, A3" autocomplete="off" />
-              <span class="field-note">Número ou ID da peça dentro da categoria</span>
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field col-span-2">
-              <label>Código interno <span style="text-transform:none;font-weight:400;font-size:10px">(gerado automaticamente)</span></label>
-              <div class="internal-code-display empty" id="f_codigo_display">— selecione a categoria e preencha o código identitário —</div>
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field">
-              <label>Preço de Compra (R$) *</label>
-              <input type="text" id="f_preco_compra" placeholder="0,00" inputmode="decimal" />
-            </div>
-            <div class="field">
-              <label>NCM</label>
-              <input type="text" id="f_ncm" placeholder="0000.00.00" />
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field col-span-2">
-              <label>Descrição</label>
-              <textarea id="f_descricao" placeholder="Descrição técnica, características, aplicação..."></textarea>
-            </div>
-          </div>
-
-          <div class="grid-2">
-            <div class="field col-span-2">
-              <label>Observações</label>
-              <textarea id="f_obs" placeholder="Observações internas"></textarea>
-            </div>
-          </div>
-
-          <div id="formMsg" style="display:none" class="msg"></div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary" id="btnSubmit">Criar peça</button>
-            <button type="button" class="btn btn-ghost" id="btnCancel" style="display:none">Cancelar</button>
-          </div>
-        </form>
-
-        <!-- Histórico de preços — somente leitura -->
-        <div id="priceHistoryCard">
-          <div class="ph-title">Histórico de preços por cliente</div>
-          <div class="ph-client-row">
-            <label for="clientSelect">Cliente:</label>
-            <select id="clientSelect">
-              <option value="">— Selecione um cliente —</option>
-            </select>
-            <button class="btn-compare" id="btnCompare" type="button">&#9654; Comparar preços</button>
-          </div>
-          <div id="priceHistoryContent">
-            <div class="ph-hint">Selecione um cliente para visualizar o histórico de preços desta peça.</div>
-          </div>
-        </div>
+      <div class="home-card" onclick="showView('partList')">
+        <div class="home-card-icon">&#128203;</div>
+        <div class="home-card-title">Ver peças cadastradas</div>
+        <div class="home-card-desc">Visualizar, editar e buscar peças existentes</div>
       </div>
-
     </div>
   </div>
 
-  <!-- ══ CATEGORIAS ════════════════════════════════════════════════════════ -->
-  <div id="viewCats" style="display:none">
+  <!-- ══ FORMULÁRIO DE PEÇA ════════════════════════════════════════════════ -->
+  <div id="viewPartCreate" style="display:none">
+    <div class="view-topbar">
+      <button class="btn-back" onclick="showView('partsMenu')">&#8592; Voltar</button>
+      <span class="view-topbar-title" id="formTitle">Nova Peça</span>
+      <span class="edit-badge" id="editBadge" style="display:none">Editando</span>
+    </div>
+
+    <div class="card form-card">
+      <form id="partForm" novalidate>
+
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Nome técnico da peça *</label>
+            <input type="text" id="f_nome" placeholder="Ex: Filtro de 3 micras" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>Categoria *</label>
+            <select id="f_category_id">
+              <option value="">— Selecione —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Código identitário *</label>
+            <input type="text" id="f_identity_code" placeholder="Ex: 1, 12, A3" autocomplete="off" />
+            <span class="field-note">Número ou ID da peça dentro da categoria</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Código interno <span style="text-transform:none;font-weight:400;font-size:10px">(gerado automaticamente)</span></label>
+            <div class="internal-code-display empty" id="f_codigo_display">— selecione a categoria e preencha o código identitário —</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label>Preço de Compra (R$) *</label>
+            <input type="text" id="f_preco_compra" placeholder="0,00" inputmode="decimal" />
+          </div>
+          <div class="field">
+            <label>NCM</label>
+            <input type="text" id="f_ncm" placeholder="0000.00.00" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Descrição</label>
+            <textarea id="f_descricao" placeholder="Descrição técnica, características, aplicação..."></textarea>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field col-span-2">
+            <label>Observações</label>
+            <textarea id="f_obs" placeholder="Observações internas"></textarea>
+          </div>
+        </div>
+
+        <div id="formMsg" style="display:none" class="msg"></div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="btnSubmit">Criar peça</button>
+          <button type="button" class="btn btn-ghost" id="btnCancel" style="display:none">Cancelar edição</button>
+        </div>
+      </form>
+
+      <!-- Histórico de preços — somente leitura, visível ao editar -->
+      <div id="priceHistoryCard">
+        <div class="ph-title">Histórico de preços por cliente</div>
+        <div class="ph-client-row">
+          <label for="clientSelect">Cliente:</label>
+          <select id="clientSelect">
+            <option value="">— Selecione um cliente —</option>
+          </select>
+          <button class="btn-compare" id="btnCompare" type="button">&#9654; Comparar preços</button>
+        </div>
+        <div id="priceHistoryContent">
+          <div class="ph-hint">Selecione um cliente para visualizar o histórico de preços desta peça.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LISTA DE PEÇAS ════════════════════════════════════════════════════ -->
+  <div id="viewPartList" style="display:none">
+    <div class="view-topbar">
+      <button class="btn-back" onclick="showView('partsMenu')">&#8592; Voltar</button>
+      <span class="view-topbar-title">Peças cadastradas</span>
+      <button class="btn btn-primary btn-sm" onclick="goToPartCreate()">+ Nova peça</button>
+    </div>
+    <div class="card">
+      <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="Buscar por nome, categoria, código..." autocomplete="off" />
+      </div>
+      <div id="listLoading">Carregando...</div>
+      <div class="part-list" id="partList"></div>
+    </div>
+  </div>
+
+  <!-- ══ MENU CATEGORIAS ═══════════════════════════════════════════════════ -->
+  <div id="viewCatsMenu" style="display:none">
     <div class="view-topbar">
       <button class="btn-back" onclick="showView('home')">&#8592; Voltar</button>
       <span class="view-topbar-title">Categorias</span>
     </div>
-    <div class="split">
-
-      <!-- Lista de categorias -->
-      <div class="card">
-        <div class="card-title">
-          Categorias cadastradas
-          <button class="btn-new" id="btnNewCat">+ Nova</button>
-        </div>
-        <div id="catListLoading">Carregando...</div>
-        <div class="cat-list" id="catList"></div>
+    <div class="home-grid">
+      <div class="home-card" onclick="goToCatCreate()">
+        <div class="home-card-icon">&#43;</div>
+        <div class="home-card-title">Cadastrar nova categoria</div>
+        <div class="home-card-desc">Criar categoria com nome e código</div>
       </div>
+      <div class="home-card" onclick="showView('catList')">
+        <div class="home-card-icon">&#128203;</div>
+        <div class="home-card-title">Ver categorias cadastradas</div>
+        <div class="home-card-desc">Visualizar, editar e excluir categorias</div>
+      </div>
+    </div>
+  </div>
 
-      <!-- Formulário de categoria -->
-      <div class="card">
-        <div class="card-title">
-          <span id="catFormTitle">Nova Categoria</span>
-          <span class="edit-badge" id="catEditBadge" style="display:none">Editando</span>
+  <!-- ══ FORMULÁRIO DE CATEGORIA ══════════════════════════════════════════ -->
+  <div id="viewCatCreate" style="display:none">
+    <div class="view-topbar">
+      <button class="btn-back" onclick="showView('catsMenu')">&#8592; Voltar</button>
+      <span class="view-topbar-title" id="catFormTitle">Nova Categoria</span>
+      <span class="edit-badge" id="catEditBadge" style="display:none">Editando</span>
+    </div>
+
+    <div class="card cat-form-card">
+      <form id="catForm" novalidate>
+
+        <div class="field" style="margin-bottom:12px">
+          <label>Nome da categoria *</label>
+          <input type="text" id="cf_name" placeholder="Ex: Filtro, Resistência, Válvula" />
         </div>
 
-        <form id="catForm" novalidate>
+        <div class="field" style="margin-bottom:12px">
+          <label>Código da categoria *</label>
+          <input type="text" id="cf_code" placeholder="Ex: F, R, V" maxlength="10" autocomplete="off" style="text-transform:uppercase" />
+          <span class="field-note">
+            Código único, sem espaços, em maiúsculo.<br>
+            Exemplo: código <strong>F</strong> + identitário <strong>1</strong> = código interno <strong>F-1</strong>
+          </span>
+        </div>
 
-          <div class="field" style="margin-bottom:12px">
-            <label>Nome da categoria *</label>
-            <input type="text" id="cf_name" placeholder="Ex: Filtro, Resistência, Válvula" />
-          </div>
+        <div id="catFormMsg" style="display:none" class="msg"></div>
 
-          <div class="field" style="margin-bottom:12px">
-            <label>Código da categoria *</label>
-            <input type="text" id="cf_code" placeholder="Ex: F, R, V" maxlength="10" autocomplete="off" style="text-transform:uppercase" />
-            <span class="field-note">
-              Código único, sem espaços, em maiúsculo.<br>
-              Exemplo: código <strong>F</strong> + identitário <strong>1</strong> = código interno <strong>F-1</strong>
-            </span>
-          </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="btnCatSubmit">Criar categoria</button>
+          <button type="button" class="btn btn-ghost" id="btnCatCancel" style="display:none">Cancelar edição</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-          <div id="catFormMsg" style="display:none" class="msg"></div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary" id="btnCatSubmit">Criar categoria</button>
-            <button type="button" class="btn btn-ghost" id="btnCatCancel" style="display:none">Cancelar</button>
-          </div>
-        </form>
-      </div>
-
+  <!-- ══ LISTA DE CATEGORIAS ═══════════════════════════════════════════════ -->
+  <div id="viewCatList" style="display:none">
+    <div class="view-topbar">
+      <button class="btn-back" onclick="showView('catsMenu')">&#8592; Voltar</button>
+      <span class="view-topbar-title">Categorias cadastradas</span>
+      <button class="btn btn-primary btn-sm" onclick="goToCatCreate()">+ Nova categoria</button>
+    </div>
+    <div class="card">
+      <div id="catListLoading">Carregando...</div>
+      <div class="cat-list" id="catList"></div>
     </div>
   </div>
 
@@ -378,14 +407,38 @@ function escHtml(s) {
 }
 
 // ─── Views ────────────────────────────────────────────────────────────────────
-let partsLoaded = false;
+const VIEW_IDS = {
+  home:        'viewHome',
+  partsMenu:   'viewPartsMenu',
+  partCreate:  'viewPartCreate',
+  partList:    'viewPartList',
+  catsMenu:    'viewCatsMenu',
+  catCreate:   'viewCatCreate',
+  catList:     'viewCatList',
+};
 
 function showView(name) {
-  v('viewHome').style.display  = name === 'home'  ? 'block' : 'none';
-  v('viewParts').style.display = name === 'parts' ? 'block' : 'none';
-  v('viewCats').style.display  = name === 'cats'  ? 'block' : 'none';
-  if (name === 'parts' && !partsLoaded) { loadCategorySelect(); loadParts(); partsLoaded = true; }
-  if (name === 'cats')  loadCategories();
+  Object.values(VIEW_IDS).forEach(id => v(id).style.display = 'none');
+  const target = VIEW_IDS[name];
+  if (target) v(target).style.display = 'block';
+
+  if (name === 'partList')   { loadParts(v('searchInput').value.trim()); }
+  if (name === 'partCreate') { loadCategorySelect(); }
+  if (name === 'catList')    { loadCategories(); }
+}
+
+// Navegar para criar nova peça (limpa o form)
+function goToPartCreate() {
+  setCreateMode();
+  showView('partCreate');
+  v('f_nome').focus();
+}
+
+// Navegar para criar nova categoria (limpa o form)
+function goToCatCreate() {
+  setCatCreateMode();
+  showView('catCreate');
+  v('cf_name').focus();
 }
 
 // ─── URL params ───────────────────────────────────────────────────────────────
@@ -469,6 +522,8 @@ function renderList(parts) {
 }
 
 async function loadParts(q) {
+  v('listLoading').style.display = 'block';
+  v('partList').innerHTML = '';
   try {
     const url = q ? `/parts/search?q=${encodeURIComponent(q)}` : '/parts';
     renderList(await (await fetch(url)).json());
@@ -573,7 +628,8 @@ async function loadForEdit(id) {
     setEditMode(part);
     v('clientSelect').value = '';
     v('priceHistoryContent').innerHTML = '<div class="ph-hint">Selecione um cliente para visualizar o histórico de preços desta peça.</div>';
-    v('partForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showView('partCreate');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch { showMsg('error', 'Erro ao carregar peça.'); }
 }
 
@@ -598,11 +654,11 @@ function fillForm(p) {
 
 function setEditMode(part) {
   editingId = part.id;
-  v('formTitle').textContent   = `Editando: ${part.nome}`;
-  v('editBadge').style.display  = 'inline';
-  v('btnSubmit').textContent   = 'Salvar alterações';
-  v('btnCancel').style.display  = 'inline-flex';
-  v('priceHistoryCard').style.display = 'block';
+  v('formTitle').textContent           = `Editando: ${part.nome}`;
+  v('editBadge').style.display          = 'inline';
+  v('btnSubmit').textContent           = 'Salvar alterações';
+  v('btnCancel').style.display          = 'inline-flex';
+  v('priceHistoryCard').style.display   = 'block';
   highlightSelected(); hideMsg();
 }
 
@@ -612,11 +668,11 @@ function setCreateMode() {
   ['f_nome','f_category_id','f_identity_code','f_preco_compra'].forEach(id => v(id).classList.remove('error'));
   const el = v('f_codigo_display');
   el.textContent = '— selecione a categoria e preencha o código identitário —'; el.classList.add('empty');
-  v('formTitle').textContent    = 'Nova Peça';
-  v('editBadge').style.display  = 'none';
-  v('btnSubmit').textContent    = 'Criar peça';
-  v('btnCancel').style.display  = 'none';
-  v('priceHistoryCard').style.display = 'none';
+  v('formTitle').textContent            = 'Nova Peça';
+  v('editBadge').style.display           = 'none';
+  v('btnSubmit').textContent            = 'Criar peça';
+  v('btnCancel').style.display           = 'none';
+  v('priceHistoryCard').style.display    = 'none';
   v('clientSelect').value = '';
   v('priceHistoryContent').innerHTML = '<div class="ph-hint">Selecione um cliente para visualizar o histórico de preços desta peça.</div>';
   highlightSelected(); hideMsg();
@@ -627,7 +683,6 @@ function highlightSelected() {
     el.classList.toggle('selected', Number(el.dataset.id) === editingId));
 }
 
-v('btnNew').addEventListener('click', () => { setCreateMode(); v('f_nome').focus(); });
 v('btnCancel').addEventListener('click', setCreateMode);
 
 function parsePrecoCompra(raw) {
@@ -684,7 +739,8 @@ v('partForm').addEventListener('submit', async e => {
 
     if (res.ok) {
       showMsg('success', editingId ? 'Peça atualizada com sucesso.' : 'Peça criada com sucesso.');
-      await loadParts(v('searchInput').value.trim());
+      // Refresca a lista em background
+      loadParts(v('searchInput').value.trim());
       if (!editingId) { fillForm(data.part); setEditMode(data.part); }
       else v('formTitle').textContent = `Editando: ${data.part.nome}`;
     } else if (res.status === 409) {
@@ -718,19 +774,17 @@ async function loadCategories() {
     const cats = await (await fetch('/part-categories')).json();
     v('catListLoading').style.display = 'none';
     renderCatList(cats);
-    // Atualiza o select de categorias no form de peças (se já carregado)
-    if (partsLoaded) {
-      const sel = v('f_category_id');
-      const cur = sel.value;
-      while (sel.options.length > 1) sel.remove(1);
-      cats.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id; opt.dataset.code = c.code;
-        opt.textContent = `${c.name}  (${c.code})`;
-        sel.appendChild(opt);
-      });
-      if (cur) sel.value = cur;
-    }
+    // Mantém o select de categorias no form de peças sempre atualizado
+    const sel = v('f_category_id');
+    const cur = sel.value;
+    while (sel.options.length > 1) sel.remove(1);
+    cats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id; opt.dataset.code = c.code;
+      opt.textContent = `${c.name}  (${c.code})`;
+      sel.appendChild(opt);
+    });
+    if (cur) sel.value = cur;
   } catch { v('catListLoading').textContent = 'Erro ao carregar categorias.'; }
 }
 
@@ -756,11 +810,13 @@ async function loadCatForEdit(id) {
     if (!cat) return;
     editingCatId = id;
     set('cf_name', cat.name); set('cf_code', cat.code);
-    v('catFormTitle').textContent  = `Editando: ${cat.name}`;
-    v('catEditBadge').style.display = 'inline';
-    v('btnCatSubmit').textContent  = 'Salvar alterações';
-    v('btnCatCancel').style.display = 'inline-flex';
-    renderCatList(cats); hideCatMsg();
+    v('catFormTitle').textContent   = `Editando: ${cat.name}`;
+    v('catEditBadge').style.display  = 'inline';
+    v('btnCatSubmit').textContent   = 'Salvar alterações';
+    v('btnCatCancel').style.display  = 'inline-flex';
+    hideCatMsg();
+    showView('catCreate');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch { showCatMsg('error', 'Erro ao carregar categoria.'); }
 }
 
@@ -768,15 +824,13 @@ function setCatCreateMode() {
   editingCatId = null;
   v('catForm').reset();
   ['cf_name','cf_code'].forEach(id => v(id).classList.remove('error'));
-  v('catFormTitle').textContent   = 'Nova Categoria';
-  v('catEditBadge').style.display  = 'none';
-  v('btnCatSubmit').textContent   = 'Criar categoria';
-  v('btnCatCancel').style.display  = 'none';
-  document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('selected'));
+  v('catFormTitle').textContent    = 'Nova Categoria';
+  v('catEditBadge').style.display   = 'none';
+  v('btnCatSubmit').textContent    = 'Criar categoria';
+  v('btnCatCancel').style.display   = 'none';
   hideCatMsg();
 }
 
-v('btnNewCat').addEventListener('click', () => { setCatCreateMode(); v('cf_name').focus(); });
 v('btnCatCancel').addEventListener('click', setCatCreateMode);
 
 v('cf_code').addEventListener('input', function() {
@@ -807,10 +861,10 @@ v('catForm').addEventListener('submit', async e => {
       await loadCategories();
       if (!editingCatId && data.category) {
         editingCatId = data.category.id;
-        v('catFormTitle').textContent   = `Editando: ${data.category.name}`;
-        v('catEditBadge').style.display  = 'inline';
-        v('btnCatSubmit').textContent   = 'Salvar alterações';
-        v('btnCatCancel').style.display  = 'inline-flex';
+        v('catFormTitle').textContent    = `Editando: ${data.category.name}`;
+        v('catEditBadge').style.display   = 'inline';
+        v('btnCatSubmit').textContent    = 'Salvar alterações';
+        v('btnCatCancel').style.display   = 'inline-flex';
       }
     } else if (res.status === 409) {
       showCatMsg('warn', data.message);
@@ -834,20 +888,21 @@ async function deleteCat(e, id) {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (async function init() {
+  loadClientSelect();
+  loadCategorySelect();
+
   if (_urlParams.get('view') === 'cats') {
-    showView('cats');
-  } else if (_urlParams.get('id') || _urlParams.get('new') === '1') {
-    showView('parts');
-    await loadParts();
-    partsLoaded = true;
-    if (_urlParams.get('id')) loadForEdit(Number(_urlParams.get('id')));
-    else { setCreateMode(); v('f_nome').focus(); }
+    showView('catsMenu');
+  } else if (_urlParams.get('id')) {
+    await loadCategorySelect();
+    loadForEdit(Number(_urlParams.get('id')));
+  } else if (_urlParams.get('new') === '1') {
+    setCreateMode();
+    showView('partCreate');
+    v('f_nome').focus();
   } else {
     showView('home');
   }
-  // Carrega select de clientes e categorias independente da view
-  loadClientSelect();
-  loadCategorySelect();
 })();
 </script>
 <script src="/auth.js"></script>
