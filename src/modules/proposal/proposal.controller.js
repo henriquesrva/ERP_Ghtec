@@ -9,6 +9,7 @@ const {
   removeProposalExecution,
   registerApproval,
   registerBilling,
+  canMoveKanban,
 } = require("./proposal.service");
 
 const {
@@ -268,6 +269,14 @@ function registerBillingHandler(req, res) {
   try {
     const id = Number(req.params.id);
     const userRole = req.session.userRole || "user";
+
+    // Verifica permissão antes de persistir qualquer dado
+    const proposalRow = findProposalRowById(id);
+    if (!proposalRow) return res.status(404).json({ success: false, message: "Proposta não encontrada." });
+    if (!canMoveKanban(userRole, proposalRow.kanban_status, "faturado")) {
+      return res.status(403).json({ success: false, message: "Você não tem permissão para faturar esta proposta." });
+    }
+
     registerBilling(
       id,
       {

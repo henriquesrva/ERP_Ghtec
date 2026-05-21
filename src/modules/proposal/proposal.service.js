@@ -392,6 +392,7 @@ async function createProposalFlow(data) {
     item_ordem:     index + 1,
     quantidade:     Number(item.quantidade),
     descricao:      item.descricao,
+    part_id:        item.part_id ? Number(item.part_id) : null,
     valor_unitario: Number(item.valor_unitario),
     ncm:            item.ncm || null,
   }));
@@ -406,16 +407,16 @@ async function createProposalFlow(data) {
     normalizedItems
   );
 
-  // Auto-registro de peças: para cada item, garante que a peça existe no catálogo
-  // e vincula o part_id no price_history para manter integridade referencial.
-  // Usa nome exato da descrição + marca/modelo nulos para evitar duplicidade.
+  // Auto-registro de peças: garante que price_history aponta para a peça correta.
+  // Usa o part_id enviado pelo frontend quando disponível (peça selecionada do catálogo).
+  // Só busca/cria por composição de nome como fallback (compatibilidade com itens sem part_id).
   for (const item of normalizedItems) {
-    let existing = findPartByComposition(item.descricao, null, null);
-    let partId;
-    if (existing) {
-      partId = existing.id;
-    } else {
-      partId = createPart({ nome: item.descricao, ncm: item.ncm || null });
+    let partId = item.part_id;
+    if (!partId) {
+      const existing = findPartByComposition(item.descricao, null, null);
+      partId = existing
+        ? existing.id
+        : createPart({ nome: item.descricao, ncm: item.ncm || null });
     }
     updatePriceHistoryPartId(proposalId, item.descricao, partId);
   }

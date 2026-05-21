@@ -493,4 +493,215 @@ if (!proposalColsCond.includes("commercial_condition_id")) {
   console.log(`[migrate] proposals: coluna "commercial_condition_id" adicionada.`);
 }
 
+// ── Módulo financeiro: fornecedores ──────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fornecedores (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    razao_social       TEXT NOT NULL,
+    nome_fantasia      TEXT,
+    cnpj               TEXT,
+    inscricao_estadual TEXT,
+    email              TEXT,
+    telefone           TEXT,
+    endereco           TEXT,
+    cidade             TEXT,
+    estado             TEXT,
+    cep                TEXT,
+    observacoes        TEXT,
+    ativo              INTEGER NOT NULL DEFAULT 1,
+    created_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_fornecedores_cnpj
+    ON fornecedores(cnpj) WHERE cnpj IS NOT NULL;
+
+  CREATE TRIGGER IF NOT EXISTS fornecedores_updated_at
+  AFTER UPDATE ON fornecedores BEGIN
+    UPDATE fornecedores SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
+// ── Módulo financeiro: categorias_despesa ─────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS categorias_despesa (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome       TEXT NOT NULL,
+    descricao  TEXT,
+    ativo      INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TRIGGER IF NOT EXISTS categorias_despesa_updated_at
+  AFTER UPDATE ON categorias_despesa BEGIN
+    UPDATE categorias_despesa SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
+// ── Módulo financeiro: notas_recebidas ────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS notas_recebidas (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    fornecedor_id        INTEGER NOT NULL REFERENCES fornecedores(id),
+    numero_nota          TEXT,
+    serie                TEXT,
+    chave_acesso         TEXT,
+    tipo_nota            TEXT NOT NULL DEFAULT 'produto',
+    data_emissao         TEXT,
+    data_entrada         TEXT NOT NULL,
+    valor_total          REAL NOT NULL,
+    descricao            TEXT,
+    categoria_despesa_id INTEGER REFERENCES categorias_despesa(id),
+    arquivo_pdf          TEXT,
+    arquivo_xml          TEXT,
+    status               TEXT NOT NULL DEFAULT 'lancada',
+    observacoes          TEXT,
+    created_by           INTEGER NOT NULL REFERENCES users(id),
+    created_at           TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at           TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_nr_fornecedor ON notas_recebidas(fornecedor_id);
+
+  CREATE INDEX IF NOT EXISTS idx_nr_chave ON notas_recebidas(chave_acesso)
+    WHERE chave_acesso IS NOT NULL;
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_nr_dedup
+    ON notas_recebidas(fornecedor_id, numero_nota, serie)
+    WHERE numero_nota IS NOT NULL AND serie IS NOT NULL;
+
+  CREATE TRIGGER IF NOT EXISTS notas_recebidas_updated_at
+  AFTER UPDATE ON notas_recebidas BEGIN
+    UPDATE notas_recebidas SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
+// ── Módulo financeiro: contas_pagar ───────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS contas_pagar (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    fornecedor_id        INTEGER NOT NULL REFERENCES fornecedores(id),
+    nota_recebida_id     INTEGER REFERENCES notas_recebidas(id),
+    categoria_despesa_id INTEGER REFERENCES categorias_despesa(id),
+    descricao            TEXT NOT NULL,
+    valor                REAL NOT NULL,
+    data_emissao         TEXT NOT NULL,
+    data_vencimento      TEXT NOT NULL,
+    forma_pagamento      TEXT,
+    status               TEXT NOT NULL DEFAULT 'em_aberto',
+    data_pagamento       TEXT,
+    valor_pago           REAL,
+    comprovante_pagamento TEXT,
+    paid_by              INTEGER REFERENCES users(id),
+    cancelled_by         INTEGER REFERENCES users(id),
+    cancelled_at         TEXT,
+    cancel_reason        TEXT,
+    observacoes          TEXT,
+    parcela_numero       INTEGER,
+    parcela_total        INTEGER,
+    created_by           INTEGER NOT NULL REFERENCES users(id),
+    created_at           TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at           TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_cp_fornecedor  ON contas_pagar(fornecedor_id);
+  CREATE INDEX IF NOT EXISTS idx_cp_nota        ON contas_pagar(nota_recebida_id);
+  CREATE INDEX IF NOT EXISTS idx_cp_vencimento  ON contas_pagar(data_vencimento, status);
+  CREATE INDEX IF NOT EXISTS idx_cp_status      ON contas_pagar(status);
+
+  CREATE TRIGGER IF NOT EXISTS contas_pagar_updated_at
+  AFTER UPDATE ON contas_pagar BEGIN
+    UPDATE contas_pagar SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
+// ── Camada fiscal: campos no header de notas_recebidas ───────────────────────
+
+const nrFiscalCols = db.pragma("table_info(notas_recebidas)").map((c) => c.name);
+const nrNewFiscalCols = [
+  ["natureza_operacao",     "TEXT"],
+  ["cfop_principal",        "TEXT"],
+  ["modalidade_frete",      "INTEGER"],
+  ["valor_frete",           "REAL"],
+  ["valor_seguro",          "REAL"],
+  ["valor_desconto",        "REAL"],
+  ["valor_outras_despesas", "REAL"],
+  ["valor_bc_icms",         "REAL"],
+  ["valor_icms",            "REAL"],
+  ["valor_ipi",             "REAL"],
+  ["valor_pis",             "REAL"],
+  ["valor_cofins",          "REAL"],
+  ["valor_iss",             "REAL"],
+  ["numero_protocolo",      "TEXT"],
+  ["data_autorizacao",      "TEXT"],
+];
+for (const [col, type] of nrNewFiscalCols) {
+  if (!nrFiscalCols.includes(col)) {
+    db.exec(`ALTER TABLE notas_recebidas ADD COLUMN ${col} ${type}`);
+    console.log(`[migrate] notas_recebidas: coluna "${col}" adicionada.`);
+  }
+}
+
+// ── Camada fiscal: tabela itens_nota_recebida ─────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS itens_nota_recebida (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    nota_recebida_id         INTEGER NOT NULL REFERENCES notas_recebidas(id),
+    produto_id               INTEGER REFERENCES parts(id),
+    numero_item              INTEGER NOT NULL,
+    codigo_produto           TEXT,
+    descricao                TEXT NOT NULL,
+    ncm                      TEXT,
+    cfop                     TEXT,
+    unidade                  TEXT,
+    quantidade               REAL,
+    valor_unitario           REAL,
+    valor_total              REAL,
+    valor_desconto           REAL,
+    origem_mercadoria        TEXT,
+    cst_icms                 TEXT,
+    csosn                    TEXT,
+    modalidade_bc_icms       INTEGER,
+    reducao_base_icms        REAL,
+    valor_bc_icms            REAL,
+    aliquota_icms            REAL,
+    valor_icms               REAL,
+    valor_bc_icms_st         REAL,
+    aliquota_icms_st         REAL,
+    valor_icms_st            REAL,
+    cst_ipi                  TEXT,
+    codigo_enquadramento_ipi TEXT,
+    valor_bc_ipi             REAL,
+    aliquota_ipi             REAL,
+    valor_ipi                REAL,
+    cst_pis                  TEXT,
+    valor_bc_pis             REAL,
+    aliquota_pis             REAL,
+    valor_pis                REAL,
+    cst_cofins               TEXT,
+    valor_bc_cofins          REAL,
+    aliquota_cofins          REAL,
+    valor_cofins             REAL,
+    aliquota_iss             REAL,
+    valor_iss                REAL,
+    cest                     TEXT,
+    informacoes_adicionais   TEXT,
+    created_at               TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at               TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_inr_nota ON itens_nota_recebida(nota_recebida_id);
+
+  CREATE TRIGGER IF NOT EXISTS itens_nota_recebida_updated_at
+  AFTER UPDATE ON itens_nota_recebida BEGIN
+    UPDATE itens_nota_recebida SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
 console.log("[migrate] Banco de dados atualizado com sucesso.");

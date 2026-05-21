@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GHTec — Fornecedores</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
+      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
+      --danger: #c62828; --amber: #f57f17; --radius: 6px;
+      --blue: #1565c0;
+    }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
+    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; flex-wrap: wrap; }
+    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
+    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
+    .nav-link:hover { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
+    .nav-link.active { color: #fff; border-bottom-color: #fff; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
+    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
+    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
+    .btn-logout:hover { background: rgba(255,255,255,0.2); }
+    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
+    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
+    .container { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
+    .split { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
+    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .search-wrap { position: relative; margin-bottom: 10px; display: flex; gap: 6px; }
+    .search-wrap input { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+    .search-wrap input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .list-wrap { max-height: 560px; overflow-y: auto; }
+    .list-item { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; margin-bottom: 4px; transition: all 0.12s; }
+    .list-item:hover { background: var(--green-bg); border-color: var(--border); }
+    .list-item.selected { background: var(--green-bg); border-color: var(--green-light); }
+    .li-name { font-weight: 700; font-size: 13px; }
+    .li-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .badge-inativo { font-size: 10px; background: #eee; color: #999; border-radius: 3px; padding: 1px 5px; margin-left: 5px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .field input, .field textarea, .field select { padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; color: var(--text); }
+    .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .field textarea { resize: vertical; min-height: 58px; }
+    .col-span-2 { grid-column: span 2; }
+    .col-span-3 { grid-column: span 3; }
+    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
+    .btn-ghost { background: #eee; color: #444; }
+    .btn-ghost:hover:not(:disabled) { background: #ddd; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover:not(:disabled) { background: #b71c1c; }
+    .msg { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 12px; }
+    .msg-ok  { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .msg-err { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
+    .detail-section { margin-top: 18px; }
+    .detail-section h3 { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; color: var(--green); text-transform: uppercase; margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .mini-table th { text-align: left; color: var(--muted); font-weight: 700; padding: 4px 8px; border-bottom: 1px solid var(--border); }
+    .mini-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+    .tag { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 11px; font-weight: 700; }
+    .tag-ok      { background: #e8f5e9; color: #1b5e20; }
+    .tag-warn    { background: #fff8e1; color: #e65100; }
+    .tag-danger  { background: #ffebee; color: var(--danger); }
+    .tag-muted   { background: #f5f5f5; color: #666; }
+    .empty-list  { text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px; }
+    .sect-row    { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+    .sect-label  { font-size: 11px; color: var(--muted); font-weight: 700; min-width: 90px; }
+    .sect-val    { font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-brand">GHTec</a>
+  <a href="/proposals.html" class="nav-link">Propostas</a>
+  <a href="/kanban.html" class="nav-link">Kanban</a>
+  <a href="/clients.html" class="nav-link">Clientes</a>
+  <a href="/parts.html" class="nav-link">Peças</a>
+  <a href="/stock.html" class="nav-link">Estoque</a>
+  <a href="/fornecedores.html" class="nav-link active">Fornecedores</a>
+  <a href="/notas-recebidas.html" class="nav-link">Notas Recebidas</a>
+  <a href="/contas-pagar.html" class="nav-link">Contas a Pagar</a>
+  <a href="/financeiro.html" class="nav-link">Financeiro</a>
+  <div class="nav-right">
+    <span id="navUserLabel"></span>
+    <button class="btn-logout" onclick="logout()">Sair</button>
+  </div>
+</nav>
+
+<div class="page-bar">
+  <h1>Fornecedores</h1>
+</div>
+
+<div class="container">
+  <div class="split">
+
+    <!-- Lista -->
+    <div>
+      <div class="card">
+        <div class="card-title">
+          Fornecedores
+          <label style="font-size:11px;font-weight:400;color:var(--muted);display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <input type="checkbox" id="chkInativos" onchange="loadList()"> Mostrar inativos
+          </label>
+        </div>
+        <div class="search-wrap">
+          <input type="text" id="searchInput" placeholder="Buscar por nome, CNPJ..." oninput="loadList()" />
+          <button class="btn btn-primary" onclick="newForm()">+ Novo</button>
+        </div>
+        <div class="list-wrap" id="listWrap">
+          <div class="empty-list">Carregando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalhe / Formulário -->
+    <div>
+      <!-- Formulário -->
+      <div class="card" id="formCard" style="display:none">
+        <div class="card-title" id="formTitle">Novo Fornecedor</div>
+        <div id="formMsg"></div>
+        <form id="fornecedorForm" onsubmit="submitForm(event)">
+          <div class="grid-2">
+            <div class="field col-span-2">
+              <label>Razão Social *</label>
+              <input type="text" name="razao_social" required />
+            </div>
+            <div class="field">
+              <label>Nome Fantasia</label>
+              <input type="text" name="nome_fantasia" />
+            </div>
+            <div class="field">
+              <label>CNPJ</label>
+              <input type="text" name="cnpj" placeholder="00.000.000/0001-00" />
+            </div>
+            <div class="field">
+              <label>Inscrição Estadual</label>
+              <input type="text" name="inscricao_estadual" />
+            </div>
+            <div class="field">
+              <label>Telefone</label>
+              <input type="text" name="telefone" />
+            </div>
+            <div class="field col-span-2">
+              <label>E-mail</label>
+              <input type="email" name="email" />
+            </div>
+            <div class="field col-span-2">
+              <label>Endereço</label>
+              <input type="text" name="endereco" />
+            </div>
+            <div class="field">
+              <label>Cidade</label>
+              <input type="text" name="cidade" />
+            </div>
+            <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="field">
+                <label>Estado</label>
+                <input type="text" name="estado" maxlength="2" placeholder="SP" style="text-transform:uppercase" />
+              </div>
+              <div class="field">
+                <label>CEP</label>
+                <input type="text" name="cep" placeholder="00000-000" />
+              </div>
+            </div>
+            <div class="field col-span-2">
+              <label>Observações</label>
+              <textarea name="observacoes" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="btnSave">Salvar</button>
+            <button type="button" class="btn btn-ghost" onclick="cancelForm()">Cancelar</button>
+            <button type="button" class="btn btn-danger" id="btnDesativar" style="display:none;margin-left:auto" onclick="desativar()">Desativar fornecedor</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Detalhe -->
+      <div class="card" id="detailCard" style="display:none">
+        <div class="card-title">
+          <span id="detailNome"></span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost" style="padding:4px 12px;font-size:12px" onclick="editFornecedor()">Editar</button>
+          </div>
+        </div>
+        <div id="detailInfo"></div>
+        <div class="detail-section">
+          <h3>Notas recebidas <span id="detailNotasCount" style="font-weight:400;color:var(--muted)"></span></h3>
+          <div id="detailNotas"><div class="empty-list">Nenhuma nota.</div></div>
+        </div>
+        <div class="detail-section">
+          <h3>Contas a pagar <span id="detailContasCount" style="font-weight:400;color:var(--muted)"></span></h3>
+          <div id="detailContas"><div class="empty-list">Nenhuma conta.</div></div>
+        </div>
+      </div>
+
+      <!-- Placeholder -->
+      <div class="card" id="placeholderCard">
+        <div class="empty-list" style="padding:40px 0;color:var(--muted)">Selecione um fornecedor ou clique em <strong>+ Novo</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentId = null;
+let editingId = null;
+let userRole  = null;
+
+async function init() {
+  const me = await fetch("/auth/me").then(r => r.json()).catch(() => null);
+  if (!me) { location.href = "/login.html"; return; }
+  document.getElementById("navUserLabel").textContent = me.nome;
+  userRole = me.role;
+  loadList();
+}
+
+async function loadList() {
+  const q    = document.getElementById("searchInput").value.trim();
+  const incl = document.getElementById("chkInativos").checked;
+  const url  = q
+    ? `/fornecedores/search?q=${encodeURIComponent(q)}&includeInactive=${incl}`
+    : `/fornecedores?includeInactive=${incl}`;
+  const data = await fetch(url).then(r => r.json()).catch(() => []);
+  const wrap = document.getElementById("listWrap");
+  if (!data.length) { wrap.innerHTML = '<div class="empty-list">Nenhum fornecedor encontrado.</div>'; return; }
+  wrap.innerHTML = data.map(f => `
+    <div class="list-item ${currentId === f.id ? 'selected' : ''}" onclick="selectItem(${f.id})">
+      <div class="li-name">${f.razao_social}${!f.ativo ? '<span class="badge-inativo">inativo</span>' : ''}</div>
+      <div class="li-sub">${f.cnpj || ''}${f.cidade ? ' · ' + f.cidade + (f.estado ? '/' + f.estado : '') : ''}</div>
+    </div>
+  `).join("");
+}
+
+async function selectItem(id) {
+  currentId = id;
+  editingId = null;
+  loadList();
+  document.getElementById("formCard").style.display = "none";
+  document.getElementById("placeholderCard").style.display = "none";
+  document.getElementById("detailCard").style.display = "block";
+
+  const data = await fetch(`/fornecedores/${id}/detalhes`).then(r => r.json());
+  const f    = data.fornecedor;
+
+  document.getElementById("detailNome").textContent = f.razao_social + (f.nome_fantasia ? ` / ${f.nome_fantasia}` : "");
+
+  document.getElementById("detailInfo").innerHTML = `
+    <div class="sect-row"><span class="sect-label">CNPJ</span><span class="sect-val">${f.cnpj || '—'}</span></div>
+    <div class="sect-row"><span class="sect-label">IE</span><span class="sect-val">${f.inscricao_estadual || '—'}</span></div>
+    <div class="sect-row"><span class="sect-label">Telefone</span><span class="sect-val">${f.telefone || '—'}</span></div>
+    <div class="sect-row"><span class="sect-label">E-mail</span><span class="sect-val">${f.email || '—'}</span></div>
+    <div class="sect-row"><span class="sect-label">Endereço</span><span class="sect-val">${[f.endereco, f.cidade, f.estado, f.cep].filter(Boolean).join(', ') || '—'}</span></div>
+    ${f.observacoes ? `<div class="sect-row"><span class="sect-label">Obs.</span><span class="sect-val">${f.observacoes}</span></div>` : ''}
+  `;
+
+  const notas = data.notas || [];
+  document.getElementById("detailNotasCount").textContent = `(${notas.length})`;
+  document.getElementById("detailNotas").innerHTML = notas.length ? `
+    <table class="mini-table">
+      <tr><th>Nota</th><th>Data entrada</th><th>Valor</th><th>Status</th></tr>
+      ${notas.map(n => `
+        <tr>
+          <td><a href="/notas-recebidas.html?id=${n.id}" style="color:var(--blue)">${n.numero_nota || 's/n'} ${n.serie ? '/' + n.serie : ''}</a></td>
+          <td>${fmtDate(n.data_entrada)}</td>
+          <td>${fmtMoeda(n.valor_total)}</td>
+          <td><span class="tag ${n.status === 'lancada' ? 'tag-ok' : 'tag-muted'}">${n.status}</span></td>
+        </tr>`).join("")}
+    </table>` : '<div class="empty-list">Nenhuma nota.</div>';
+
+  const contas = data.contas || [];
+  document.getElementById("detailContasCount").textContent = `(${contas.length})`;
+  document.getElementById("detailContas").innerHTML = contas.length ? `
+    <table class="mini-table">
+      <tr><th>Descrição</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr>
+      ${contas.map(c => `
+        <tr>
+          <td>${c.descricao}</td>
+          <td>${fmtDate(c.data_vencimento)}</td>
+          <td>${fmtMoeda(c.valor)}</td>
+          <td><span class="tag ${tagStatus(c.status, c.atrasado)}">${labelStatus(c.status, c.atrasado)}</span></td>
+        </tr>`).join("")}
+    </table>` : '<div class="empty-list">Nenhuma conta.</div>';
+}
+
+function newForm() {
+  editingId = null;
+  currentId = null;
+  document.getElementById("detailCard").style.display = "none";
+  document.getElementById("placeholderCard").style.display = "none";
+  document.getElementById("formCard").style.display = "block";
+  document.getElementById("formTitle").textContent = "Novo Fornecedor";
+  document.getElementById("btnDesativar").style.display = "none";
+  document.getElementById("formMsg").innerHTML = "";
+  document.getElementById("fornecedorForm").reset();
+}
+
+function editFornecedor() {
+  fetch(`/fornecedores/${currentId}`).then(r => r.json()).then(f => {
+    editingId = f.id;
+    document.getElementById("detailCard").style.display = "none";
+    document.getElementById("formCard").style.display = "block";
+    document.getElementById("formTitle").textContent = "Editar Fornecedor";
+    document.getElementById("formMsg").innerHTML = "";
+    const form = document.getElementById("fornecedorForm");
+    ["razao_social","nome_fantasia","cnpj","inscricao_estadual","telefone","email",
+     "endereco","cidade","estado","cep","observacoes"].forEach(k => {
+      if (form.elements[k]) form.elements[k].value = f[k] || "";
+    });
+    document.getElementById("btnDesativar").style.display = userRole === "admin" ? "inline-flex" : "none";
+  });
+}
+
+function cancelForm() {
+  document.getElementById("formCard").style.display = "none";
+  if (currentId) {
+    selectItem(currentId);
+  } else {
+    document.getElementById("placeholderCard").style.display = "block";
+  }
+}
+
+async function submitForm(e) {
+  e.preventDefault();
+  const btn  = document.getElementById("btnSave");
+  const form = document.getElementById("fornecedorForm");
+  const data = Object.fromEntries(new FormData(form));
+  btn.disabled = true;
+
+  const url    = editingId ? `/fornecedores/${editingId}` : "/fornecedores";
+  const method = editingId ? "PUT" : "POST";
+
+  const resp = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  const json = await resp.json();
+  btn.disabled = false;
+
+  if (json.success) {
+    showMsg("formMsg", "Fornecedor salvo com sucesso.", "ok");
+    currentId = json.fornecedor.id;
+    loadList();
+    setTimeout(() => { selectItem(currentId); }, 800);
+  } else {
+    showMsg("formMsg", json.message, "err");
+  }
+}
+
+async function desativar() {
+  if (!confirm("Desativar este fornecedor? Ele não aparecerá mais nas listas, mas os registros serão mantidos.")) return;
+  const resp = await fetch(`/fornecedores/${editingId}/desativar`, { method: "POST" });
+  const json = await resp.json();
+  if (json.success) {
+    document.getElementById("formCard").style.display = "none";
+    document.getElementById("placeholderCard").style.display = "block";
+    currentId = null; editingId = null;
+    loadList();
+  } else {
+    showMsg("formMsg", json.message, "err");
+  }
+}
+
+async function logout() {
+  await fetch("/auth/logout", { method: "POST" });
+  location.href = "/login.html";
+}
+
+function showMsg(containerId, msg, type) {
+  document.getElementById(containerId).innerHTML =
+    `<div class="msg msg-${type === "ok" ? "ok" : "err"}">${msg}</div>`;
+}
+
+function fmtDate(d) {
+  if (!d) return "—";
+  const [y, m, dd] = d.slice(0, 10).split("-");
+  return `${dd}/${m}/${y}`;
+}
+
+function fmtMoeda(v) {
+  if (v == null) return "—";
+  return "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+}
+
+function tagStatus(status, atrasado) {
+  if (atrasado) return "tag-danger";
+  if (status === "pago") return "tag-ok";
+  if (status === "cancelado") return "tag-muted";
+  return "tag-warn";
+}
+
+function labelStatus(status, atrasado) {
+  if (atrasado) return "atrasado";
+  return { em_aberto: "em aberto", pago: "pago", cancelado: "cancelado" }[status] || status;
+}
+
+init();
+</script>
+</body>
+</html>

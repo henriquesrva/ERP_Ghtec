@@ -26,7 +26,7 @@
           {{#if cliente.razao_social}}<p>{{cliente.razao_social}}</p>{{/if}}
           {{#if cliente.cnpj}}<p>CNPJ: {{cliente.cnpj}}</p>{{/if}}
           {{#if cliente.endereco}}<p>{{cliente.endereco}}</p>{{/if}}
-          <p>{{cliente.cidade}} - {{cliente.estado}}</p>
+          {{#if cliente.cidade}}<p>{{cliente.cidade}}{{#if cliente.estado}} - {{cliente.estado}}{{/if}}</p>{{else}}{{#if cliente.estado}}<p>{{cliente.estado}}</p>{{/if}}{{/if}}
           {{#if cliente.cep}}<p>CEP: {{cliente.cep}}</p>{{/if}}
           {{#if cliente.email}}<p>E-mail: {{cliente.email}}</p>{{/if}}
         </div>
