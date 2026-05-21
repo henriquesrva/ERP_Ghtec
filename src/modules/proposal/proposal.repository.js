@@ -34,6 +34,7 @@ function createProposal(proposal) {
       responsible_name,
       responsible_role,
       responsible_phone,
+      commercial_condition_id,
       pdf_path,
       kanban_status,
       kanban_status_updated_at
@@ -58,6 +59,7 @@ function createProposal(proposal) {
       @responsible_name,
       @responsible_role,
       @responsible_phone,
+      @commercial_condition_id,
       @pdf_path,
       'pendente_envio',
       datetime('now')

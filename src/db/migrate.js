@@ -463,4 +463,34 @@ db.exec(`
     ON parts(codigo_interno) WHERE codigo_interno IS NOT NULL;
 `);
 
+// ── Tabela commercial_conditions ─────────────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS commercial_conditions (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    name             TEXT NOT NULL,
+    forma_pagamento  TEXT NOT NULL,
+    prazo_pagamento  TEXT NOT NULL,
+    prazo_entrega    TEXT NOT NULL,
+    garantia         TEXT,
+    validade         TEXT NOT NULL,
+    created_at       TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TEXT DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TRIGGER IF NOT EXISTS commercial_conditions_updated_at
+  AFTER UPDATE ON commercial_conditions
+  BEGIN
+    UPDATE commercial_conditions SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
+// ── Campo commercial_condition_id em proposals ────────────────────────────────
+
+const proposalColsCond = db.pragma("table_info(proposals)").map((c) => c.name);
+if (!proposalColsCond.includes("commercial_condition_id")) {
+  db.exec(`ALTER TABLE proposals ADD COLUMN commercial_condition_id INTEGER REFERENCES commercial_conditions(id)`);
+  console.log(`[migrate] proposals: coluna "commercial_condition_id" adicionada.`);
+}
+
 console.log("[migrate] Banco de dados atualizado com sucesso.");

@@ -482,6 +482,19 @@
     }
     .btn-criar-link:hover { background: #dcedc8; }
 
+    /* ── Back button ── */
+    .btn-back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #eee; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 700; color: #444; cursor: pointer; font-family: inherit; transition: background 0.15s; text-decoration: none; }
+    .btn-back:hover { background: #ddd; }
+
+    /* ── Condition mode selector ── */
+    .cond-mode-btn {
+      padding: 8px 16px; border-radius: var(--radius); border: 1px solid #ccc;
+      background: #fff; color: #555; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; font-family: inherit;
+    }
+    .cond-mode-btn:hover { border-color: var(--green-light); color: var(--green); background: var(--green-bg); }
+    .cond-mode-btn.active { background: var(--green); color: #fff; border-color: var(--green); }
+
     @media (max-width: 640px) {
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
     }
@@ -491,11 +504,10 @@
 
 <nav class="nav">
   <a class="nav-brand" href="/">GHTec</a>
-  <a class="nav-link active" href="/">Nova Proposta</a>
-  <a class="nav-link" href="/proposals.html">Propostas</a>
+  <a class="nav-link active" href="/proposals.html">Propostas</a>
   <a class="nav-link" href="/clients.html">Clientes</a>
   <a class="nav-link" href="/parts.html">Peças</a>
-  <a class="nav-link" href="/objetos.html">Objetos</a>
+  <a class="nav-link" href="/objetos.html">Objetos e Condições</a>
   <a class="nav-link" href="/kanban.html">Kanban</a>
   <a class="nav-link" href="/stock.html">Estoque</a>
   <div class="nav-right">
@@ -510,6 +522,9 @@
 </div>
 
 <div class="container">
+  <div style="margin-bottom:16px;">
+    <a href="/proposals.html" class="btn-back">← Voltar para Propostas</a>
+  </div>
   <form id="proposalForm">
 
     <!-- Identificação -->
@@ -582,30 +597,97 @@
     </div>
 
     <!-- Condições -->
-    <div class="card">
+    <div class="card" id="condCard">
       <div class="card-title">Condições Comerciais</div>
-      <div class="grid-2" style="margin-bottom:14px">
-        <div class="field">
-          <label>Forma de Pagamento *</label>
-          <input type="text" name="forma_pagamento" placeholder="Boleto bancário" required />
+
+      <!-- Seletor de modo -->
+      <div id="condModeSelector" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+        <button type="button" class="cond-mode-btn active" data-mode="catalog" id="condModeCatalog">
+          Escolher condição
+        </button>
+        <button type="button" class="cond-mode-btn" data-mode="new" id="condModeNew">
+          Criar nova condição
+        </button>
+        <button type="button" class="cond-mode-btn" data-mode="manual" id="condModeManual">
+          Elaborar condição específica
+        </button>
+      </div>
+
+      <!-- Modo: Escolher condição do catálogo -->
+      <div id="condModeCatalogPanel">
+        <div id="cond-buttons" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn-procurar" id="btnProcurarCondicao">&#128269; Procurar condição</button>
         </div>
-        <div class="field">
-          <label>Prazo de Pagamento *</label>
-          <input type="text" name="prazo_pagamento" placeholder="30 dias após entrega" required />
+        <div id="cond-selecionada" style="display:none; background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; font-size:13px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <div id="cs-cond-nome" style="font-weight:700;"></div>
+            <button type="button" id="btnTrocarCondicao" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted);">Trocar</button>
+          </div>
+          <div id="cs-cond-preview" style="margin-top:6px;"></div>
         </div>
       </div>
-      <div class="grid-3">
-        <div class="field">
-          <label>Prazo de Entrega *</label>
-          <input type="text" name="prazo_entrega" placeholder="30 dias úteis" required />
+
+      <!-- Modo: Criar nova condição -->
+      <div id="condModeNewPanel" style="display:none;">
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="field">
+            <label>Nome da Condição *</label>
+            <input type="text" id="cnf_name" placeholder="Ex: Pagamento 30 dias" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label>Forma de Pagamento *</label>
+            <input type="text" id="cnf_forma" placeholder="Boleto bancário" />
+          </div>
         </div>
-        <div class="field">
-          <label>Garantia</label>
-          <input type="text" name="garantia" placeholder="12 meses (opcional)" />
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="field">
+            <label>Prazo de Pagamento *</label>
+            <input type="text" id="cnf_prazo_pag" placeholder="30 dias após entrega" />
+          </div>
+          <div class="field">
+            <label>Prazo de Entrega *</label>
+            <input type="text" id="cnf_prazo_ent" placeholder="30 dias úteis" />
+          </div>
         </div>
-        <div class="field">
-          <label>Validade da Proposta *</label>
-          <input type="text" name="validade" placeholder="30 dias" required />
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="field">
+            <label>Validade da Proposta *</label>
+            <input type="text" id="cnf_validade" placeholder="30 dias" />
+          </div>
+          <div class="field">
+            <label>Garantia <span style="font-weight:400; text-transform:none; letter-spacing:0;">(opcional)</span></label>
+            <input type="text" id="cnf_garantia" placeholder="12 meses (opcional)" />
+          </div>
+        </div>
+        <div id="condNewMsg" style="display:none; padding:8px 12px; border-radius:var(--radius); font-size:13px; margin-bottom:12px;"></div>
+        <button type="button" id="condNewBtn" class="btn-procurar" style="border-color:var(--green); background:var(--green); color:#fff;">Criar e usar esta condição</button>
+      </div>
+
+      <!-- Modo: Elaborar condição específica (comportamento atual) -->
+      <div id="condModeManualPanel" style="display:none;">
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="field">
+            <label>Forma de Pagamento *</label>
+            <input type="text" name="forma_pagamento" placeholder="Boleto bancário" />
+          </div>
+          <div class="field">
+            <label>Prazo de Pagamento *</label>
+            <input type="text" name="prazo_pagamento" placeholder="30 dias após entrega" />
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Prazo de Entrega *</label>
+            <input type="text" name="prazo_entrega" placeholder="30 dias úteis" />
+          </div>
+          <div class="field">
+            <label>Garantia</label>
+            <input type="text" name="garantia" placeholder="12 meses (opcional)" />
+          </div>
+          <div class="field">
+            <label>Validade da Proposta *</label>
+            <input type="text" name="validade" placeholder="30 dias" />
+          </div>
         </div>
       </div>
     </div>
@@ -673,6 +755,9 @@
   let itemCount = 0;
   let currentClientId   = null;
   let currentClientData = null;
+  let condMode = 'catalog';
+  let currentConditionId   = null;
+  let currentConditionData = null;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -839,6 +924,134 @@
     });
   });
 
+  // ─── Condition mode ──────────────────────────────────────────────────────
+
+  function setCondMode(mode) {
+    condMode = mode;
+    document.querySelectorAll('.cond-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    document.getElementById('condModeCatalogPanel').style.display = mode === 'catalog' ? '' : 'none';
+    document.getElementById('condModeNewPanel').style.display     = mode === 'new'     ? '' : 'none';
+    document.getElementById('condModeManualPanel').style.display  = mode === 'manual'  ? '' : 'none';
+  }
+
+  document.querySelectorAll('.cond-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => setCondMode(btn.dataset.mode));
+  });
+
+  // ─── Condition catalog modal + panel ─────────────────────────────────────
+
+  const condPanel = document.getElementById('cond-selecionada');
+
+  function selectCondition(c) {
+    currentConditionId   = c.id;
+    currentConditionData = c;
+    document.getElementById('cond-buttons').style.display = 'none';
+    document.getElementById('cs-cond-nome').textContent = c.name;
+    const rows = [
+      ['Forma de pagamento', c.forma_pagamento],
+      ['Prazo de pagamento', c.prazo_pagamento],
+      ['Prazo de entrega',   c.prazo_entrega],
+      ['Validade',           c.validade],
+    ];
+    if (c.garantia) rows.push(['Garantia', c.garantia]);
+    document.getElementById('cs-cond-preview').innerHTML =
+      '<div class="entity-preview">' +
+      rows.map(([l, v]) => `<span class="ep-label">${l}</span><span class="ep-value">${v}</span>`).join('') +
+      '</div>';
+    condPanel.style.display = 'block';
+  }
+
+  function clearCondSelection() {
+    currentConditionId   = null;
+    currentConditionData = null;
+    document.getElementById('cond-buttons').style.display = 'flex';
+    document.getElementById('cs-cond-preview').innerHTML = '';
+    condPanel.style.display = 'none';
+  }
+
+  document.getElementById('btnTrocarCondicao').addEventListener('click', clearCondSelection);
+
+  document.getElementById('btnProcurarCondicao').addEventListener('click', () => {
+    openEntityModal({
+      title: 'Selecionar Condição Comercial',
+      fetchUrl: '/commercial-conditions',
+      searchPlaceholder: 'Buscar por nome ou forma de pagamento...',
+      renderRow: c => {
+        const sub = [c.forma_pagamento, c.prazo_pagamento].filter(Boolean).join(' · ');
+        return `<div class="mi-main">${c.name}</div>${sub ? `<div class="mi-sub">${sub}</div>` : ''}`;
+      },
+      filterFn: (c, q) => (c.name||'').toLowerCase().includes(q) || (c.forma_pagamento||'').toLowerCase().includes(q),
+      onSelect: selectCondition
+    });
+  });
+
+  // ─── New condition inline form ────────────────────────────────────────────
+
+  document.getElementById('condNewBtn').addEventListener('click', async () => {
+    const msgEl = document.getElementById('condNewMsg');
+
+    function cnfVal(id) { return document.getElementById(id).value.trim(); }
+    function cnfShowError(text) {
+      msgEl.style.cssText = 'display:block; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; padding:8px 12px; border-radius:6px; font-size:13px; margin-bottom:12px;';
+      msgEl.textContent = text;
+    }
+
+    const name     = cnfVal('cnf_name');
+    const forma    = cnfVal('cnf_forma');
+    const prazoPag = cnfVal('cnf_prazo_pag');
+    const prazoEnt = cnfVal('cnf_prazo_ent');
+    const validade = cnfVal('cnf_validade');
+    const garantia = document.getElementById('cnf_garantia').value.trim();
+
+    if (!name)     { cnfShowError('Nome da condição é obrigatório.');     document.getElementById('cnf_name').focus();      return; }
+    if (!forma)    { cnfShowError('Forma de pagamento é obrigatória.');   document.getElementById('cnf_forma').focus();     return; }
+    if (!prazoPag) { cnfShowError('Prazo de pagamento é obrigatório.');  document.getElementById('cnf_prazo_pag').focus(); return; }
+    if (!prazoEnt) { cnfShowError('Prazo de entrega é obrigatório.');    document.getElementById('cnf_prazo_ent').focus(); return; }
+    if (!validade) { cnfShowError('Validade é obrigatória.');             document.getElementById('cnf_validade').focus();  return; }
+
+    const btn = document.getElementById('condNewBtn');
+    btn.disabled = true;
+    btn.textContent = 'Criando...';
+    msgEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/commercial-conditions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name, forma_pagamento: forma, prazo_pagamento: prazoPag,
+          prazo_entrega: prazoEnt, validade, garantia: garantia || null
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { cnfShowError(data.message || 'Erro ao criar condição.'); return; }
+
+      const condRes = await fetch(`/commercial-conditions/${data.id}`);
+      if (!condRes.ok) { cnfShowError('Condição criada, mas erro ao carregá-la. Use "Escolher condição" para selecioná-la.'); return; }
+      const newCond = await condRes.json();
+
+      ['cnf_name','cnf_forma','cnf_prazo_pag','cnf_prazo_ent','cnf_validade','cnf_garantia'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      selectCondition(newCond);
+      setCondMode('catalog');
+    } catch {
+      cnfShowError('Erro de conexão com o servidor.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Criar e usar esta condição';
+    }
+  });
+
+  document.getElementById('condModeNewPanel').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('condNewBtn').click();
+    }
+  });
+
   // ─── Items table ──────────────────────────────────────────────────────────
 
   function updateTotal() {
@@ -1000,20 +1213,41 @@
     }));
   }
 
-  function buildPayload() {
+  function buildCondPayload() {
+    if (condMode === 'catalog' && currentConditionData) {
+      return {
+        condicoes: {
+          forma_pagamento: currentConditionData.forma_pagamento,
+          prazo_pagamento: currentConditionData.prazo_pagamento,
+          prazo_entrega:   currentConditionData.prazo_entrega,
+          garantia:        currentConditionData.garantia || '',
+          validade:        currentConditionData.validade,
+        },
+        commercial_condition_id: currentConditionId,
+      };
+    }
     return {
-      numero_proposta:  getFieldValue('numero_proposta'),
-      observacoes:      getFieldValue('observacoes') || null,
-      objeto_proposta: getFieldValue('objeto_proposta'),
-      cliente_id:      currentClientId,
-      items:           collectItems(),
       condicoes: {
         forma_pagamento: getFieldValue('forma_pagamento'),
         prazo_pagamento: getFieldValue('prazo_pagamento'),
         prazo_entrega:   getFieldValue('prazo_entrega'),
         garantia:        getFieldValue('garantia'),
-        validade:        getFieldValue('validade')
-      }
+        validade:        getFieldValue('validade'),
+      },
+      commercial_condition_id: null,
+    };
+  }
+
+  function buildPayload() {
+    const condPayload = buildCondPayload();
+    return {
+      numero_proposta:          getFieldValue('numero_proposta'),
+      observacoes:              getFieldValue('observacoes') || null,
+      objeto_proposta:          getFieldValue('objeto_proposta'),
+      cliente_id:               currentClientId,
+      items:                    collectItems(),
+      condicoes:                condPayload.condicoes,
+      commercial_condition_id:  condPayload.commercial_condition_id,
     };
   }
 
@@ -1030,6 +1264,22 @@
       showResult('error', 'Selecione um Objeto da Proposta antes de gerar.');
       document.getElementById('btnProcurarObjeto').focus();
       return;
+    }
+
+    if (condMode === 'catalog' && !currentConditionId) {
+      showResult('error', 'Selecione uma condição comercial cadastrada ou escolha "Elaborar condição específica".');
+      document.getElementById('btnProcurarCondicao').focus();
+      return;
+    }
+    if (condMode === 'new') {
+      showResult('error', 'Preencha os dados da nova condição e clique em "Criar e usar esta condição" antes de gerar a proposta.');
+      return;
+    }
+    if (condMode === 'manual') {
+      if (!getFieldValue('forma_pagamento') || !getFieldValue('prazo_pagamento') || !getFieldValue('prazo_entrega') || !getFieldValue('validade')) {
+        showResult('error', 'Preencha todos os campos obrigatórios de Condições Comerciais (Forma de Pagamento, Prazo de Pagamento, Prazo de Entrega, Validade).');
+        return;
+      }
     }
 
     const items = collectItems();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GHTec — Objetos de Proposta</title>
+  <title>GHTec — Objetos e Condições</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     :root {
@@ -28,13 +28,44 @@
 
     /* Layout */
     .container { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
+
+    /* Home grid */
+    .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 700px; margin: 0 auto; }
+    @media (max-width: 600px) { .home-grid { grid-template-columns: 1fr; } }
+
+    .section-card {
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 32px 28px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
+      text-align: center;
+    }
+    .section-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--green-light); }
+    .section-card .sc-icon { font-size: 36px; margin-bottom: 12px; }
+    .section-card .sc-title { font-size: 16px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+    .section-card .sc-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* Menu sub-views (2-card layout like home) */
+    .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 600px; }
+    @media (max-width: 540px) { .menu-grid { grid-template-columns: 1fr; } }
+
+    /* Split layout for objetos */
     .split { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
     @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+
+    /* Form card for conditions */
+    .form-card { max-width: 680px; }
 
     /* Card */
     .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
     .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
     .card-title span { color: var(--amber); font-size: 11px; }
+
+    /* Topbar */
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; gap: 12px; flex-wrap: wrap; }
+    .topbar h2 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text); }
+
+    /* Back button */
+    .btn-back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #eee; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 700; color: #444; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+    .btn-back:hover { background: #ddd; }
 
     /* Search + list */
     .search-wrap { position: relative; margin-bottom: 12px; }
@@ -50,7 +81,7 @@
     .oi-name { font-weight: 700; font-size: 13px; }
     .oi-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .empty-list { text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px; }
-    #listLoading { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
+    .list-loading { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
 
     /* Form */
     .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
@@ -61,7 +92,9 @@
     }
     .field input:focus, .field textarea:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
     .field input.error, .field textarea.error { border-color: var(--danger); }
-    .field textarea { resize: vertical; min-height: 90px; }
+    .field textarea { resize: vertical; min-height: 60px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 540px) { .grid-2 { grid-template-columns: 1fr; } }
 
     /* Buttons */
     .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
@@ -73,6 +106,8 @@
     .btn-ghost:hover:not(:disabled) { background: #ddd; }
     .btn-new { padding: 5px 12px; font-size: 12px; background: var(--green-bg); color: var(--green); border: 1px dashed var(--green-light); border-radius: var(--radius); cursor: pointer; font-weight: 700; font-family: inherit; transition: background 0.15s; }
     .btn-new:hover { background: #dcedc8; }
+    .btn-new-sm { padding: 5px 12px; font-size: 12px; background: var(--green-bg); color: var(--green); border: 1px dashed var(--green-light); border-radius: var(--radius); cursor: pointer; font-weight: 700; font-family: inherit; transition: background 0.15s; }
+    .btn-new-sm:hover { background: #dcedc8; }
 
     /* Status message */
     .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
@@ -81,13 +116,22 @@
 
     /* Delete button inside list item */
     .oi-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .btn-del-obj {
+    .btn-del-item {
       display: none; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
       border: 1px solid #ef9a9a; border-radius: var(--radius); background: #fff; color: var(--danger);
       transition: background 0.15s; flex-shrink: 0;
     }
-    .obj-item:hover .btn-del-obj { display: inline-block; }
-    .btn-del-obj:hover { background: #ffebee; }
+    .obj-item:hover .btn-del-item { display: inline-block; }
+    .btn-del-item:hover { background: #ffebee; }
+
+    /* Edit button inside condition list item */
+    .btn-edit-item {
+      display: none; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+      border: 1px solid var(--border); border-radius: var(--radius); background: #fff; color: var(--green);
+      transition: background 0.15s; flex-shrink: 0; margin-right: 4px;
+    }
+    .obj-item:hover .btn-edit-item { display: inline-block; }
+    .btn-edit-item:hover { background: var(--green-bg); }
 
     /* Confirm overlay */
     .confirm-overlay {
@@ -102,18 +146,19 @@
     .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
     .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
-    @media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
+    /* Condition detail pills */
+    .cond-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .cond-pill { font-size: 10px; padding: 2px 7px; background: var(--green-bg); border: 1px solid var(--border); border-radius: 12px; color: var(--green); }
   </style>
 </head>
 <body>
 
 <nav class="nav">
   <a class="nav-brand" href="/">GHTec</a>
-  <a class="nav-link" href="/">Nova Proposta</a>
   <a class="nav-link" href="/proposals.html">Propostas</a>
   <a class="nav-link" href="/clients.html">Clientes</a>
   <a class="nav-link" href="/parts.html">Peças</a>
-  <a class="nav-link active" href="/objetos.html">Objetos</a>
+  <a class="nav-link active" href="/objetos.html">Objetos e Condições</a>
   <a class="nav-link" href="/kanban.html">Kanban</a>
   <a class="nav-link" href="/stock.html">Estoque</a>
   <div class="nav-right">
@@ -123,32 +168,56 @@
   </div>
 </nav>
 <div class="page-bar">
-  <h1>Objetos de Proposta</h1>
-  Cadastro de objetos reutilizáveis para propostas comerciais
+  <h1 id="pageBarTitle">Objetos e Condições</h1>
+  <span id="pageBarSub">Cadastro de objetos e condições comerciais reutilizáveis</span>
 </div>
 
 <div class="container">
-  <div class="split">
 
-    <!-- ── Lista ── -->
-    <div class="card">
-      <div class="card-title">
-        Objetos cadastrados
-        <button class="btn-new" id="btnNew">+ Novo</button>
+  <!-- ══ HOME ══════════════════════════════════════════════════════════════════ -->
+  <div id="viewHome">
+    <div class="home-grid">
+      <div class="section-card" onclick="showView('objMenu')">
+        <div class="sc-icon">📦</div>
+        <div class="sc-title">Objetos</div>
+        <div class="sc-desc">Cadastre e gerencie objetos de proposta reutilizáveis</div>
       </div>
-      <div class="search-wrap">
-        <input type="text" id="searchInput" placeholder="Buscar por nome ou descrição..." autocomplete="off" />
+      <div class="section-card" onclick="showView('condMenu')">
+        <div class="sc-icon">📋</div>
+        <div class="sc-title">Condições</div>
+        <div class="sc-desc">Cadastre e gerencie condições comerciais reutilizáveis</div>
       </div>
-      <div id="listLoading">Carregando...</div>
-      <div class="obj-list" id="objList"></div>
     </div>
+  </div>
 
-    <!-- ── Formulário ── -->
-    <div class="card">
-      <div class="card-title">
-        <span id="formTitle">Novo Objeto</span>
+  <!-- ══ OBJETOS MENU ═══════════════════════════════════════════════════════════ -->
+  <div id="viewObjMenu" style="display:none">
+    <div style="margin-bottom:16px;">
+      <button class="btn-back" onclick="showView('home')">← Voltar</button>
+    </div>
+    <div class="menu-grid">
+      <div class="section-card" onclick="goToObjCreate()">
+        <div class="sc-icon">➕</div>
+        <div class="sc-title">Cadastrar novo objeto</div>
+        <div class="sc-desc">Adicione um novo objeto ao cadastro</div>
       </div>
+      <div class="section-card" onclick="showView('objList')">
+        <div class="sc-icon">📋</div>
+        <div class="sc-title">Ver objetos cadastrados</div>
+        <div class="sc-desc">Visualize e gerencie os objetos existentes</div>
+      </div>
+    </div>
+  </div>
 
+  <!-- ══ OBJETOS CREATE ═════════════════════════════════════════════════════════ -->
+  <div id="viewObjCreate" style="display:none">
+    <div style="margin-bottom:16px;">
+      <button class="btn-back" onclick="showView('objMenu')">← Voltar</button>
+    </div>
+    <div class="card form-card">
+      <div class="card-title">
+        <span id="objFormTitle">Novo Objeto</span>
+      </div>
       <form id="objForm" novalidate>
         <div class="field">
           <label>Nome do Objeto *</label>
@@ -158,34 +227,142 @@
           <label>Descrição</label>
           <textarea id="f_descricao" placeholder="Texto completo que será inserido na proposta..."></textarea>
         </div>
-
-        <div id="formMsg" style="display:none" class="msg"></div>
-
+        <div id="objFormMsg" style="display:none" class="msg"></div>
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary" id="btnSubmit">Criar objeto</button>
-          <button type="button" class="btn btn-ghost" id="btnCancel" style="display:none">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="objBtnSubmit">Criar objeto</button>
+          <button type="button" class="btn btn-ghost" id="objBtnCancel" style="display:none">Cancelar edição</button>
         </div>
       </form>
     </div>
-
   </div>
+
+  <!-- ══ OBJETOS LIST ══════════════════════════════════════════════════════════ -->
+  <div id="viewObjList" style="display:none">
+    <div class="topbar">
+      <button class="btn-back" onclick="showView('objMenu')">← Voltar</button>
+      <h2>Objetos cadastrados</h2>
+      <button class="btn-new-sm" onclick="goToObjCreate()">+ Novo objeto</button>
+    </div>
+    <div class="card">
+      <div class="search-wrap">
+        <input type="text" id="objSearchInput" placeholder="Buscar por nome ou descrição..." autocomplete="off" />
+      </div>
+      <div id="objListLoading" class="list-loading">Carregando...</div>
+      <div class="obj-list" id="objList"></div>
+    </div>
+  </div>
+
+  <!-- ══ CONDIÇÕES MENU ══════════════════════════════════════════════════════════ -->
+  <div id="viewCondMenu" style="display:none">
+    <div style="margin-bottom:16px;">
+      <button class="btn-back" onclick="showView('home')">← Voltar</button>
+    </div>
+    <div class="menu-grid">
+      <div class="section-card" onclick="goToCondCreate()">
+        <div class="sc-icon">➕</div>
+        <div class="sc-title">Criar nova condição</div>
+        <div class="sc-desc">Cadastre uma nova condição comercial reutilizável</div>
+      </div>
+      <div class="section-card" onclick="showView('condList')">
+        <div class="sc-icon">📋</div>
+        <div class="sc-title">Lista de condições</div>
+        <div class="sc-desc">Visualize e edite as condições cadastradas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CONDIÇÕES CREATE ═══════════════════════════════════════════════════════ -->
+  <div id="viewCondCreate" style="display:none">
+    <div style="margin-bottom:16px;">
+      <button class="btn-back" id="condCreateBack" onclick="showView('condMenu')">← Voltar</button>
+    </div>
+    <div class="card form-card">
+      <div class="card-title">
+        <span id="condFormTitle">Nova Condição Comercial</span>
+      </div>
+      <form id="condForm" novalidate>
+        <div class="field">
+          <label>Nome da Condição *</label>
+          <input type="text" id="cf_name" placeholder="Ex: Pagamento 30 dias" />
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Forma de Pagamento *</label>
+            <input type="text" id="cf_forma" placeholder="Boleto bancário" />
+          </div>
+          <div class="field">
+            <label>Prazo de Pagamento *</label>
+            <input type="text" id="cf_prazo_pag" placeholder="30 dias após entrega" />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Prazo de Entrega *</label>
+            <input type="text" id="cf_prazo_ent" placeholder="30 dias úteis" />
+          </div>
+          <div class="field">
+            <label>Validade da Proposta *</label>
+            <input type="text" id="cf_validade" placeholder="30 dias" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Garantia <span style="font-weight:400; text-transform:none; letter-spacing:0;">(opcional)</span></label>
+          <input type="text" id="cf_garantia" placeholder="12 meses (opcional)" />
+        </div>
+        <div id="condFormMsg" style="display:none" class="msg"></div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="condBtnSubmit">Criar condição</button>
+          <button type="button" class="btn btn-ghost" id="condBtnCancel" style="display:none">Cancelar edição</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══ CONDIÇÕES LIST ═════════════════════════════════════════════════════════ -->
+  <div id="viewCondList" style="display:none">
+    <div class="topbar">
+      <button class="btn-back" onclick="showView('condMenu')">← Voltar</button>
+      <h2>Condições cadastradas</h2>
+      <button class="btn-new-sm" onclick="goToCondCreate()">+ Nova condição</button>
+    </div>
+    <div class="card">
+      <div class="search-wrap">
+        <input type="text" id="condSearchInput" placeholder="Buscar por nome ou forma de pagamento..." autocomplete="off" />
+      </div>
+      <div id="condListLoading" class="list-loading">Carregando...</div>
+      <div class="obj-list" id="condList"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
   // ─── State ──────────────────────────────────────────────────────────────────
-  let allObj = [];
+  let objEditingId  = null;
+  let condEditingId = null;
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────
-  function v(id)      { return document.getElementById(id); }
-  function val(id)    { return v(id).value.trim(); }
+  const ALL_VIEWS = ['home','objMenu','objCreate','objList','condMenu','condCreate','condList'];
+  const VIEW_IDS = {
+    home:       'viewHome',
+    objMenu:    'viewObjMenu',
+    objCreate:  'viewObjCreate',
+    objList:    'viewObjList',
+    condMenu:   'viewCondMenu',
+    condCreate: 'viewCondCreate',
+    condList:   'viewCondList',
+  };
 
-  function showMsg(type, text) {
-    const el = v('formMsg');
-    el.className = `msg ${type}`;
-    el.textContent = text;
-    el.style.display = 'block';
+  function v(id) { return document.getElementById(id); }
+  function val(id) { return v(id).value.trim(); }
+
+  function showView(name) {
+    ALL_VIEWS.forEach(k => { v(VIEW_IDS[k]).style.display = 'none'; });
+    const target = VIEW_IDS[name];
+    if (target) v(target).style.display = 'block';
+
+    if (name === 'objList')  loadObjList(val('objSearchInput'));
+    if (name === 'condList') loadCondList(val('condSearchInput'));
   }
-  function hideMsg() { v('formMsg').style.display = 'none'; }
 
   // ─── Confirm dialog ────────────────────────────────────────────────────────
   function showConfirm(title, text, onConfirm) {
@@ -196,147 +373,359 @@
         <h3>${title}</h3>
         <p>${text}</p>
         <div class="confirm-actions">
-          <button class="btn btn-ghost" id="_confirmCancel">Cancelar</button>
-          <button class="btn btn-primary" id="_confirmOk" style="background:var(--danger)">Excluir</button>
+          <button class="btn btn-ghost" id="_cc">Cancelar</button>
+          <button class="btn btn-primary" id="_co" style="background:var(--danger)">Excluir</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
-    overlay.querySelector('#_confirmCancel').addEventListener('click', () => overlay.remove());
-    overlay.querySelector('#_confirmOk').addEventListener('click', () => { overlay.remove(); onConfirm(); });
+    overlay.querySelector('#_cc').addEventListener('click', () => overlay.remove());
+    overlay.querySelector('#_co').addEventListener('click', () => { overlay.remove(); onConfirm(); });
   }
 
-  // ─── List rendering ────────────────────────────────────────────────────────
-  function renderList(list) {
-    const container = v('objList');
-    v('listLoading').style.display = 'none';
-    container.innerHTML = '';
+  function showMsg(msgId, type, text) {
+    const el = v(msgId);
+    el.className = `msg ${type}`;
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+  function hideMsg(msgId) { v(msgId).style.display = 'none'; }
 
+  // ══════════════════════════════════════════════════════════════════════════════
+  // OBJETOS
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  function goToObjCreate() {
+    setObjCreateMode();
+    showView('objCreate');
+    v('f_nome').focus();
+  }
+
+  function setObjCreateMode() {
+    objEditingId = null;
+    v('objForm').reset();
+    v('objFormTitle').textContent  = 'Novo Objeto';
+    v('objBtnSubmit').textContent  = 'Criar objeto';
+    v('objBtnCancel').style.display = 'none';
+    hideMsg('objFormMsg');
+  }
+
+  function loadForObjEdit(id, nome, descricao) {
+    objEditingId = id;
+    v('f_nome').value = nome || '';
+    v('f_descricao').value = descricao || '';
+    v('objFormTitle').textContent  = 'Editar Objeto';
+    v('objBtnSubmit').textContent  = 'Salvar alterações';
+    v('objBtnCancel').style.display = '';
+    hideMsg('objFormMsg');
+    showView('objCreate');
+    v('f_nome').focus();
+  }
+
+  v('objBtnCancel').addEventListener('click', () => {
+    setObjCreateMode();
+    showView('objMenu');
+  });
+
+  v('objForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    hideMsg('objFormMsg');
+    if (!val('f_nome')) {
+      v('f_nome').classList.add('error');
+      showMsg('objFormMsg', 'error', 'O campo Nome é obrigatório.');
+      v('f_nome').focus();
+      return;
+    }
+    v('f_nome').classList.remove('error');
+
+    const btn = v('objBtnSubmit');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    const body = {
+      nome:      val('f_nome') || null,
+      descricao: v('f_descricao').value.trim() || null,
+    };
+
+    try {
+      let res;
+      if (objEditingId) {
+        res = await fetch(`/objetos/${objEditingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } else {
+        res = await fetch('/objetos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      }
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('objFormMsg', 'success', objEditingId ? 'Objeto atualizado com sucesso.' : 'Objeto criado com sucesso.');
+        setObjCreateMode();
+      } else {
+        showMsg('objFormMsg', 'error', data.message || 'Erro ao salvar. Tente novamente.');
+      }
+    } catch {
+      showMsg('objFormMsg', 'error', 'Erro de conexão com o servidor.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = objEditingId ? 'Salvar alterações' : 'Criar objeto';
+    }
+  });
+
+  async function renderObjList(list) {
+    const container = v('objList');
+    v('objListLoading').style.display = 'none';
+    container.innerHTML = '';
     if (!list.length) {
       container.innerHTML = '<div class="empty-list">Nenhum objeto encontrado.</div>';
       return;
     }
-
     list.forEach(o => {
       const desc = o.descricao ? o.descricao.substring(0, 70) + (o.descricao.length > 70 ? '...' : '') : '';
       const div = document.createElement('div');
       div.className = 'obj-item';
-      div.dataset.id = o.id;
       div.innerHTML = `
         <div class="oi-actions">
           <div style="min-width:0; flex:1;">
             <div class="oi-name">${o.nome}</div>
             ${desc ? `<div class="oi-sub">${desc}</div>` : ''}
           </div>
-          <button class="btn-del-obj" data-id="${o.id}" title="Excluir objeto">✕</button>
+          <div style="display:flex; gap:4px; flex-shrink:0;">
+            <button class="btn-edit-item" title="Editar">Editar</button>
+            <button class="btn-del-item" title="Excluir">✕</button>
+          </div>
         </div>`;
-
-      div.querySelector('.btn-del-obj').addEventListener('click', (e) => {
+      div.querySelector('.btn-edit-item').addEventListener('click', e => {
         e.stopPropagation();
-        showConfirm(
-          'Excluir objeto',
-          `Deseja excluir <strong>${o.nome}</strong>? Esta ação não pode ser desfeita.`,
-          () => deleteObjAction(o.id, o.nome)
-        );
+        loadForObjEdit(o.id, o.nome, o.descricao);
       });
-
+      div.querySelector('.btn-del-item').addEventListener('click', e => {
+        e.stopPropagation();
+        showConfirm('Excluir objeto', `Deseja excluir <strong>${o.nome}</strong>? Esta ação não pode ser desfeita.`, () => deleteObjAction(o.id, o.nome));
+      });
       container.appendChild(div);
     });
   }
 
-  async function deleteObjAction(id, nome) {
-    try {
-      const res  = await fetch(`/objetos/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (res.ok) {
-        showMsg('success', `Objeto "${nome}" excluído com sucesso.`);
-        await loadList(v('searchInput').value.trim());
-      } else {
-        showMsg('error', data.message || 'Erro ao excluir objeto.');
-      }
-    } catch {
-      showMsg('error', 'Erro de conexão com o servidor.');
-    }
-  }
-
-  // ─── Load / search ─────────────────────────────────────────────────────────
-  async function loadList(q) {
+  async function loadObjList(q) {
+    v('objListLoading').style.display = 'block';
+    v('objList').innerHTML = '';
     try {
       const url = q ? `/objetos/search?q=${encodeURIComponent(q)}` : '/objetos';
       const res = await fetch(url);
-      allObj = await res.json();
-      renderList(allObj);
+      const list = await res.json();
+      renderObjList(list);
     } catch {
-      v('listLoading').textContent = 'Erro ao carregar.';
+      v('objListLoading').textContent = 'Erro ao carregar.';
     }
   }
 
-  let searchT;
-  v('searchInput').addEventListener('input', e => {
-    clearTimeout(searchT);
-    searchT = setTimeout(() => loadList(e.target.value.trim()), 280);
+  async function deleteObjAction(id, nome) {
+    const res  = await fetch(`/objetos/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+      loadObjList(val('objSearchInput'));
+    } else {
+      alert(data.message || 'Erro ao excluir objeto.');
+    }
+  }
+
+  let objSearchT;
+  v('objSearchInput').addEventListener('input', e => {
+    clearTimeout(objSearchT);
+    objSearchT = setTimeout(() => loadObjList(e.target.value.trim()), 280);
   });
 
-  // ─── Form reset ────────────────────────────────────────────────────────────
-  function setCreateMode() {
-    v('objForm').reset();
-    v('formTitle').textContent  = 'Novo Objeto';
-    v('btnSubmit').textContent  = 'Criar objeto';
-    v('btnCancel').style.display = 'none';
-    hideMsg();
+  // ══════════════════════════════════════════════════════════════════════════════
+  // CONDIÇÕES
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  function goToCondCreate() {
+    setCondCreateMode();
+    showView('condCreate');
+    v('cf_name').focus();
   }
 
-  v('btnNew').addEventListener('click', () => { setCreateMode(); v('f_nome').focus(); });
-  v('btnCancel').addEventListener('click', setCreateMode);
+  function setCondCreateMode() {
+    condEditingId = null;
+    v('condForm').reset();
+    v('condFormTitle').textContent   = 'Nova Condição Comercial';
+    v('condBtnSubmit').textContent   = 'Criar condição';
+    v('condBtnCancel').style.display = 'none';
+    hideMsg('condFormMsg');
+  }
 
-  // ─── Form submit ───────────────────────────────────────────────────────────
-  v('objForm').addEventListener('submit', async e => {
+  function loadForCondEdit(cond) {
+    condEditingId = cond.id;
+    v('cf_name').value      = cond.name || '';
+    v('cf_forma').value     = cond.forma_pagamento || '';
+    v('cf_prazo_pag').value = cond.prazo_pagamento || '';
+    v('cf_prazo_ent').value = cond.prazo_entrega || '';
+    v('cf_validade').value  = cond.validade || '';
+    v('cf_garantia').value  = cond.garantia || '';
+    v('condFormTitle').textContent   = 'Editar Condição';
+    v('condBtnSubmit').textContent   = 'Salvar alterações';
+    v('condBtnCancel').style.display = '';
+    hideMsg('condFormMsg');
+    showView('condCreate');
+    v('cf_name').focus();
+  }
+
+  v('condBtnCancel').addEventListener('click', () => {
+    setCondCreateMode();
+    showView('condMenu');
+  });
+
+  v('condForm').addEventListener('submit', async e => {
     e.preventDefault();
-    hideMsg();
+    hideMsg('condFormMsg');
 
-    if (!val('f_nome')) {
-      v('f_nome').classList.add('error');
-      showMsg('error', 'O campo Nome é obrigatório.');
-      v('f_nome').focus();
-      return;
+    const required = [
+      ['cf_name',      'Nome é obrigatório.'],
+      ['cf_forma',     'Forma de pagamento é obrigatória.'],
+      ['cf_prazo_pag', 'Prazo de pagamento é obrigatório.'],
+      ['cf_prazo_ent', 'Prazo de entrega é obrigatório.'],
+      ['cf_validade',  'Validade é obrigatória.'],
+    ];
+    for (const [id, msg] of required) {
+      if (!val(id)) {
+        v(id).classList.add('error');
+        showMsg('condFormMsg', 'error', msg);
+        v(id).focus();
+        return;
+      }
+      v(id).classList.remove('error');
     }
-    v('f_nome').classList.remove('error');
 
-    const btn = v('btnSubmit');
+    const btn = v('condBtnSubmit');
     btn.disabled = true;
     btn.textContent = 'Salvando...';
 
-    try {
-      const res  = await fetch('/objetos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome:     val('f_nome')     || null,
-          descricao: v('f_descricao').value.trim() || null,
-        }),
-      });
-      const data = await res.json();
+    const body = {
+      name:            val('cf_name'),
+      forma_pagamento: val('cf_forma'),
+      prazo_pagamento: val('cf_prazo_pag'),
+      prazo_entrega:   val('cf_prazo_ent'),
+      validade:        val('cf_validade'),
+      garantia:        v('cf_garantia').value.trim() || null,
+    };
 
-      if (res.ok) {
-        showMsg('success', 'Objeto criado com sucesso.');
-        setCreateMode();
-        await loadList(v('searchInput').value.trim());
+    try {
+      let res;
+      if (condEditingId) {
+        res = await fetch(`/commercial-conditions/${condEditingId}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
       } else {
-        showMsg('error', data.message || 'Erro ao salvar. Tente novamente.');
+        res = await fetch('/commercial-conditions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+      }
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('condFormMsg', 'success', condEditingId ? 'Condição atualizada com sucesso.' : 'Condição criada com sucesso.');
+        setCondCreateMode();
+      } else {
+        showMsg('condFormMsg', 'error', data.message || 'Erro ao salvar. Tente novamente.');
       }
     } catch {
-      showMsg('error', 'Erro de conexão com o servidor.');
+      showMsg('condFormMsg', 'error', 'Erro de conexão com o servidor.');
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Criar objeto';
+      btn.textContent = condEditingId ? 'Salvar alterações' : 'Criar condição';
     }
   });
 
-  // ─── Init ──────────────────────────────────────────────────────────────────
-  loadList();
-  if (new URLSearchParams(location.search).get('new') === '1') {
-    setCreateMode();
-    v('f_nome').focus();
+  function renderCondList(list) {
+    const container = v('condList');
+    v('condListLoading').style.display = 'none';
+    container.innerHTML = '';
+    if (!list.length) {
+      container.innerHTML = '<div class="empty-list">Nenhuma condição encontrada.</div>';
+      return;
+    }
+    list.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'obj-item';
+      div.innerHTML = `
+        <div class="oi-actions">
+          <div style="min-width:0; flex:1;">
+            <div class="oi-name">${c.name}</div>
+            <div class="cond-pills">
+              <span class="cond-pill">${c.forma_pagamento}</span>
+              <span class="cond-pill">${c.prazo_pagamento}</span>
+              <span class="cond-pill">Entrega: ${c.prazo_entrega}</span>
+              <span class="cond-pill">Válida: ${c.validade}</span>
+              ${c.garantia ? `<span class="cond-pill">Garantia: ${c.garantia}</span>` : ''}
+            </div>
+          </div>
+          <div style="display:flex; gap:4px; flex-shrink:0;">
+            <button class="btn-edit-item" title="Editar">Editar</button>
+            <button class="btn-del-item" title="Excluir">✕</button>
+          </div>
+        </div>`;
+      div.querySelector('.btn-edit-item').addEventListener('click', e => {
+        e.stopPropagation();
+        loadForCondEdit(c);
+      });
+      div.querySelector('.btn-del-item').addEventListener('click', e => {
+        e.stopPropagation();
+        showConfirm('Excluir condição', `Deseja excluir <strong>${c.name}</strong>? Esta ação não pode ser desfeita.`, () => deleteCondAction(c.id, c.name));
+      });
+      container.appendChild(div);
+    });
   }
+
+  async function loadCondList(q) {
+    v('condListLoading').style.display = 'block';
+    v('condList').innerHTML = '';
+    try {
+      const url = q ? `/commercial-conditions/search?q=${encodeURIComponent(q)}` : '/commercial-conditions';
+      const res = await fetch(url);
+      renderCondList(await res.json());
+    } catch {
+      v('condListLoading').textContent = 'Erro ao carregar.';
+    }
+  }
+
+  async function deleteCondAction(id, name) {
+    const res  = await fetch(`/commercial-conditions/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+      loadCondList(val('condSearchInput'));
+    } else {
+      alert(data.message || 'Erro ao excluir condição.');
+    }
+  }
+
+  let condSearchT;
+  v('condSearchInput').addEventListener('input', e => {
+    clearTimeout(condSearchT);
+    condSearchT = setTimeout(() => loadCondList(e.target.value.trim()), 280);
+  });
+
+  // ─── URL params ────────────────────────────────────────────────────────────
+  (function init() {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+    const isNew   = params.get('new') === '1';
+
+    if (section === 'conditions') {
+      if (isNew) {
+        goToCondCreate();
+      } else {
+        showView('condMenu');
+      }
+    } else if (isNew) {
+      goToObjCreate();
+    } else {
+      showView('home');
+    }
+  })();
 </script>
 <script src="/auth.js"></script>
 </body>

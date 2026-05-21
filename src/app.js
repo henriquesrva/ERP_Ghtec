@@ -86,6 +86,7 @@ const {
   getObjetoByIdHandler,
   searchObjetosHandler,
   createObjetoHandler,
+  updateObjetoHandler,
   deleteObjetoHandler,
 } = require("./modules/objeto/objeto.controller");
 
@@ -115,6 +116,15 @@ const {
   updateCategoryHandler,
   deleteCategoryHandler,
 } = require("./modules/category/category.controller");
+
+const {
+  listConditionsHandler,
+  getConditionHandler,
+  searchConditionsHandler,
+  createConditionHandler,
+  updateConditionHandler,
+  deleteConditionHandler,
+} = require("./modules/condition/condition.controller");
 
 const app = express();
 
@@ -182,11 +192,20 @@ app.get("/responsaveis/:id",     getResponsavelByIdHandler);
 app.post("/responsaveis",        createResponsavelHandler);
 app.delete("/responsaveis/:id",  deleteResponsavelHandler);
 
+// Condições comerciais — /search deve vir antes de /:id
+app.get("/commercial-conditions",         listConditionsHandler);
+app.get("/commercial-conditions/search",  searchConditionsHandler);
+app.get("/commercial-conditions/:id",     getConditionHandler);
+app.post("/commercial-conditions",        createConditionHandler);
+app.put("/commercial-conditions/:id",     updateConditionHandler);
+app.delete("/commercial-conditions/:id",  deleteConditionHandler);
+
 // Objetos — /search deve vir antes de /:id
 app.get("/objetos",         listObjetosHandler);
 app.get("/objetos/search",  searchObjetosHandler);
 app.get("/objetos/:id",     getObjetoByIdHandler);
 app.post("/objetos",        createObjetoHandler);
+app.put("/objetos/:id",     updateObjetoHandler);
 app.delete("/objetos/:id",  deleteObjetoHandler);
 
 // Kanban — cards, tarefas e comentários

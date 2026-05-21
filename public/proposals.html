@@ -22,6 +22,21 @@
     #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
     .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
     .btn-logout:hover { background: rgba(255,255,255,0.2); }
+    /* Home grid */
+    .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 560px; margin: 0 auto; }
+    @media (max-width: 560px) { .home-grid { grid-template-columns: 1fr; } }
+    .section-card {
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 36px 28px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
+      text-align: center; text-decoration: none; color: inherit; display: block;
+    }
+    .section-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--green-light); }
+    .sc-icon  { font-size: 36px; margin-bottom: 12px; }
+    .sc-title { font-size: 16px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+    .sc-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .btn-back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #eee; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 700; color: #444; cursor: pointer; font-family: inherit; transition: background 0.15s; text-decoration: none; }
+    .btn-back:hover { background: #ddd; }
+
     .badge-faturado { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; white-space: nowrap; }
     .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
     .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
@@ -78,11 +93,10 @@
 
 <nav class="nav">
   <a class="nav-brand" href="/">GHTec</a>
-  <a class="nav-link" href="/">Nova Proposta</a>
   <a class="nav-link active" href="/proposals.html">Propostas</a>
   <a class="nav-link" href="/clients.html">Clientes</a>
   <a class="nav-link" href="/parts.html">Peças</a>
-  <a class="nav-link" href="/objetos.html">Objetos</a>
+  <a class="nav-link" href="/objetos.html">Objetos e Condições</a>
   <a class="nav-link" href="/kanban.html">Kanban</a>
   <a class="nav-link" href="/stock.html">Estoque</a>
   <div class="nav-right">
@@ -93,39 +107,60 @@
 </nav>
 <div class="page-bar">
   <h1>Propostas</h1>
-  Histórico de propostas geradas
+  <span id="pageBarSub">Geração e histórico de propostas comerciais</span>
 </div>
 
 <div class="container">
-  <div class="card">
-    <div class="card-title">
-      Todas as propostas
-      <a class="btn btn-primary" href="/">+ Nova proposta</a>
-    </div>
 
-    <div class="search-bar">
-      <input type="text" id="searchInput" placeholder="Filtrar por número ou cliente..." />
-    </div>
-
-    <div id="loading">Carregando...</div>
-    <div id="content" style="display:none">
-      <table>
-        <thead>
-          <tr>
-            <th>Nº da Proposta</th>
-            <th>Cliente</th>
-            <th>Data de Emissão</th>
-            <th>Valor Total</th>
-            <th>Status</th>
-            <th>PDF</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-      <div class="empty" id="empty" style="display:none">Nenhuma proposta encontrada.</div>
+  <!-- ══ HOME ══════════════════════════════════════════════════════════════════ -->
+  <div id="viewHome">
+    <div class="home-grid">
+      <a class="section-card" href="/">
+        <div class="sc-icon">📝</div>
+        <div class="sc-title">Nova proposta</div>
+        <div class="sc-desc">Criar uma nova proposta comercial e gerar o PDF</div>
+      </a>
+      <div class="section-card" onclick="showListing()">
+        <div class="sc-icon">📋</div>
+        <div class="sc-title">Histórico de propostas</div>
+        <div class="sc-desc">Visualizar e acessar as propostas já geradas</div>
+      </div>
     </div>
   </div>
+
+  <!-- ══ LISTING ════════════════════════════════════════════════════════════════ -->
+  <div id="viewListing" style="display:none">
+    <div style="margin-bottom:16px;">
+      <button class="btn-back" onclick="showHome()">← Voltar</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Todas as propostas</div>
+
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Filtrar por número ou cliente..." />
+      </div>
+
+      <div id="loading">Carregando...</div>
+      <div id="content" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Nº da Proposta</th>
+              <th>Cliente</th>
+              <th>Data de Emissão</th>
+              <th>Valor Total</th>
+              <th>Status</th>
+              <th>PDF</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty" style="display:none">Nenhuma proposta encontrada.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div id="toast"></div>
@@ -136,7 +171,21 @@
   }
 
   let all = [];
+  let listLoaded = false;
   let toastTimer;
+
+  function showHome() {
+    document.getElementById('viewHome').style.display = '';
+    document.getElementById('viewListing').style.display = 'none';
+    document.getElementById('pageBarSub').textContent = 'Geração e histórico de propostas comerciais';
+  }
+
+  function showListing() {
+    document.getElementById('viewHome').style.display = 'none';
+    document.getElementById('viewListing').style.display = '';
+    document.getElementById('pageBarSub').textContent = 'Histórico de propostas geradas';
+    if (!listLoaded) { listLoaded = true; load(); }
+  }
 
   function showToast(type, text) {
     const el = document.getElementById('toast');
@@ -245,7 +294,10 @@
     }, 200);
   });
 
-  load();
+  // Verifica se a URL pede a listagem diretamente (para compatibilidade com links antigos)
+  if (location.search.includes('view=list') || location.hash === '#list') {
+    showListing();
+  }
 </script>
 <script src="/auth.js"></script>
 </body>

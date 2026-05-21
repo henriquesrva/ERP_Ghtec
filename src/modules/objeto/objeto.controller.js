@@ -3,6 +3,7 @@ const {
   getObjetoById,
   searchObjetosByQuery,
   createNewObjeto,
+  updateObjetoService,
   deleteObjeto,
 } = require("./objeto.service");
 
@@ -50,6 +51,18 @@ function createObjetoHandler(req, res) {
   }
 }
 
+function updateObjetoHandler(req, res) {
+  try {
+    const o = updateObjetoService(Number(req.params.id), req.body);
+    return res.json({ success: true, objeto: o });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
+    if (err.message.includes("obrigatório")) return res.status(400).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao atualizar objeto." });
+  }
+}
+
 function deleteObjetoHandler(req, res) {
   try {
     deleteObjeto(Number(req.params.id));
@@ -68,5 +81,6 @@ module.exports = {
   getObjetoByIdHandler,
   searchObjetosHandler,
   createObjetoHandler,
+  updateObjetoHandler,
   deleteObjetoHandler,
 };

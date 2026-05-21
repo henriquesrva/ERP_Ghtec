@@ -3,6 +3,7 @@ const {
   findObjetoById,
   searchObjetos,
   createObjeto,
+  updateObjeto,
   deleteObjetoById,
 } = require("./objeto.repository");
 
@@ -26,6 +27,20 @@ function createNewObjeto(data) {
   return findObjetoById(id);
 }
 
+function updateObjetoService(id, data) {
+  const existing = findObjetoById(id);
+  if (!existing) {
+    const err = new Error("Objeto não encontrado.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  if (!data.nome || !data.nome.trim()) {
+    throw new Error("O campo 'nome' é obrigatório.");
+  }
+  updateObjeto(id, { nome: data.nome.trim(), descricao: data.descricao?.trim() || null });
+  return findObjetoById(id);
+}
+
 function deleteObjeto(id) {
   const existing = findObjetoById(id);
   if (!existing) {
@@ -41,5 +56,6 @@ module.exports = {
   getObjetoById,
   searchObjetosByQuery,
   createNewObjeto,
+  updateObjetoService,
   deleteObjeto,
 };

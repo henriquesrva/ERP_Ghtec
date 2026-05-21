@@ -34,6 +34,14 @@ function createObjeto(data) {
   return result.lastInsertRowid;
 }
 
+function updateObjeto(id, data) {
+  db.prepare(`UPDATE objetos SET nome = @nome, descricao = @descricao WHERE id = @id`).run({
+    nome:      data.nome      ?? null,
+    descricao: data.descricao ?? null,
+    id,
+  });
+}
+
 function deleteObjetoById(id) {
   db.prepare(`DELETE FROM objetos WHERE id = ?`).run(id);
 }
@@ -43,5 +51,6 @@ module.exports = {
   findObjetoById,
   searchObjetos,
   createObjeto,
+  updateObjeto,
   deleteObjetoById,
 };

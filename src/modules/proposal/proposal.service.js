@@ -374,10 +374,11 @@ async function createProposalFlow(data) {
       responsavel_cargo: data.responsavel.cargo,
       responsavel_email: data.responsavel.email || '',
       responsavel_telefone: data.responsavel.telefone,
-      responsible_user_id: data.responsible_user_id || null,
-      responsible_name:    data.responsible_name    || data.responsavel.nome,
-      responsible_role:    data.responsible_role    || data.responsavel.cargo,
-      responsible_phone:   data.responsible_phone   || data.responsavel.telefone,
+      responsible_user_id:        data.responsible_user_id        || null,
+      responsible_name:           data.responsible_name           || data.responsavel.nome,
+      responsible_role:           data.responsible_role           || data.responsavel.cargo,
+      responsible_phone:          data.responsible_phone          || data.responsavel.telefone,
+      commercial_condition_id:    data.commercial_condition_id    || null,
       pdf_path: null
     });
   } catch (error) {
