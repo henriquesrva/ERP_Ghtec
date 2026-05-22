@@ -1,5 +1,42 @@
+# ─── Dependências ───────────────────────────────────────────
 node_modules/
+
+# ─── Variáveis de ambiente (dados sensíveis) ─────────────────
 .env
+.env.local
+.env.*.local
+
+# ─── Banco de dados ──────────────────────────────────────────
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# ─── Arquivos gerados (PDFs, uploads, comprovantes) ──────────
+output/
+
+# ─── Build ───────────────────────────────────────────────────
 dist/
 build/
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+
+# ─── Certificados e chaves ───────────────────────────────────
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ─── Sistema operacional ─────────────────────────────────────
 .DS_Store
+Thumbs.db
+
+# ─── Editores ────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
