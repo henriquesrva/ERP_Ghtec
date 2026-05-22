@@ -5,9 +5,12 @@ const {
   searchParts,
   createPart,
   updatePart,
+  deletePart,
   getPartPriceHistory,
   getPartPriceHistoryByClient,
   getPartLastPricePerClient,
+  getClientPriceRefs,
+  upsertClientPriceRef,
 } = require("./part.repository");
 
 const { findCategoryById } = require("../category/category.repository");
@@ -139,13 +142,57 @@ function getPartPriceComparisonService(partId) {
   return getPartLastPricePerClient(partId);
 }
 
+function deletePartService(id) {
+  const part = findPartById(id);
+  if (!part) {
+    const err = new Error("Peça não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  deletePart(id);
+}
+
+function getClientPriceRefsService(partId) {
+  const part = findPartById(partId);
+  if (!part) {
+    const err = new Error("Peça não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  return getClientPriceRefs(partId);
+}
+
+function upsertClientPriceRefService(partId, clientId, data, userId) {
+  const part = findPartById(partId);
+  if (!part) {
+    const err = new Error("Peça não encontrada.");
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  const price = parseFloat(String(data.reference_price ?? "").replace(/\./g, "").replace(",", "."));
+  if (isNaN(price) || price < 0) {
+    const err = new Error("Preço de referência inválido.");
+    err.code = "VALIDATION";
+    throw err;
+  }
+  if (!clientId || isNaN(Number(clientId))) {
+    const err = new Error("client_id inválido.");
+    err.code = "VALIDATION";
+    throw err;
+  }
+  return upsertClientPriceRef(partId, Number(clientId), price, data.notes ?? null, userId);
+}
+
 module.exports = {
   getAllParts,
   getPartById,
   searchPartsByQuery,
   createNewPart,
   updateExistingPart,
+  deletePartService,
   getPartPriceHistoryService,
   getPartPriceHistoryByClientService,
   getPartPriceComparisonService,
+  getClientPriceRefsService,
+  upsertClientPriceRefService,
 };

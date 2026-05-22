@@ -4,9 +4,12 @@ const {
   searchPartsByQuery,
   createNewPart,
   updateExistingPart,
+  deletePartService,
   getPartPriceHistoryService,
   getPartPriceHistoryByClientService,
   getPartPriceComparisonService,
+  getClientPriceRefsService,
+  upsertClientPriceRefService,
 } = require("./part.service");
 
 function listPartsHandler(req, res) {
@@ -129,13 +132,57 @@ function getPartPriceComparisonHandler(req, res) {
   }
 }
 
+function deletePartHandler(req, res) {
+  try {
+    deletePartService(Number(req.params.id));
+    return res.json({ success: true, message: "Peça excluída com sucesso." });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND")        return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "HAS_DEPENDENCIES") return res.status(409).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao excluir peça." });
+  }
+}
+
+function getClientPriceRefsHandler(req, res) {
+  try {
+    const refs = getClientPriceRefsService(Number(req.params.id));
+    return res.json(refs);
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao buscar referências de preço." });
+  }
+}
+
+function upsertClientPriceRefHandler(req, res) {
+  if (req.session?.userRole !== "admin") {
+    return res.status(403).json({ success: false, message: "Apenas administradores podem gerenciar referências de preço." });
+  }
+  try {
+    const partId   = Number(req.params.id);
+    const clientId = Number(req.body.client_id);
+    if (!clientId) return res.status(400).json({ success: false, message: "client_id é obrigatório." });
+    const ref = upsertClientPriceRefService(partId, clientId, req.body, req.session.userId);
+    return res.json({ success: true, ref });
+  } catch (err) {
+    console.error(err);
+    if (err.code === "NOT_FOUND")   return res.status(404).json({ success: false, message: err.message });
+    if (err.code === "VALIDATION")  return res.status(400).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: "Erro ao salvar referência de preço." });
+  }
+}
+
 module.exports = {
   listPartsHandler,
   getPartByIdHandler,
   searchPartsHandler,
   createPartHandler,
   updatePartHandler,
+  deletePartHandler,
   getPartPriceHistoryHandler,
   getPartPriceHistoryByClientHandler,
   getPartPriceComparisonHandler,
+  getClientPriceRefsHandler,
+  upsertClientPriceRefHandler,
 };

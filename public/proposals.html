@@ -3,115 +3,109 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/css/styles.css">
   <title>GHTec — Propostas</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    :root {
-      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
-      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
-      --danger: #c62828; --radius: 6px;
+    /* ── Home grid ── */
+    .home-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 580px;
+      margin: 40px auto 0;
     }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
-
-    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; }
-    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
-    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
-    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
-    .nav-link.active { color: #fff; border-bottom-color: #fff; }
-    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
-    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
-    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
-    .btn-logout:hover { background: rgba(255,255,255,0.2); }
-    /* Home grid */
-    .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 560px; margin: 0 auto; }
     @media (max-width: 560px) { .home-grid { grid-template-columns: 1fr; } }
+
     .section-card {
-      background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 36px 28px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
-      text-align: center; text-decoration: none; color: inherit; display: block;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 36px 28px;
+      cursor: pointer;
+      transition: box-shadow 0.18s, border-color 0.18s, transform 0.15s;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      box-shadow: var(--shadow-sm);
     }
-    .section-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); border-color: var(--green-light); }
-    .sc-icon  { font-size: 36px; margin-bottom: 12px; }
-    .sc-title { font-size: 16px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
-    .sc-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
-    .btn-back { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #eee; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 700; color: #444; cursor: pointer; font-family: inherit; transition: background 0.15s; text-decoration: none; }
-    .btn-back:hover { background: #ddd; }
-
-    .badge-faturado { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; white-space: nowrap; }
-    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
-    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
-
-    .container { max-width: 1000px; margin: 28px auto; padding: 0 16px 60px; }
-
-    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 28px; margin-bottom: 20px; }
-    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-
-    .search-bar input { width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13.5px; font-family: inherit; margin-bottom: 16px; }
-    .search-bar input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
-
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: var(--green-bg); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--green); padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
-    td { padding: 9px 12px; border: 1px solid #eee; vertical-align: middle; }
-    tr:hover td { background: #fafff9; }
-
-    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: var(--radius); border: none; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.15s; text-decoration: none; font-family: inherit; }
-    .btn-primary { background: var(--green); color: #fff; }
-    .btn-primary:hover { background: var(--green-light); }
-    .btn-outline { background: #fff; color: var(--green); border: 1px solid var(--green); }
-    .btn-outline:hover { background: var(--green-bg); }
-    .btn-danger { background: #fff; color: var(--danger); border: 1px solid #ef9a9a; }
-    .btn-danger:hover { background: #ffebee; }
-
-    .empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 13px; }
-    #loading { text-align: center; color: var(--muted); padding: 30px 0; }
-
-    /* Confirm overlay */
-    .confirm-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200;
-      display: flex; align-items: center; justify-content: center;
+    .section-card:hover {
+      box-shadow: var(--shadow);
+      border-color: var(--color-primary-light);
+      transform: translateY(-2px);
     }
-    .confirm-box {
-      background: #fff; border-radius: var(--radius); padding: 24px 28px;
-      max-width: 420px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    }
-    .confirm-box h3 { margin: 0 0 10px; font-size: 15px; }
-    .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
-    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .sc-icon  { font-size: 40px; margin-bottom: 14px; display: block; }
+    .sc-title { font-size: 15px; font-weight: 700; color: var(--color-primary); margin-bottom: 6px; }
+    .sc-desc  { font-size: 12px; color: var(--color-muted); line-height: 1.5; }
 
-    /* Toast message */
-    #toast {
-      display: none; position: fixed; bottom: 24px; right: 24px; z-index: 300;
-      padding: 12px 18px; border-radius: var(--radius); font-size: 13px; font-weight: 600;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    /* ── Search ── */
+    .search-wrap { margin-bottom: 16px; }
+    .search-wrap input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #ccc;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: inherit;
     }
-    #toast.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
-    #toast.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
-    #toast.warn    { background: #fff8e1; color: #5d4037; border: 1px solid #ffe082; }
+    .search-wrap input:focus {
+      outline: none;
+      border-color: var(--color-primary-light);
+      box-shadow: 0 0 0 3px rgba(67,160,71,0.14);
+    }
+
+    /* ── Delete button (outline-danger style) ── */
+    .btn-del-prop {
+      background: #fff;
+      color: var(--color-danger);
+      border: 1px solid var(--color-danger-border);
+      font-size: 11px;
+    }
+    .btn-del-prop:hover { background: var(--color-danger-bg); }
   </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a class="nav-brand" href="/">GHTec</a>
-  <a class="nav-link active" href="/proposals.html">Propostas</a>
-  <a class="nav-link" href="/clients.html">Clientes</a>
-  <a class="nav-link" href="/parts.html">Peças</a>
-  <a class="nav-link" href="/objetos.html">Objetos e Condições</a>
-  <a class="nav-link" href="/kanban.html">Kanban</a>
-  <a class="nav-link" href="/stock.html">Estoque</a>
-  <a class="nav-link" href="/fornecedores.html">Fornecedores</a>
-  <a class="nav-link" href="/notas-recebidas.html">Notas Recebidas</a>
-  <a class="nav-link" href="/contas-pagar.html">Contas a Pagar</a>
-  <a class="nav-link" href="/financeiro.html">Financeiro</a>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logoGHTEC.png" alt="GHTec" class="app-logo">
+  </a>
+  <div class="nav-group" data-group="comercial">
+    <button class="nav-group-btn">Comercial <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/proposals.html" class="nav-dd-link">Propostas</a>
+      <a href="/kanban.html" class="nav-dd-link">Kanban</a>
+      <a href="/clients.html" class="nav-dd-link">Clientes</a>
+      <a href="/objetos.html" class="nav-dd-link">Objetos e Condições</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="operacional">
+    <button class="nav-group-btn">Operacional <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/parts.html" class="nav-dd-link">Peças</a>
+      <a href="/stock.html" class="nav-dd-link">Estoque</a>
+      <a href="/fornecedores.html" class="nav-dd-link">Fornecedores</a>
+      <a href="/notas-recebidas.html" class="nav-dd-link">Notas Recebidas</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="financeiro">
+    <button class="nav-group-btn">Financeiro <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/contas-pagar.html" class="nav-dd-link">Contas a Pagar</a>
+      <a href="/financeiro.html" class="nav-dd-link">Financeiro</a>
+    </div>
+  </div>
   <div class="nav-right">
-    <a class="nav-link" href="/usuarios.html">Usuários</a>
     <span id="navUserLabel"></span>
+    <a href="/usuarios.html" class="nav-icon-link" title="Usuários e configurações">&#9881;</a>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </nav>
 <div class="page-bar">
-  <h1>Propostas</h1>
-  <span id="pageBarSub">Geração e histórico de propostas comerciais</span>
+  <div>
+    <h1>Propostas</h1>
+    <span id="pageBarSub">Geração e histórico de propostas comerciais</span>
+  </div>
 </div>
 
 <div class="container">
@@ -119,7 +113,7 @@
   <!-- ══ HOME ══════════════════════════════════════════════════════════════════ -->
   <div id="viewHome">
     <div class="home-grid">
-      <a class="section-card" href="/">
+      <a class="section-card" href="/nova-proposta.html">
         <div class="sc-icon">📝</div>
         <div class="sc-title">Nova proposta</div>
         <div class="sc-desc">Criar uma nova proposta comercial e gerar o PDF</div>
@@ -140,7 +134,7 @@
     <div class="card">
       <div class="card-title">Todas as propostas</div>
 
-      <div class="search-bar">
+      <div class="search-wrap">
         <input type="text" id="searchInput" placeholder="Filtrar por número ou cliente..." />
       </div>
 
@@ -239,7 +233,7 @@
         <td>${fmt(p.valor_total)}</td>
         <td>${statusCell}</td>
         <td>${pdfCell}</td>
-        <td><button class="btn btn-danger btn-del-prop" data-id="${p.id}" data-num="${p.numero_proposta}" title="Excluir proposta">✕ Excluir</button></td>`;
+        <td><button class="btn btn-sm btn-del-prop" data-id="${p.id}" data-num="${p.numero_proposta}" title="Excluir proposta">✕ Excluir</button></td>`;
       tbody.appendChild(tr);
     });
 

@@ -167,9 +167,19 @@ function searchItemDescriptions(q) {
   `).all(term);
 }
 
-// Prioridade 1: client_id + part_id (quando a peça estiver cadastrada)
-// Prioridade 2: client_id + descricao_normalizada
-function getLastItemPriceForClient(clientId, descricao) {
+// Prioridade 1: referência manual (part_client_price_references) por client_id + part_id
+// Prioridade 2: client_id + descricao_normalizada em price_history
+function getLastItemPriceForClient(clientId, descricao, partId = null) {
+  if (partId) {
+    const manualRef = db.prepare(`
+      SELECT reference_price AS valor_unitario, NULL AS numero_proposta, updated_at AS data_proposta
+      FROM part_client_price_references
+      WHERE client_id = ? AND part_id = ?
+      LIMIT 1
+    `).get(clientId, partId);
+    if (manualRef) return manualRef;
+  }
+
   return db.prepare(`
     SELECT ph.valor_unitario, ph.descricao_original, ph.numero_proposta, ph.data_proposta
     FROM price_history ph

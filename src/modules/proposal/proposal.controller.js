@@ -139,7 +139,8 @@ function getItemPriceHandler(req, res) {
 
     if (!resolvedClientId) return res.json(null);
 
-    const row = getLastItemPriceForClient(resolvedClientId, descricao);
+    const partId = req.query.partId ? parseInt(req.query.partId, 10) : null;
+    const row = getLastItemPriceForClient(resolvedClientId, descricao, partId);
     return res.json(row || null);
   } catch (error) {
     console.error(error);

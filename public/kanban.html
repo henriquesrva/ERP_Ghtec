@@ -3,31 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/css/styles.css">
   <title>GHTec — Kanban</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    :root {
-      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
-      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
-      --danger: #c62828; --amber: #f57f17; --radius: 6px;
-      --blue: #1565c0; --blue-bg: #e3f2fd;
-    }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f0f4f0; color: var(--text); }
-
-    /* Nav */
-    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; flex-wrap: wrap; }
-    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
-    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
-    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
-    .nav-link.active { color: #fff; border-bottom-color: #fff; }
-    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
-    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
-    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
-    .btn-logout:hover { background: rgba(255,255,255,0.2); }
-
-    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
-    .page-bar-right { display: flex; align-items: center; gap: 12px; }
+.page-bar-right { display: flex; align-items: center; gap: 12px; }
     .page-bar-ts { font-size: 12px; color: rgba(255,255,255,0.7); }
     .btn-create-task { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 7px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 700; }
     .btn-create-task:hover { background: rgba(255,255,255,0.25); }
@@ -45,8 +24,7 @@
     .col-empty { font-size: 11px; color: var(--muted); text-align: center; padding: 18px 8px; }
 
     /* Card */
-    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-size: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); cursor: pointer; transition: box-shadow 0.12s; }
-    .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
     .card.card-task { border-left: 3px solid var(--blue); }
     .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
     .card-num { font-weight: 800; font-size: 12px; color: var(--green); white-space: nowrap; }
@@ -73,12 +51,7 @@
     .exec-pending { background: #fff8e1; color: #e65100; border: 1px solid #ffcc80; }
 
     /* Confirm modal */
-    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 900; display: flex; align-items: center; justify-content: center; }
-    .confirm-box { background: #fff; border-radius: var(--radius); padding: 24px 28px; max-width: 420px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
-    .confirm-box h3 { margin: 0 0 10px; font-size: 15px; }
-    .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
-    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
-    .btn-c { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-c { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .btn-c-ghost  { background: #eee; color: #444; }
     .btn-c-warn   { background: var(--amber); color: #fff; }
     .btn-c-green  { background: var(--green); color: #fff; }
@@ -118,8 +91,7 @@
     .drawer-header h2 { margin: 0; font-size: 15px; }
     .drawer-close { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--muted); line-height: 1; padding: 2px 6px; border-radius: 4px; }
     .drawer-close:hover { background: #f5f5f5; }
-    .drawer-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-    .drawer-section { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+.drawer-section { font-size: 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
     .drawer-field { margin-bottom: 10px; }
     .drawer-field-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
     .drawer-field-value { font-size: 13px; font-weight: 600; }
@@ -157,20 +129,37 @@
 <body>
 
 <nav class="nav">
-  <a class="nav-brand" href="/">GHTec</a>
-  <a class="nav-link" href="/proposals.html">Propostas</a>
-  <a class="nav-link" href="/clients.html">Clientes</a>
-  <a class="nav-link" href="/parts.html">Peças</a>
-  <a class="nav-link" href="/objetos.html">Objetos e Condições</a>
-  <a class="nav-link active" href="/kanban.html">Kanban</a>
-  <a class="nav-link" href="/stock.html">Estoque</a>
-  <a class="nav-link" href="/fornecedores.html">Fornecedores</a>
-  <a class="nav-link" href="/notas-recebidas.html">Notas Recebidas</a>
-  <a class="nav-link" href="/contas-pagar.html">Contas a Pagar</a>
-  <a class="nav-link" href="/financeiro.html">Financeiro</a>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logoGHTEC.png" alt="GHTec" class="app-logo">
+  </a>
+  <div class="nav-group" data-group="comercial">
+    <button class="nav-group-btn">Comercial <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/proposals.html" class="nav-dd-link">Propostas</a>
+      <a href="/kanban.html" class="nav-dd-link">Kanban</a>
+      <a href="/clients.html" class="nav-dd-link">Clientes</a>
+      <a href="/objetos.html" class="nav-dd-link">Objetos e Condições</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="operacional">
+    <button class="nav-group-btn">Operacional <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/parts.html" class="nav-dd-link">Peças</a>
+      <a href="/stock.html" class="nav-dd-link">Estoque</a>
+      <a href="/fornecedores.html" class="nav-dd-link">Fornecedores</a>
+      <a href="/notas-recebidas.html" class="nav-dd-link">Notas Recebidas</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="financeiro">
+    <button class="nav-group-btn">Financeiro <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/contas-pagar.html" class="nav-dd-link">Contas a Pagar</a>
+      <a href="/financeiro.html" class="nav-dd-link">Financeiro</a>
+    </div>
+  </div>
   <div class="nav-right">
-    <a class="nav-link" href="/usuarios.html">Usuários</a>
     <span id="navUserLabel"></span>
+    <a href="/usuarios.html" class="nav-icon-link" title="Usuários e configurações">&#9881;</a>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </nav>
@@ -262,10 +251,10 @@
   // ─── Toast ────────────────────────────────────────────────────────────────────
   function showToast(msg, type = 'error') {
     const t = document.createElement('div');
-    t.className = 'toast toast-' + type;
+    t.className = 'toast ' + type;
     t.textContent = msg;
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), 4000);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(() => t.remove(), 400); }, 3000);
   }
 
   // ─── Confirmação genérica ─────────────────────────────────────────────────────

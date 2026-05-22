@@ -152,6 +152,86 @@ function getPartLastPricePerClient(partId) {
   `).all(partId, partId);
 }
 
+function deletePart(id) {
+  const hasMovements = db.prepare(
+    `SELECT 1 FROM stock_movements WHERE part_id = ? LIMIT 1`
+  ).get(id);
+  if (hasMovements) {
+    const err = new Error("Não é possível excluir esta peça pois ela possui movimentações de estoque vinculadas.");
+    err.code = "HAS_DEPENDENCIES";
+    throw err;
+  }
+
+  db.transaction(() => {
+    db.prepare(`UPDATE price_history        SET part_id    = NULL WHERE part_id    = ?`).run(id);
+    db.prepare(`UPDATE itens_nota_recebida  SET produto_id = NULL WHERE produto_id = ?`).run(id);
+    db.prepare(`DELETE FROM part_client_price_references WHERE part_id = ?`).run(id);
+    db.prepare(`DELETE FROM parts WHERE id = ?`).run(id);
+  })();
+}
+
+// ── part_client_price_references ─────────────────────────────────────────────
+
+function getClientPriceRefs(partId) {
+  return db.prepare(`
+    SELECT
+      c.id            AS client_id,
+      c.nome          AS client_nome,
+      c.cnpj,
+      COALESCE(r.reference_price, ph_last.valor_unitario) AS reference_price,
+      CASE WHEN r.id IS NOT NULL THEN 'manual' ELSE 'proposal' END AS source,
+      COALESCE(r.updated_at, ph_last.data_proposta)        AS updated_at,
+      r.notes,
+      ph_last.numero_proposta,
+      r.id            AS ref_id
+    FROM clients c
+    LEFT JOIN part_client_price_references r
+      ON r.part_id = ? AND r.client_id = c.id
+    LEFT JOIN (
+      SELECT client_id, MAX(id) AS max_id
+      FROM price_history
+      WHERE part_id = ?
+      GROUP BY client_id
+    ) ph_agg ON ph_agg.client_id = c.id
+    LEFT JOIN price_history ph_last ON ph_last.id = ph_agg.max_id
+    WHERE r.id IS NOT NULL OR ph_last.id IS NOT NULL
+    ORDER BY c.nome ASC
+  `).all(partId, partId);
+}
+
+function upsertClientPriceRef(partId, clientId, referencePrice, notes, userId) {
+  const existing = db.prepare(
+    `SELECT id FROM part_client_price_references WHERE part_id = ? AND client_id = ?`
+  ).get(partId, clientId);
+
+  if (existing) {
+    db.prepare(`
+      UPDATE part_client_price_references
+      SET reference_price = ?, notes = ?, source = 'manual', updated_by_user_id = ?
+      WHERE part_id = ? AND client_id = ?
+    `).run(referencePrice, notes ?? null, userId, partId, clientId);
+  } else {
+    db.prepare(`
+      INSERT INTO part_client_price_references
+        (part_id, client_id, reference_price, notes, source, created_by_user_id, updated_by_user_id)
+      VALUES (?, ?, ?, ?, 'manual', ?, ?)
+    `).run(partId, clientId, referencePrice, notes ?? null, userId, userId);
+  }
+
+  return db.prepare(
+    `SELECT * FROM part_client_price_references WHERE part_id = ? AND client_id = ?`
+  ).get(partId, clientId);
+}
+
+function getManualPriceRef(partId, clientId) {
+  return db.prepare(`
+    SELECT reference_price AS valor_unitario, NULL AS numero_proposta, updated_at AS data_proposta
+    FROM part_client_price_references
+    WHERE part_id = ? AND client_id = ?
+    LIMIT 1
+  `).get(partId, clientId);
+}
+
 // Mantida para compatibilidade com migrate.js backfill
 function findPartByComposition(nome, marca, modelo) {
   return db.prepare(`
@@ -170,6 +250,7 @@ function findPartByComposition(nome, marca, modelo) {
 module.exports = {
   listAllParts,
   findPartById,
+  deletePart,
   findPartByInternalCode,
   findPartByComposition,
   searchParts,
@@ -178,4 +259,7 @@ module.exports = {
   getPartPriceHistory,
   getPartPriceHistoryByClient,
   getPartLastPricePerClient,
+  getClientPriceRefs,
+  upsertClientPriceRef,
+  getManualPriceRef,
 };

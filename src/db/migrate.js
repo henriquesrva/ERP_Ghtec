@@ -704,4 +704,30 @@ db.exec(`
   END;
 `);
 
+// ── Tabela part_client_price_references ──────────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS part_client_price_references (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    part_id            INTEGER NOT NULL REFERENCES parts(id),
+    client_id          INTEGER NOT NULL REFERENCES clients(id),
+    reference_price    REAL    NOT NULL,
+    source             TEXT    NOT NULL DEFAULT 'manual',
+    notes              TEXT,
+    created_by_user_id INTEGER REFERENCES users(id),
+    updated_by_user_id INTEGER REFERENCES users(id),
+    created_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(part_id, client_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_pcpr_part_client
+    ON part_client_price_references(part_id, client_id);
+
+  CREATE TRIGGER IF NOT EXISTS part_client_price_references_updated_at
+  AFTER UPDATE ON part_client_price_references BEGIN
+    UPDATE part_client_price_references SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+  END;
+`);
+
 console.log("[migrate] Banco de dados atualizado com sucesso.");

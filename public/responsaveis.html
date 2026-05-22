@@ -3,38 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/css/styles.css">
   <title>GHTec — Responsáveis</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    :root {
-      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
-      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
-      --danger: #c62828; --amber: #f57f17; --radius: 6px;
-    }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
-
-    /* Nav */
-    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; }
-    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
-    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
-    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
-    .nav-link.active { color: #fff; border-bottom-color: #fff; }
-    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
-    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
-    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
-    .btn-logout:hover { background: rgba(255,255,255,0.2); }
-    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
-    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
-
-    /* Layout */
-    .container { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
-    .split { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
+/* Layout */
+.split { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
     @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
 
     /* Card */
-    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
-    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .card-title span { color: var(--amber); font-size: 11px; }
+.card-title span { color: var(--amber); font-size: 11px; }
 
     /* Search + list */
     .search-wrap { position: relative; margin-bottom: 12px; }
@@ -53,35 +30,13 @@
     #listLoading { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
 
     /* Form */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .field input {
-      padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius);
-      font-size: 13px; font-family: inherit; color: var(--text);
-    }
-    .field input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
-    .field input.error { border-color: var(--danger); }
-    .col-span-2 { grid-column: span 2; }
-
-    /* Buttons */
-    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: var(--green); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
-    .btn-ghost { background: #eee; color: #444; }
-    .btn-ghost:hover:not(:disabled) { background: #ddd; }
-    .btn-new { padding: 5px 12px; font-size: 12px; background: var(--green-bg); color: var(--green); border: 1px dashed var(--green-light); border-radius: var(--radius); cursor: pointer; font-weight: 700; font-family: inherit; transition: background 0.15s; }
+/* Buttons */
+.btn-new { padding: 5px 12px; font-size: 12px; background: var(--green-bg); color: var(--green); border: 1px dashed var(--green-light); border-radius: var(--radius); cursor: pointer; font-weight: 700; font-family: inherit; transition: background 0.15s; }
     .btn-new:hover { background: #dcedc8; }
 
     /* Status message */
     .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
-    .msg.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
-    .msg.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
-    .msg.warn    { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; }
-
-    /* Delete button inside list item */
+/* Delete button inside list item */
     .ri-actions { display: flex; align-items: center; justify-content: space-between; }
     .btn-del-resp {
       display: none; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;
@@ -92,45 +47,52 @@
     .btn-del-resp:hover { background: #ffebee; }
 
     /* Confirm overlay */
-    .confirm-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .confirm-box {
-      background: #fff; border-radius: var(--radius); padding: 24px 28px;
-      max-width: 420px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    }
-    .confirm-box h3 { margin: 0 0 10px; font-size: 15px; color: var(--text); }
-    .confirm-box p  { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
-    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
-
-    @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } .col-span-2 { grid-column: span 1; } }
+@media (max-width: 640px) {
+}
   </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a class="nav-brand" href="/">GHTec</a>
-  <a class="nav-link" href="/proposals.html">Propostas</a>
-  <a class="nav-link" href="/clients.html">Clientes</a>
-  <a class="nav-link active" href="/responsaveis.html">Responsáveis</a>
-  <a class="nav-link" href="/parts.html">Peças</a>
-  <a class="nav-link" href="/objetos.html">Objetos e Condições</a>
-  <a class="nav-link" href="/kanban.html">Kanban</a>
-  <a class="nav-link" href="/stock.html">Estoque</a>
-  <a class="nav-link" href="/fornecedores.html">Fornecedores</a>
-  <a class="nav-link" href="/notas-recebidas.html">Notas Recebidas</a>
-  <a class="nav-link" href="/contas-pagar.html">Contas a Pagar</a>
-  <a class="nav-link" href="/financeiro.html">Financeiro</a>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logoGHTEC.png" alt="GHTec" class="app-logo">
+  </a>
+  <div class="nav-group" data-group="comercial">
+    <button class="nav-group-btn">Comercial <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/proposals.html" class="nav-dd-link">Propostas</a>
+      <a href="/kanban.html" class="nav-dd-link">Kanban</a>
+      <a href="/clients.html" class="nav-dd-link">Clientes</a>
+      <a href="/objetos.html" class="nav-dd-link">Objetos e Condições</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="operacional">
+    <button class="nav-group-btn">Operacional <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/parts.html" class="nav-dd-link">Peças</a>
+      <a href="/stock.html" class="nav-dd-link">Estoque</a>
+      <a href="/fornecedores.html" class="nav-dd-link">Fornecedores</a>
+      <a href="/notas-recebidas.html" class="nav-dd-link">Notas Recebidas</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="financeiro">
+    <button class="nav-group-btn">Financeiro <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/contas-pagar.html" class="nav-dd-link">Contas a Pagar</a>
+      <a href="/financeiro.html" class="nav-dd-link">Financeiro</a>
+    </div>
+  </div>
   <div class="nav-right">
-    <a class="nav-link" href="/usuarios.html">Usuários</a>
     <span id="navUserLabel"></span>
+    <a href="/usuarios.html" class="nav-icon-link" title="Usuários e configurações">&#9881;</a>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </nav>
 <div class="page-bar">
-  <h1>Responsáveis</h1>
-  Cadastro de responsáveis comerciais pelas propostas
+  <div>
+    <h1>Responsáveis</h1>
+    <div>Cadastro de responsáveis comerciais pelas propostas</div>
+  </div>
 </div>
 
 <div class="container">

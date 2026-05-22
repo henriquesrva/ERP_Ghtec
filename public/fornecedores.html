@@ -3,100 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/css/styles.css">
   <title>GHTec — Fornecedores</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    :root {
-      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
-      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
-      --danger: #c62828; --amber: #f57f17; --radius: 6px;
-      --blue: #1565c0;
-    }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
-    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; flex-wrap: wrap; }
-    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
-    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
-    .nav-link:hover { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
-    .nav-link.active { color: #fff; border-bottom-color: #fff; }
-    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
-    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
-    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
-    .btn-logout:hover { background: rgba(255,255,255,0.2); }
-    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
-    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
-    .container { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
-    .split { display: grid; grid-template-columns: 360px 1fr; gap: 20px; align-items: start; }
-    @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
-    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
-    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .search-wrap { position: relative; margin-bottom: 10px; display: flex; gap: 6px; }
+    /* ── Lista de fornecedores ── */
+    .search-wrap { margin-bottom: 10px; display: flex; gap: 6px; }
     .search-wrap input { flex: 1; padding: 8px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
-    .search-wrap input:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+    .search-wrap input:focus { outline: none; border-color: var(--color-primary-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.14); }
+
     .list-wrap { max-height: 560px; overflow-y: auto; }
-    .list-item { padding: 10px 12px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; margin-bottom: 4px; transition: all 0.12s; }
-    .list-item:hover { background: var(--green-bg); border-color: var(--border); }
-    .list-item.selected { background: var(--green-bg); border-color: var(--green-light); }
+    .list-item {
+      padding: 10px 12px; border-radius: var(--radius); cursor: pointer;
+      border: 1px solid transparent; margin-bottom: 3px; transition: all 0.12s;
+    }
+    .list-item:hover   { background: var(--color-primary-bg); border-color: var(--color-border); }
+    .list-item.selected { background: var(--color-primary-bg); border-color: var(--color-primary-light); }
     .li-name { font-weight: 700; font-size: 13px; }
-    .li-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .badge-inativo { font-size: 10px; background: #eee; color: #999; border-radius: 3px; padding: 1px 5px; margin-left: 5px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .field input, .field textarea, .field select { padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; color: var(--text); }
-    .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
-    .field textarea { resize: vertical; min-height: 58px; }
-    .col-span-2 { grid-column: span 2; }
-    .col-span-3 { grid-column: span 3; }
-    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: var(--green); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
-    .btn-ghost { background: #eee; color: #444; }
-    .btn-ghost:hover:not(:disabled) { background: #ddd; }
-    .btn-danger { background: var(--danger); color: #fff; }
-    .btn-danger:hover:not(:disabled) { background: #b71c1c; }
-    .msg { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 12px; }
-    .msg-ok  { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
-    .msg-err { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
+    .li-sub  { font-size: 11px; color: var(--color-muted); margin-top: 2px; }
+    .empty-list { text-align: center; color: var(--color-muted); padding: 24px 0; font-size: 13px; }
+
+    /* ── Detalhe ── */
     .detail-section { margin-top: 18px; }
-    .detail-section h3 { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; color: var(--green); text-transform: uppercase; margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-    .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .mini-table th { text-align: left; color: var(--muted); font-weight: 700; padding: 4px 8px; border-bottom: 1px solid var(--border); }
-    .mini-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
-    .tag { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 11px; font-weight: 700; }
-    .tag-ok      { background: #e8f5e9; color: #1b5e20; }
-    .tag-warn    { background: #fff8e1; color: #e65100; }
-    .tag-danger  { background: #ffebee; color: var(--danger); }
-    .tag-muted   { background: #f5f5f5; color: #666; }
-    .empty-list  { text-align: center; color: var(--muted); padding: 24px 0; font-size: 13px; }
-    .sect-row    { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-    .sect-label  { font-size: 11px; color: var(--muted); font-weight: 700; min-width: 90px; }
-    .sect-val    { font-size: 13px; }
+    .detail-section h3 {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
+      color: var(--color-primary); text-transform: uppercase;
+      margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border);
+    }
+    .sect-row   { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 5px; }
+    .sect-label { font-size: 11px; color: var(--color-muted); font-weight: 700; min-width: 90px; padding-top: 1px; }
+    .sect-val   { font-size: 13px; }
+
+    /* ── Msg ── */
+    .msg { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 12px; }
   </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a href="/" class="nav-brand">GHTec</a>
-  <a href="/proposals.html" class="nav-link">Propostas</a>
-  <a href="/kanban.html" class="nav-link">Kanban</a>
-  <a href="/clients.html" class="nav-link">Clientes</a>
-  <a href="/parts.html" class="nav-link">Peças</a>
-  <a href="/stock.html" class="nav-link">Estoque</a>
-  <a href="/fornecedores.html" class="nav-link active">Fornecedores</a>
-  <a href="/notas-recebidas.html" class="nav-link">Notas Recebidas</a>
-  <a href="/contas-pagar.html" class="nav-link">Contas a Pagar</a>
-  <a href="/financeiro.html" class="nav-link">Financeiro</a>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logoGHTEC.png" alt="GHTec" class="app-logo">
+  </a>
+  <div class="nav-group" data-group="comercial">
+    <button class="nav-group-btn">Comercial <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/proposals.html" class="nav-dd-link">Propostas</a>
+      <a href="/kanban.html" class="nav-dd-link">Kanban</a>
+      <a href="/clients.html" class="nav-dd-link">Clientes</a>
+      <a href="/objetos.html" class="nav-dd-link">Objetos e Condições</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="operacional">
+    <button class="nav-group-btn">Operacional <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/parts.html" class="nav-dd-link">Peças</a>
+      <a href="/stock.html" class="nav-dd-link">Estoque</a>
+      <a href="/fornecedores.html" class="nav-dd-link">Fornecedores</a>
+      <a href="/notas-recebidas.html" class="nav-dd-link">Notas Recebidas</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="financeiro">
+    <button class="nav-group-btn">Financeiro <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/contas-pagar.html" class="nav-dd-link">Contas a Pagar</a>
+      <a href="/financeiro.html" class="nav-dd-link">Financeiro</a>
+    </div>
+  </div>
   <div class="nav-right">
     <span id="navUserLabel"></span>
+    <a href="/usuarios.html" class="nav-icon-link" title="Usuários e configurações">&#9881;</a>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </nav>
 
 <div class="page-bar">
-  <h1>Fornecedores</h1>
+  <div>
+    <h1>Fornecedores</h1>
+    <div>Cadastro e histórico de compras por fornecedor</div>
+  </div>
 </div>
 
 <div class="container">

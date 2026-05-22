@@ -99,8 +99,9 @@ function updateNotaHandler(req, res) {
 
 function cancelarNotaHandler(req, res) {
   try {
-    if (req.session.userRole !== "admin") {
-      return res.status(403).json({ success: false, message: "Apenas administradores podem cancelar notas." });
+    const role = req.session.userRole;
+    if (role !== "admin" && role !== "financeiro") {
+      return res.status(403).json({ success: false, message: "Apenas administradores e o financeiro podem cancelar notas." });
     }
     cancelarNotaById(Number(req.params.id), req.session.userId);
     return res.json({ success: true, message: "Nota cancelada com sucesso." });

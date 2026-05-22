@@ -112,9 +112,12 @@ const {
   searchPartsHandler,
   createPartHandler,
   updatePartHandler,
+  deletePartHandler,
   getPartPriceHistoryHandler,
   getPartPriceHistoryByClientHandler,
   getPartPriceComparisonHandler,
+  getClientPriceRefsHandler,
+  upsertClientPriceRefHandler,
 } = require("./modules/part/part.controller");
 
 const {
@@ -207,8 +210,13 @@ const {
 
 const app = express();
 
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  console.warn("[AVISO] SESSION_SECRET não definido. Usando secret de desenvolvimento — NÃO use em produção.");
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || "ghtec-session-secret-2024",
+  secret: sessionSecret || "ghtec-dev-secret-nao-use-em-producao",
   resave: false,
   saveUninitialized: false,
   cookie: { httpOnly: true, maxAge: 8 * 60 * 60 * 1000 },
@@ -253,14 +261,17 @@ app.put("/part-categories/:id",     updateCategoryHandler);
 app.delete("/part-categories/:id",  deleteCategoryHandler);
 
 // Peças — rotas específicas devem vir antes de /:id
-app.get("/parts",                            listPartsHandler);
-app.get("/parts/search",                     searchPartsHandler);
-app.get("/parts/:id/price-history",          getPartPriceHistoryHandler);
-app.get("/parts/:id/price-history-client",   getPartPriceHistoryByClientHandler);
-app.get("/parts/:id/price-comparison",       getPartPriceComparisonHandler);
-app.get("/parts/:id",                        getPartByIdHandler);
-app.post("/parts",                           createPartHandler);
-app.put("/parts/:id",                        updatePartHandler);
+app.get("/parts",                                     listPartsHandler);
+app.get("/parts/search",                              searchPartsHandler);
+app.get("/parts/:id/price-history",                   getPartPriceHistoryHandler);
+app.get("/parts/:id/price-history-client",            getPartPriceHistoryByClientHandler);
+app.get("/parts/:id/price-comparison",                getPartPriceComparisonHandler);
+app.get("/parts/:id/client-price-references",         getClientPriceRefsHandler);
+app.post("/parts/:id/client-price-references",        upsertClientPriceRefHandler);
+app.get("/parts/:id",                                 getPartByIdHandler);
+app.post("/parts",                                    createPartHandler);
+app.put("/parts/:id",                                 updatePartHandler);
+app.delete("/parts/:id",                              deletePartHandler);
 
 // Itens / preço histórico
 app.get("/items/search",     searchItemsHandler);
@@ -367,5 +378,12 @@ app.post("/contas-pagar/:id/baixar", (req, res, next) => {
   });
 }, baixarContaHandler);
 app.post("/contas-pagar/:id/cancelar", cancelarContaHandler);
+
+// ── Handlers de fallback (devem vir depois de todas as rotas) ─────────────────
+const notFoundHandler = require("./middleware/notFoundHandler");
+const errorHandler    = require("./middleware/errorHandler");
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;

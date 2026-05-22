@@ -84,8 +84,9 @@ function baixarContaHandler(req, res) {
 
 function cancelarContaHandler(req, res) {
   try {
-    if (req.session.userRole !== "admin") {
-      return res.status(403).json({ success: false, message: "Apenas administradores podem cancelar contas." });
+    const role = req.session.userRole;
+    if (role !== "admin" && role !== "financeiro") {
+      return res.status(403).json({ success: false, message: "Apenas administradores e o financeiro podem cancelar contas." });
     }
     const { motivo } = req.body;
     const conta = cancelar(Number(req.params.id), motivo, req.session.userId);

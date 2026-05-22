@@ -3,100 +3,146 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/css/styles.css">
   <title>GHTec — Contas a Pagar</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    :root {
-      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
-      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
-      --danger: #c62828; --amber: #f57f17; --radius: 6px;
-      --blue: #1565c0;
+    /* ── Filtros ── */
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
     }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
-    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; flex-wrap: wrap; }
-    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
-    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
-    .nav-link:hover { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
-    .nav-link.active { color: #fff; border-bottom-color: #fff; }
-    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
-    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
-    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
-    .btn-logout:hover { background: rgba(255,255,255,0.2); }
-    .page-bar { background: #1b5e20; padding: 10px 32px; }
-    .page-bar h1 { margin: 0; font-size: 16px; font-weight: 700; color: #fff; }
-    .container { max-width: 1200px; margin: 28px auto; padding: 0 16px 60px; display: flex; flex-direction: column; gap: 20px; }
-    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
-    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
-    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0; }
-    .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
-    .filters select, .filters input { padding: 7px 10px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
-    .filters select:focus, .filters input:focus { outline: none; border-color: var(--green-light); }
-    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: var(--green); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
-    .btn-ghost { background: #eee; color: #444; }
-    .btn-ghost:hover:not(:disabled) { background: #ddd; }
-    .btn-sm { padding: 4px 10px; font-size: 12px; }
-    .btn-danger { background: var(--danger); color: #fff; }
-    .btn-danger:hover:not(:disabled) { background: #b71c1c; }
-    .btn-amber { background: var(--amber); color: #fff; }
-    .btn-amber:hover:not(:disabled) { background: #e65100; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { text-align: left; color: var(--muted); font-size: 11px; font-weight: 700; padding: 6px 10px; border-bottom: 2px solid var(--border); white-space: nowrap; }
-    td { padding: 9px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    .filters select,
+    .filters input {
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .filters select:focus,
+    .filters input:focus { outline: none; border-color: var(--color-primary-light); }
+
+    /* ── Tabela (cabeçalho neutro — tabela financeira) ── */
+    th {
+      text-align: left;
+      color: var(--color-muted);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 7px 10px;
+      border-bottom: 2px solid var(--color-border);
+      white-space: nowrap;
+      background: var(--color-bg);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
     tr.row-atrasado td { background: #fff8f8; }
     tr.row-atrasado:hover td { background: #ffebee; }
-    tr:hover td { background: var(--green-bg); }
-    .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; }
-    .tag-ok      { background: #e8f5e9; color: #1b5e20; }
-    .tag-warn    { background: #fff8e1; color: #e65100; }
-    .tag-danger  { background: #ffebee; color: var(--danger); }
-    .tag-muted   { background: #f5f5f5; color: #666; }
-    .modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:100; align-items:center; justify-content:center; }
-    .modal-bg.open { display:flex; }
-    .modal { background:#fff; border-radius: 8px; padding: 28px 32px; width: 520px; max-width: 96vw; max-height: 90vh; overflow-y: auto; }
-    .modal-title { font-size: 15px; font-weight: 700; color: var(--green); margin: 0 0 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .field input, .field select, .field textarea { padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; color: var(--text); }
-    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
-    .col-span-2 { grid-column: span 2; }
-    .form-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; align-items: center; }
+
+    /* ── Modal de formulário ── */
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 400;
+      align-items: center; justify-content: center;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      width: 520px;
+      max-width: 96vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-title {
+      font-size: 15px; font-weight: 700;
+      color: var(--color-primary);
+      margin: 0 0 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    /* ── Info box (detalhe da conta) ── */
+    .info-box {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      line-height: 1.9;
+    }
+    .info-box strong {
+      display: inline-block;
+      min-width: 120px;
+      color: var(--color-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    /* ── Msg ── */
     .msg { padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-bottom: 12px; }
-    .msg-ok  { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
-    .msg-err { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
-    .info-box { background: #f5f5f5; border-radius: var(--radius); padding: 12px 14px; font-size: 13px; margin-bottom: 16px; line-height: 1.8; }
-    .info-box strong { display: inline-block; min-width: 120px; color: var(--muted); font-size: 11px; text-transform: uppercase; }
-    .empty-state { text-align: center; color: var(--muted); padding: 32px 0; }
   </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a href="/" class="nav-brand">GHTec</a>
-  <a href="/proposals.html" class="nav-link">Propostas</a>
-  <a href="/kanban.html" class="nav-link">Kanban</a>
-  <a href="/clients.html" class="nav-link">Clientes</a>
-  <a href="/parts.html" class="nav-link">Peças</a>
-  <a href="/stock.html" class="nav-link">Estoque</a>
-  <a href="/fornecedores.html" class="nav-link">Fornecedores</a>
-  <a href="/notas-recebidas.html" class="nav-link">Notas Recebidas</a>
-  <a href="/contas-pagar.html" class="nav-link active">Contas a Pagar</a>
-  <a href="/financeiro.html" class="nav-link">Financeiro</a>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logoGHTEC.png" alt="GHTec" class="app-logo">
+  </a>
+  <div class="nav-group" data-group="comercial">
+    <button class="nav-group-btn">Comercial <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/proposals.html" class="nav-dd-link">Propostas</a>
+      <a href="/kanban.html" class="nav-dd-link">Kanban</a>
+      <a href="/clients.html" class="nav-dd-link">Clientes</a>
+      <a href="/objetos.html" class="nav-dd-link">Objetos e Condições</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="operacional">
+    <button class="nav-group-btn">Operacional <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/parts.html" class="nav-dd-link">Peças</a>
+      <a href="/stock.html" class="nav-dd-link">Estoque</a>
+      <a href="/fornecedores.html" class="nav-dd-link">Fornecedores</a>
+      <a href="/notas-recebidas.html" class="nav-dd-link">Notas Recebidas</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="financeiro">
+    <button class="nav-group-btn">Financeiro <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/contas-pagar.html" class="nav-dd-link">Contas a Pagar</a>
+      <a href="/financeiro.html" class="nav-dd-link">Financeiro</a>
+    </div>
+  </div>
   <div class="nav-right">
     <span id="navUserLabel"></span>
+    <a href="/usuarios.html" class="nav-icon-link" title="Usuários e configurações">&#9881;</a>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </nav>
 
-<div class="page-bar"><h1>Contas a Pagar</h1></div>
+<div class="page-bar">
+  <div>
+    <h1>Contas a Pagar</h1>
+    <div>Gestão de pagamentos e obrigações financeiras</div>
+  </div>
+  <a href="/financeiro.html" class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);">← Painel Financeiro</a>
+</div>
 
 <div class="container">
   <div class="card">
     <div class="card-header">
-      <span class="card-title">Contas a pagar</span>
+      <span class="section-title">Contas a pagar</span>
       <button class="btn btn-primary" onclick="openNovaContaModal()">+ Nova conta</button>
     </div>
 
@@ -333,7 +379,7 @@ async function loadList() {
             <td style="white-space:nowrap">
               ${(c.status === 'em_aberto' || c.atrasado) ? `<button class="btn btn-amber btn-sm" onclick="openBaixa(${c.id})">Dar baixa</button>` : ''}
               ${c.status === 'pago' && c.comprovante_pagamento ? `<a class="btn btn-ghost btn-sm" href="/files/comprovantes/${c.comprovante_pagamento.replace('comprovantes/','')}" target="_blank">Comprovante</a>` : ''}
-              ${(c.status !== 'cancelado' && c.status !== 'pago' && userRole === 'admin') ? `<button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="openCancelamento(${c.id})">Cancelar</button>` : ''}
+              ${(c.status !== 'cancelado' && c.status !== 'pago' && (userRole === 'admin' || userRole === 'financeiro')) ? `<button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="openCancelamento(${c.id})">Cancelar</button>` : ''}
             </td>
           </tr>`).join("")}
       </tbody>
@@ -461,15 +507,10 @@ function labelStatus(s, a) { return a ? "atrasado" : { em_aberto: "em aberto", p
 
 function showToast(msg, ok = true) {
   const t = document.createElement("div");
+  t.className = "toast " + (ok ? "success" : "error");
   t.textContent = msg;
-  Object.assign(t.style, {
-    position: "fixed", bottom: "24px", right: "24px",
-    background: ok ? "#2e7d32" : "#c62828", color: "#fff",
-    padding: "12px 20px", borderRadius: "6px", fontSize: "13px", fontWeight: "700",
-    zIndex: "9999", boxShadow: "0 4px 12px rgba(0,0,0,0.2)", transition: "opacity 0.4s",
-  });
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = "0"; setTimeout(() => t.remove(), 400); }, 2800);
+  setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity 0.4s"; setTimeout(() => t.remove(), 400); }, 3000);
 }
 
 init();

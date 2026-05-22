@@ -3,38 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/css/styles.css">
   <title>GHTec — Peças</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    :root {
-      --green: #2e7d32; --green-light: #43a047; --green-bg: #f1f8f1;
-      --border: #c8d8c8; --text: #1f1f1f; --muted: #666;
-      --danger: #c62828; --amber: #f57f17; --radius: 6px;
-    }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; font-size: 14px; background: #f5f5f5; color: var(--text); }
-
-    /* Nav */
-    .nav { background: var(--green); display: flex; align-items: center; padding: 0 32px; flex-wrap: wrap; }
-    .nav-brand { color: #fff; text-decoration: none; font-size: 17px; font-weight: 800; padding: 16px 20px 16px 0; margin-right: 12px; border-right: 1px solid rgba(255,255,255,0.25); }
-    .nav-link { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 13px; font-weight: 600; padding: 19px 14px; border-bottom: 3px solid transparent; display: inline-block; transition: all 0.15s; }
-    .nav-link:hover  { color: #fff; border-bottom-color: rgba(255,255,255,0.5); }
-    .nav-link.active { color: #fff; border-bottom-color: #fff; }
-    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 2px; padding-right: 8px; }
-    #navUserLabel { color: rgba(255,255,255,0.7); font-size: 12px; padding: 0 10px; border-left: 1px solid rgba(255,255,255,0.2); margin-left: 4px; white-space: nowrap; }
-    .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; font-weight: 600; margin-left: 4px; }
-    .btn-logout:hover { background: rgba(255,255,255,0.2); }
-    .page-bar { background: #1b5e20; color: rgba(255,255,255,0.85); padding: 10px 32px; font-size: 13px; }
-    .page-bar h1 { margin: 0 0 2px; font-size: 16px; font-weight: 700; color: #fff; }
-
-    /* Layout */
-    .container { max-width: 1100px; margin: 28px auto; padding: 0 16px 60px; }
-
-    /* Card */
-    .card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; }
-    .card-title { font-size: 12px; font-weight: 700; letter-spacing: 0.7px; color: var(--green); text-transform: uppercase; margin: 0 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-
-    /* Home — cards de escolha */
+/* Layout */
+/* Card */
+/* Home — cards de escolha */
     .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 580px; margin: 40px auto; }
     @media (max-width: 500px) { .home-grid { grid-template-columns: 1fr; } }
     .home-card { background: #fff; border: 2px solid var(--border); border-radius: 10px; padding: 32px 24px; text-align: center; cursor: pointer; transition: all 0.15s; user-select: none; }
@@ -45,9 +20,7 @@
 
     /* Barra de sub-view */
     .view-topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
-    .btn-back { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; background: #eee; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 700; color: #444; cursor: pointer; font-family: inherit; transition: background 0.12s; }
-    .btn-back:hover { background: #ddd; }
-    .view-topbar-title { font-size: 15px; font-weight: 700; color: var(--green); flex: 1; }
+.view-topbar-title { font-size: 15px; font-weight: 700; color: var(--green); flex: 1; }
     .btn-sm { padding: 5px 14px; font-size: 12px; }
 
     /* Search + list */
@@ -67,18 +40,8 @@
 
     /* Form */
     .form-card { max-width: 760px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .field input, .field select, .field textarea {
-      padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius);
-      font-size: 13px; font-family: inherit; color: var(--text);
-    }
-    .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
-    .field input.error, .field select.error { border-color: var(--danger); }
-    .field textarea { resize: vertical; min-height: 58px; }
-    .col-span-2 { grid-column: span 2; }
-    .field-note { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .field input.error, .field select.error { border-color: var(--color-danger); }
+.field-note { font-size: 11px; color: var(--muted); margin-top: 3px; }
 
     /* Código interno gerado — leitura */
     .internal-code-display {
@@ -89,22 +52,12 @@
     .internal-code-display.empty { color: var(--muted); font-weight: 400; font-size: 12px; font-family: inherit; letter-spacing: 0; }
 
     /* Buttons */
-    .form-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 8px 18px; border-radius: var(--radius); border: none; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: var(--green); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--green-light); }
-    .btn-ghost { background: #eee; color: #444; }
-    .btn-ghost:hover:not(:disabled) { background: #ddd; }
-
-    /* Status message */
+/* Status message */
     .msg { font-size: 13px; padding: 8px 12px; border-radius: var(--radius); }
-    .msg.success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
-    .msg.error   { background: #ffebee; color: var(--danger); border: 1px solid #ef9a9a; }
-    .msg.warn    { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; }
-    .edit-badge  { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+.edit-badge  { background: #fff8e1; color: var(--amber); border: 1px solid #ffe082; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; }
 
-    @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } .col-span-2 { grid-column: span 1; } }
+    @media (max-width: 640px) {
+}
 
     /* ── Histórico de preços ── */
     #priceHistoryCard { display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; }
@@ -115,9 +68,10 @@
     .ph-client-row select:focus { outline: none; border-color: var(--green-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
     .btn-compare { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: var(--radius); border: 1px solid var(--green-light); background: var(--green-bg); color: var(--green); font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.15s; white-space: nowrap; }
     .btn-compare:hover { background: #dcedc8; }
-    .ph-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .ph-table th { background: var(--green-bg); color: var(--green); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 6px 8px; border: 1px solid var(--border); text-align: left; white-space: nowrap; }
-    .ph-table td { padding: 6px 8px; border: 1px solid #eee; color: var(--text); vertical-align: middle; }
+    .ph-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+    .ph-table th { background: var(--color-primary-bg); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--color-primary); padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--color-border); }
+    .ph-table td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+    .ph-table tr:last-child td { border-bottom: none; }
     .ph-table tr:nth-child(even) td { background: #fafafa; }
     .ph-empty { font-size: 12px; color: var(--muted); padding: 10px 0; }
     .ph-hint  { font-size: 12px; color: var(--muted); padding: 10px 0; font-style: italic; }
@@ -134,7 +88,7 @@
     .cat-del:hover { color: var(--danger); background: #ffebee; }
     #catListLoading { text-align: center; color: var(--muted); padding: 20px 0; font-size: 13px; }
 
-    /* ── Modal comparação ── */
+    /* ── Modal comparação + referências ── */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
     .modal-box { background: #fff; border-radius: 8px; padding: 24px 28px; max-width: 680px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
@@ -145,31 +99,62 @@
     .modal-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
     .chart-wrap { position: relative; width: 100%; }
     .compare-empty { font-size: 13px; color: var(--muted); padding: 20px 0; text-align: center; }
+
+    /* Modal de referências de preço */
+    #priceRefModal .modal-box { max-width: 800px; }
+    .ref-admin-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .ref-admin-title { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; color: var(--color-primary); text-transform: uppercase; margin-bottom: 14px; }
+    .ref-form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .ref-form-row .field { flex: 1; min-width: 160px; }
+    .ref-form-row .field label { font-size: 11px; font-weight: 700; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .ref-form-row .field input,
+    .ref-form-row .field select { padding: 8px 10px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; width: 100%; }
+    .ref-form-row .field input:focus,
+    .ref-form-row .field select:focus { outline: none; border-color: var(--color-primary-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.14); }
   </style>
 </head>
 <body>
 
 <nav class="nav">
-  <a class="nav-brand" href="/">GHTec</a>
-  <a class="nav-link" href="/proposals.html">Propostas</a>
-  <a class="nav-link" href="/clients.html">Clientes</a>
-  <a class="nav-link active" href="/parts.html">Peças</a>
-  <a class="nav-link" href="/objetos.html">Objetos e Condições</a>
-  <a class="nav-link" href="/kanban.html">Kanban</a>
-  <a class="nav-link" href="/stock.html">Estoque</a>
-  <a class="nav-link" href="/fornecedores.html">Fornecedores</a>
-  <a class="nav-link" href="/notas-recebidas.html">Notas Recebidas</a>
-  <a class="nav-link" href="/contas-pagar.html">Contas a Pagar</a>
-  <a class="nav-link" href="/financeiro.html">Financeiro</a>
+  <a class="nav-brand" href="/">
+    <img src="/assets/logoGHTEC.png" alt="GHTec" class="app-logo">
+  </a>
+  <div class="nav-group" data-group="comercial">
+    <button class="nav-group-btn">Comercial <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/proposals.html" class="nav-dd-link">Propostas</a>
+      <a href="/kanban.html" class="nav-dd-link">Kanban</a>
+      <a href="/clients.html" class="nav-dd-link">Clientes</a>
+      <a href="/objetos.html" class="nav-dd-link">Objetos e Condições</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="operacional">
+    <button class="nav-group-btn">Operacional <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/parts.html" class="nav-dd-link">Peças</a>
+      <a href="/stock.html" class="nav-dd-link">Estoque</a>
+      <a href="/fornecedores.html" class="nav-dd-link">Fornecedores</a>
+      <a href="/notas-recebidas.html" class="nav-dd-link">Notas Recebidas</a>
+    </div>
+  </div>
+  <div class="nav-group" data-group="financeiro">
+    <button class="nav-group-btn">Financeiro <span class="nav-arrow">&#9662;</span></button>
+    <div class="nav-dropdown">
+      <a href="/contas-pagar.html" class="nav-dd-link">Contas a Pagar</a>
+      <a href="/financeiro.html" class="nav-dd-link">Financeiro</a>
+    </div>
+  </div>
   <div class="nav-right">
-    <a class="nav-link" href="/usuarios.html">Usuários</a>
     <span id="navUserLabel"></span>
+    <a href="/usuarios.html" class="nav-icon-link" title="Usuários e configurações">&#9881;</a>
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </nav>
 <div class="page-bar">
-  <h1>Peças</h1>
-  Cadastro de peças e categorias
+  <div>
+    <h1>Peças</h1>
+    <div>Cadastro de peças e categorias</div>
+  </div>
 </div>
 
 <div class="container">
@@ -179,7 +164,7 @@
     <div class="home-grid">
       <div class="home-card" onclick="showView('partsMenu')">
         <div class="home-card-icon">&#9881;</div>
-        <div class="home-card-title">Peças</div>
+        <div class="home-card-title">Lista de Peças</div>
         <div class="home-card-desc">Cadastro e edição do catálogo de peças</div>
       </div>
       <div class="home-card" onclick="showView('catsMenu')">
@@ -194,7 +179,7 @@
   <div id="viewPartsMenu" style="display:none">
     <div class="view-topbar">
       <button class="btn-back" onclick="showView('home')">&#8592; Voltar</button>
-      <span class="view-topbar-title">Peças</span>
+      <span class="view-topbar-title">Lista de Peças</span>
     </div>
     <div class="home-grid">
       <div class="home-card" onclick="goToPartCreate()">
@@ -307,8 +292,12 @@
       <button class="btn btn-primary btn-sm" onclick="goToPartCreate()">+ Nova peça</button>
     </div>
     <div class="card">
-      <div class="search-wrap">
-        <input type="text" id="searchInput" placeholder="Buscar por nome, categoria, código..." autocomplete="off" />
+      <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center">
+        <select id="categoryFilter" style="padding:8px 10px; border:1px solid #ccc; border-radius:var(--radius); font-size:13px; font-family:inherit; background:#fff; flex-shrink:0; min-width:180px; color:var(--color-text)">
+          <option value="">Todas as categorias</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="Buscar por nome, código..." autocomplete="off"
+          style="flex:1; min-width:160px; padding:8px 12px; border:1px solid #ccc; border-radius:var(--radius); font-size:13px; font-family:inherit" />
       </div>
       <div id="listLoading">Carregando...</div>
       <div class="part-list" id="partList"></div>
@@ -385,6 +374,43 @@
 
 </div>
 
+<!-- Modal de referências de preço por cliente -->
+<div class="modal-overlay" id="priceRefModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="priceRefModalTitle">Referências de preço por cliente</span>
+      <button class="modal-close" id="closePriceRefModal" type="button">&times;</button>
+    </div>
+    <div class="modal-subtitle" id="priceRefModalSubtitle"></div>
+    <div id="priceRefModalBody"><div class="compare-empty">Carregando...</div></div>
+
+    <!-- Seção admin: adicionar / editar referência manual -->
+    <div class="ref-admin-section" id="priceRefAdminSection" style="display:none">
+      <div class="ref-admin-title">Adicionar / editar referência manual</div>
+      <div class="ref-form-row">
+        <div class="field" style="flex:2; min-width:200px">
+          <label>Cliente *</label>
+          <select id="priceRefClientId">
+            <option value="">— Selecione —</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1; min-width:140px">
+          <label>Preço de referência (R$) *</label>
+          <input type="text" id="priceRefPrice" placeholder="0,00" autocomplete="off" />
+        </div>
+        <div class="field" style="flex:2; min-width:180px">
+          <label>Observações</label>
+          <input type="text" id="priceRefNotes" placeholder="Opcional" />
+        </div>
+        <div style="flex-shrink:0; padding-bottom:2px">
+          <button class="btn btn-primary btn-sm" id="btnSavePriceRef" type="button">Salvar</button>
+        </div>
+      </div>
+      <div id="priceRefFormMsg" style="display:none; margin-top:8px" class="msg"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de comparação de preços -->
 <div class="modal-overlay" id="compareModal">
   <div class="modal-box">
@@ -425,7 +451,7 @@ function showView(name) {
   const target = VIEW_IDS[name];
   if (target) v(target).style.display = 'block';
 
-  if (name === 'partList')   { loadParts(v('searchInput').value.trim()); }
+  if (name === 'partList')   { loadCategoryFilter(); loadParts(true); }
   if (name === 'partCreate') { loadCategorySelect(); }
   if (name === 'catList')    { loadCategories(); }
 }
@@ -451,8 +477,9 @@ const _urlParams = new URLSearchParams(location.search);
 // PEÇAS
 // ═══════════════════════════════════════════════════════════════════
 
-let editingId    = null;
-let compareChart = null;
+let editingId     = null;
+let compareChart  = null;
+let allPartsCached = [];
 
 function formatBRL(v) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
@@ -513,31 +540,98 @@ function renderList(parts) {
     const div = document.createElement('div');
     div.className = 'part-item' + (p.id === editingId ? ' selected' : '');
     div.dataset.id = p.id;
+    div.style.display = 'flex';
+    div.style.alignItems = 'center';
+    div.style.justifyContent = 'space-between';
+    div.style.gap = '8px';
     div.innerHTML = `
-      <div class="pi-name">
-        ${escHtml(p.nome)}
-        ${p.codigo_interno ? `<span class="pi-code">${escHtml(p.codigo_interno)}</span>` : ''}
+      <div style="min-width:0; flex:1">
+        <div class="pi-name">
+          ${escHtml(p.nome)}
+          ${p.codigo_interno ? `<span class="pi-code">${escHtml(p.codigo_interno)}</span>` : ''}
+        </div>
+        ${catLabel ? `<div class="pi-sub">${escHtml(catLabel)}</div>` : ''}
       </div>
-      ${catLabel ? `<div class="pi-sub">${escHtml(catLabel)}</div>` : ''}`;
-    div.addEventListener('click', () => loadForEdit(p.id));
+      <div style="display:flex; gap:5px; flex-shrink:0">
+        <button class="btn btn-secondary btn-sm btn-price-ref"
+          data-id="${p.id}" data-nome="${escHtml(p.nome)}"
+          type="button" title="Ver referências de preço por cliente"
+          style="font-size:11px; padding:4px 10px; white-space:nowrap">
+          Preços
+        </button>
+        <button class="btn btn-danger-outline btn-sm btn-del-part"
+          data-id="${p.id}" data-nome="${escHtml(p.nome)}"
+          type="button" title="Excluir peça"
+          style="font-size:11px; padding:4px 8px; white-space:nowrap">
+          &times;
+        </button>
+      </div>`;
+    div.addEventListener('click', e => {
+      if (e.target.closest('.btn-price-ref') || e.target.closest('.btn-del-part')) return;
+      loadForEdit(p.id);
+    });
+    div.querySelector('.btn-price-ref').addEventListener('click', e => {
+      e.stopPropagation();
+      openPriceRefModal(p.id, p.nome);
+    });
+    div.querySelector('.btn-del-part').addEventListener('click', e => {
+      e.stopPropagation();
+      confirmDeletePart(p.id, p.nome);
+    });
     container.appendChild(div);
   });
 }
 
-async function loadParts(q) {
-  v('listLoading').style.display = 'block';
-  v('partList').innerHTML = '';
-  try {
-    const url = q ? `/parts/search?q=${encodeURIComponent(q)}` : '/parts';
-    renderList(await (await fetch(url)).json());
-  } catch { v('listLoading').textContent = 'Erro ao carregar.'; }
+async function loadParts(forceRefresh = false) {
+  if (forceRefresh || !allPartsCached.length) {
+    v('listLoading').style.display = 'block';
+    v('partList').innerHTML = '';
+    try {
+      allPartsCached = await (await fetch('/parts')).json();
+    } catch {
+      v('listLoading').textContent = 'Erro ao carregar.';
+      return;
+    }
+  }
+  filterAndRenderParts();
 }
 
-let searchT;
-v('searchInput').addEventListener('input', e => {
-  clearTimeout(searchT);
-  searchT = setTimeout(() => loadParts(e.target.value.trim()), 280);
-});
+function filterAndRenderParts() {
+  const catId = v('categoryFilter').value;
+  const text  = v('searchInput').value.trim().toLowerCase();
+
+  let filtered = allPartsCached;
+  if (catId) {
+    filtered = filtered.filter(p => String(p.category_id) === catId);
+  }
+  if (text) {
+    filtered = filtered.filter(p =>
+      (p.nome           || '').toLowerCase().includes(text) ||
+      (p.codigo_interno || '').toLowerCase().includes(text) ||
+      (p.identity_code  || '').toLowerCase().includes(text) ||
+      (p.categoria      || '').toLowerCase().includes(text) ||
+      (p.category_name  || '').toLowerCase().includes(text)
+    );
+  }
+  renderList(filtered);
+}
+
+async function loadCategoryFilter() {
+  try {
+    const cats = await (await fetch('/part-categories')).json();
+    const sel  = v('categoryFilter');
+    while (sel.options.length > 1) sel.remove(1);
+    cats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.name}  (${c.code})`;
+      sel.appendChild(opt);
+    });
+  } catch { /* silencioso */ }
+}
+
+v('searchInput').addEventListener('input', filterAndRenderParts);
+v('categoryFilter').addEventListener('change', filterAndRenderParts);
 
 // ─── Clientes para histórico ──────────────────────────────────────────────────
 async function loadClientSelect() {
@@ -743,7 +837,7 @@ v('partForm').addEventListener('submit', async e => {
     if (res.ok) {
       showMsg('success', editingId ? 'Peça atualizada com sucesso.' : 'Peça criada com sucesso.');
       // Refresca a lista em background
-      loadParts(v('searchInput').value.trim());
+      loadParts(true);
       if (!editingId) { fillForm(data.part); setEditMode(data.part); }
       else v('formTitle').textContent = `Editando: ${data.part.nome}`;
     } else if (res.status === 409) {
@@ -889,8 +983,194 @@ async function deleteCat(e, id) {
   } catch { alert('Erro de conexão.'); }
 }
 
+// ── Excluir peça ──────────────────────────────────────────────────────────────
+
+async function confirmDeletePart(id, nome) {
+  if (!confirm(`Excluir a peça "${nome}"?\n\nEsta ação não pode ser desfeita.`)) return;
+
+  try {
+    const res  = await fetch(`/parts/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+
+    if (res.ok) {
+      if (editingId === id) setCreateMode();
+      loadParts(true);
+      // Toast rápido
+      const toast = document.createElement('div');
+      toast.className = 'toast success';
+      toast.textContent = 'Peça excluída com sucesso.';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    } else {
+      alert(data.message || 'Erro ao excluir peça.');
+    }
+  } catch { alert('Erro de conexão com o servidor.'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REFERÊNCIAS DE PREÇO POR CLIENTE
+// ═══════════════════════════════════════════════════════════════════
+
+let isAdmin = false;
+let currentPriceRefPartId = null;
+let allClientsCache = [];
+
+async function openPriceRefModal(partId, partNome) {
+  currentPriceRefPartId = partId;
+  v('priceRefModalSubtitle').textContent = `Peça: ${partNome}`;
+  v('priceRefModalBody').innerHTML = '<div class="compare-empty">Carregando...</div>';
+  v('priceRefModal').classList.add('open');
+
+  if (isAdmin) {
+    v('priceRefAdminSection').style.display = 'block';
+    await loadClientsForRefSelect();
+    // Limpa o formulário ao abrir
+    v('priceRefClientId').value = '';
+    v('priceRefPrice').value    = '';
+    v('priceRefNotes').value    = '';
+    v('priceRefFormMsg').style.display = 'none';
+  } else {
+    v('priceRefAdminSection').style.display = 'none';
+  }
+
+  await loadPriceRefs(partId);
+}
+
+async function loadClientsForRefSelect() {
+  if (!allClientsCache.length) {
+    try { allClientsCache = await (await fetch('/clients')).json(); } catch { allClientsCache = []; }
+  }
+  const sel = v('priceRefClientId');
+  while (sel.options.length > 1) sel.remove(1);
+  allClientsCache.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.nome;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadPriceRefs(partId) {
+  const body = v('priceRefModalBody');
+  try {
+    const refs = await (await fetch(`/parts/${partId}/client-price-references`)).json();
+    if (!refs.length) {
+      body.innerHTML = '<div class="compare-empty">Nenhuma referência de preço cadastrada para esta peça.</div>';
+      return;
+    }
+
+    const adminCol = isAdmin ? '<th style="width:80px"></th>' : '';
+    let html = `
+      <table class="ph-table" style="width:100%">
+        <thead><tr>
+          <th>Cliente</th>
+          <th>CNPJ</th>
+          <th style="text-align:right">Preço de referência</th>
+          <th>Origem</th>
+          <th>Atualizado em</th>
+          ${adminCol}
+        </tr></thead>
+        <tbody>`;
+
+    refs.forEach(r => {
+      const sourceBadge = r.source === 'manual'
+        ? '<span class="tag tag-info">Manual</span>'
+        : '<span class="tag tag-muted">Última proposta</span>';
+      const editCell = isAdmin
+        ? `<td style="text-align:right">
+            <button class="btn btn-secondary btn-sm btn-edit-ref"
+              data-client-id="${r.client_id}"
+              data-price="${r.reference_price}"
+              data-notes="${escHtml(r.notes || '')}"
+              type="button" style="font-size:11px; padding:3px 9px">Editar</button>
+           </td>`
+        : '';
+      html += `<tr>
+        <td style="font-weight:600">${escHtml(r.client_nome)}</td>
+        <td style="color:var(--muted); font-size:12px">${escHtml(r.cnpj || '—')}</td>
+        <td style="font-weight:700; text-align:right">${formatBRL(r.reference_price)}</td>
+        <td>${sourceBadge}</td>
+        <td style="color:var(--muted); font-size:11px; white-space:nowrap">${escHtml(r.updated_at || '—')}</td>
+        ${editCell}
+      </tr>`;
+    });
+
+    html += '</tbody></table>';
+    body.innerHTML = html;
+
+    // Delegação para botões de editar
+    body.addEventListener('click', function handler(e) {
+      const btn = e.target.closest('.btn-edit-ref');
+      if (!btn) return;
+      v('priceRefClientId').value = btn.dataset.clientId;
+      v('priceRefPrice').value    = Number(btn.dataset.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      v('priceRefNotes').value    = btn.dataset.notes || '';
+      v('priceRefFormMsg').style.display = 'none';
+      v('priceRefAdminSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      body.removeEventListener('click', handler);
+    }, { once: false });
+
+  } catch {
+    body.innerHTML = '<div class="compare-empty">Erro ao carregar referências.</div>';
+  }
+}
+
+v('closePriceRefModal').addEventListener('click', () => v('priceRefModal').classList.remove('open'));
+v('priceRefModal').addEventListener('click', e => { if (e.target === v('priceRefModal')) v('priceRefModal').classList.remove('open'); });
+
+v('btnSavePriceRef').addEventListener('click', async () => {
+  const clientId  = v('priceRefClientId').value;
+  const priceRaw  = v('priceRefPrice').value.trim();
+  const notes     = v('priceRefNotes').value.trim();
+  const msgEl     = v('priceRefFormMsg');
+
+  function showRefMsg(type, text) {
+    msgEl.className = `msg msg-${type}`; msgEl.textContent = text; msgEl.style.display = 'block';
+  }
+
+  if (!clientId) { showRefMsg('err', 'Selecione um cliente.'); return; }
+  const priceNum = parseFloat(priceRaw.replace(/\./g, '').replace(',', '.'));
+  if (!priceRaw || isNaN(priceNum) || priceNum < 0) { showRefMsg('err', 'Preço de referência inválido.'); return; }
+
+  const btn = v('btnSavePriceRef');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  msgEl.style.display = 'none';
+
+  try {
+    const res  = await fetch(`/parts/${currentPriceRefPartId}/client-price-references`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ client_id: Number(clientId), reference_price: priceNum, notes: notes || null }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showRefMsg('ok', 'Referência salva com sucesso.');
+      v('priceRefClientId').value = '';
+      v('priceRefPrice').value    = '';
+      v('priceRefNotes').value    = '';
+      await loadPriceRefs(currentPriceRefPartId);
+    } else {
+      showRefMsg('err', data.message || 'Erro ao salvar.');
+    }
+  } catch { showRefMsg('err', 'Erro de conexão.'); }
+  finally { btn.disabled = false; btn.textContent = 'Salvar'; }
+});
+
+// Fecha com Esc
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') v('priceRefModal').classList.remove('open');
+});
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (async function init() {
+  // Detecta role do usuário logado
+  try {
+    const meRes = await fetch('/auth/me');
+    if (meRes.ok) {
+      const meData = await meRes.json();
+      isAdmin = meData.user?.role === 'admin';
+    }
+  } catch { /* silencioso */ }
+
   loadClientSelect();
   loadCategorySelect();
 
