@@ -428,6 +428,16 @@
 <script>
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function v(id)      { return document.getElementById(id); }
+
+function parseBrazilianCurrency(raw) {
+  if (raw == null) return null;
+  const str = String(raw).trim().replace(/[R$\s]/g, '');
+  if (!str) return null;
+  const num = str.includes(',')
+    ? parseFloat(str.replace(/\./g, '').replace(',', '.'))
+    : parseFloat(str);
+  return isNaN(num) ? null : num;
+}
 function val(id)    { return v(id).value.trim(); }
 function set(id, x) { v(id).value = x ?? ''; }
 function escHtml(s) {
@@ -1128,8 +1138,8 @@ v('btnSavePriceRef').addEventListener('click', async () => {
   }
 
   if (!clientId) { showRefMsg('err', 'Selecione um cliente.'); return; }
-  const priceNum = parseFloat(priceRaw.replace(/\./g, '').replace(',', '.'));
-  if (!priceRaw || isNaN(priceNum) || priceNum < 0) { showRefMsg('err', 'Preço de referência inválido.'); return; }
+  const priceNum = parseBrazilianCurrency(priceRaw);
+  if (priceNum === null || priceNum < 0) { showRefMsg('err', 'Preço de referência inválido.'); return; }
 
   const btn = v('btnSavePriceRef');
   btn.disabled = true; btn.textContent = 'Salvando...';

@@ -169,7 +169,16 @@ function upsertClientPriceRefService(partId, clientId, data, userId) {
     err.code = "NOT_FOUND";
     throw err;
   }
-  const price = parseFloat(String(data.reference_price ?? "").replace(/\./g, "").replace(",", "."));
+  const rawPrice = data.reference_price;
+  let price;
+  if (typeof rawPrice === "number") {
+    price = rawPrice;
+  } else {
+    const str = String(rawPrice ?? "").trim().replace(/[R$\s]/g, "");
+    price = str.includes(",")
+      ? parseFloat(str.replace(/\./g, "").replace(",", "."))
+      : parseFloat(str);
+  }
   if (isNaN(price) || price < 0) {
     const err = new Error("Preço de referência inválido.");
     err.code = "VALIDATION";
