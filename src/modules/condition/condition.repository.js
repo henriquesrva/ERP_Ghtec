@@ -41,7 +41,12 @@ function updateCondition(id, data) {
 }
 
 function deleteCondition(id) {
-  db.prepare("DELETE FROM commercial_conditions WHERE id = ?").run(id);
+  // Nullifica o vínculo em propostas antes de deletar (a condição é snapshot — os
+  // campos de texto nas propostas preservam os valores originais).
+  db.transaction(() => {
+    db.prepare(`UPDATE proposals SET commercial_condition_id = NULL WHERE commercial_condition_id = ?`).run(id);
+    db.prepare(`DELETE FROM commercial_conditions WHERE id = ?`).run(id);
+  })();
 }
 
 module.exports = {

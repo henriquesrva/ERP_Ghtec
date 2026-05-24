@@ -154,9 +154,23 @@ th {
   font-weight: 700;
 }
 
+.total-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1mm;
+}
+
 .total-value {
   font-size: 17px;
   font-weight: 700;
+}
+
+.total-extenso {
+  font-size: 10px;
+  font-style: italic;
+  color: #444;
+  text-align: right;
 }
 
 .conditions {

@@ -37,8 +37,7 @@ function getStockPartById(id) {
 }
 
 function listMovements({ limit = 100, offset = 0, part_id } = {}) {
-  const where = part_id ? `WHERE sm.part_id = ${Number(part_id)}` : '';
-  return db.prepare(`
+  const base = `
     SELECT
       sm.id,
       sm.part_id,
@@ -63,10 +62,12 @@ function listMovements({ limit = 100, offset = 0, part_id } = {}) {
     JOIN users   u  ON u.id  = sm.created_by_user_id
     LEFT JOIN proposals pr ON pr.id = sm.proposal_id
     LEFT JOIN clients   c  ON c.id  = sm.client_id
-    ${where}
-    ORDER BY sm.id DESC
-    LIMIT ? OFFSET ?
-  `).all(limit, offset);
+  `;
+  if (part_id) {
+    return db.prepare(`${base} WHERE sm.part_id = ? ORDER BY sm.id DESC LIMIT ? OFFSET ?`)
+      .all(Number(part_id), limit, offset);
+  }
+  return db.prepare(`${base} ORDER BY sm.id DESC LIMIT ? OFFSET ?`).all(limit, offset);
 }
 
 function getPartQtyInProposal(partId, proposalId) {

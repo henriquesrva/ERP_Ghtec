@@ -71,10 +71,18 @@ async function createProposal(req, res) {
       });
     }
 
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Erro ao gerar proposta.",
-    });
+    // Mapeia códigos conhecidos para o status HTTP correto.
+    // Evita retornar 500 para erros de validação ou conflito que são do usuário.
+    const STATUS_MAP = {
+      VALIDATION: 400, NOT_FOUND: 404, FORBIDDEN: 403,
+      CONFLICT: 409, SIGNATURE_REQUIRED: 400,
+    };
+    const status = STATUS_MAP[error.code] ?? 500;
+    const isDev  = process.env.NODE_ENV !== "production";
+    const message = status < 500 || isDev
+      ? (error.message || "Erro ao gerar proposta.")
+      : "Erro ao gerar proposta.";
+    return res.status(status).json({ success: false, message, ...(error.code ? { code: error.code } : {}) });
   }
 }
 

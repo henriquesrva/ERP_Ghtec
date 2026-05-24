@@ -341,6 +341,17 @@ function setProposalKanbanStatus(proposalId, newStatus) {
   `).run(newStatus, proposalId);
 }
 
+// Cria proposta, itens e histórico de preços em uma única transação atômica.
+// Se qualquer etapa falhar, nada é persistido — evita proposta em estado parcial.
+function createProposalAtomic(proposalData, items, { clientId, numeroProposta, dataProposta }) {
+  return db.transaction(() => {
+    const proposalId = createProposal(proposalData);
+    createProposalItems(proposalId, items);
+    insertPriceHistoryItems(clientId, proposalId, numeroProposta, dataProposta, items);
+    return proposalId;
+  })();
+}
+
 module.exports = {
   findClientByCnpj,
   findClientsByName,
@@ -349,6 +360,7 @@ module.exports = {
   createClient,
   searchClients,
   createProposal,
+  createProposalAtomic,
   createProposalItems,
   insertPriceHistoryItems,
   updatePriceHistoryPartId,

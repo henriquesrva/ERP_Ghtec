@@ -24,7 +24,7 @@ function searchClientsByQuery(q) {
 
 function createNewClient(data) {
   if (!data.nome || !data.nome.trim()) {
-    throw new Error("O campo 'nome' é obrigatório.");
+    throw Object.assign(new Error("O campo 'nome' é obrigatório."), { code: "VALIDATION" });
   }
 
   // Bloqueia CNPJ duplicado
@@ -51,7 +51,7 @@ function updateExistingClient(id, data) {
   }
 
   if (!data.nome || !data.nome.trim()) {
-    throw new Error("O campo 'nome' é obrigatório.");
+    throw Object.assign(new Error("O campo 'nome' é obrigatório."), { code: "VALIDATION" });
   }
 
   // Bloqueia conflito de CNPJ com outro cliente

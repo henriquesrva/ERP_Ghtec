@@ -10,9 +10,7 @@ const {
   findClientsByExactName,
   findClientById,
   createClient,
-  createProposal,
-  createProposalItems,
-  insertPriceHistoryItems,
+  createProposalAtomic,
   updatePriceHistoryPartId,
   updateProposalPdfPath,
   findProposalById,
@@ -37,6 +35,7 @@ const { addComment: addKanbanComment } = require("../kanban/kanban.repository");
 
 const { formatCurrency } = require("../../shared/utils/currency");
 const { normalizeText } = require("../../shared/utils/normalize");
+const { valorPorExtenso } = require("../../shared/utils/extensao");
 
 function todayFormatted() {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -110,12 +109,12 @@ function buildTemplateData(proposalData) {
     itens: formattedItems,
     valor_total: formatCurrency(total),
     valor_total_raw: total,
+    valor_total_extenso: proposalData.valor_total_extenso,
 
     condicoes: proposalData.condicoes,
     responsavel: proposalData.responsavel,
     observacoes: proposalData.observacoes || null,
 
-    // AJUSTE ESTES NOMES PRA BATER EXATAMENTE COM OS ARQUIVOS REAIS
     marca_dagua_topo: assetDataUri("marcatopo.png"),
     marca_dagua_fundo: assetDataUri("marcabaixo.jpg"),
     marca_fixa: assetDataUri("marca_fixa.png"),
@@ -311,9 +310,33 @@ function findOrCreateClient(clientData) {
   return { clientId: existingClient.id, isNew: false, possibleDuplicates: [] };
 }
 
+function validateProposalItems(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw Object.assign(new Error("A proposta deve ter pelo menos um item."), { code: "VALIDATION" });
+  }
+  items.forEach((item, i) => {
+    if (!item.descricao || !String(item.descricao).trim()) {
+      throw Object.assign(new Error(`Item ${i + 1}: descrição é obrigatória.`), { code: "VALIDATION" });
+    }
+    const qty = Number(item.quantidade);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      throw Object.assign(new Error(`Item ${i + 1}: quantidade deve ser um inteiro maior que zero.`), { code: "VALIDATION" });
+    }
+    const price = Number(item.valor_unitario);
+    if (isNaN(price) || price < 0) {
+      throw Object.assign(new Error(`Item ${i + 1}: valor unitário não pode ser negativo.`), { code: "VALIDATION" });
+    }
+  });
+}
+
 async function createProposalFlow(data) {
   const outputDir = ensureOutputDir();
   data = { ...data, data_emissao: todayFormatted() };
+
+  if (!data.numero_proposta || !String(data.numero_proposta).trim()) {
+    throw Object.assign(new Error("Número da proposta é obrigatório."), { code: "VALIDATION" });
+  }
+  validateProposalItems(data.items);
 
   // ── Resolve client ────────────────────────────────────────────────────────
   let resolvedClient, clientId, clienteIsNew, possibleDuplicates;
@@ -350,43 +373,9 @@ async function createProposalFlow(data) {
     throw new Error("Cliente é obrigatório.");
   }
 
-  const templateData = buildTemplateData({ ...data, cliente: resolvedClient });
-
-  const total = calculateTotal(data.items);
-
-  let proposalId;
-
-  try {
-    proposalId = createProposal({
-      numero_proposta: data.numero_proposta,
-      cliente_id: clientId,
-      cidade_emissao: data.cidade_emissao || '',
-      data_emissao: data.data_emissao,
-      objeto_proposta: data.objeto_proposta,
-      forma_pagamento: data.condicoes.forma_pagamento,
-      prazo_pagamento: data.condicoes.prazo_pagamento,
-      prazo_entrega: data.condicoes.prazo_entrega,
-      garantia: data.condicoes.garantia,
-      validade: data.condicoes.validade,
-      valor_total: total,
-      valor_total_extenso: data.valor_total_extenso || "valor por extenso",
-      responsavel_nome: data.responsavel.nome,
-      responsavel_cargo: data.responsavel.cargo,
-      responsavel_email: data.responsavel.email || '',
-      responsavel_telefone: data.responsavel.telefone,
-      responsible_user_id:        data.responsible_user_id        || null,
-      responsible_name:           data.responsible_name           || data.responsavel.nome,
-      responsible_role:           data.responsible_role           || data.responsavel.cargo,
-      responsible_phone:          data.responsible_phone          || data.responsavel.telefone,
-      commercial_condition_id:    data.commercial_condition_id    || null,
-      pdf_path: null
-    });
-  } catch (error) {
-    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
-      throw new Error(`Já existe uma proposta com o número ${data.numero_proposta}.`);
-    }
-    throw error;
-  }
+  const total               = calculateTotal(data.items);
+  const totalExtenso        = valorPorExtenso(total);
+  const templateData        = buildTemplateData({ ...data, cliente: resolvedClient, valor_total_extenso: totalExtenso });
 
   const normalizedItems = data.items.map((item, index) => ({
     item_ordem:     index + 1,
@@ -397,15 +386,46 @@ async function createProposalFlow(data) {
     ncm:            item.ncm || null,
   }));
 
-  createProposalItems(proposalId, normalizedItems);
-
-  insertPriceHistoryItems(
-    clientId,
-    proposalId,
-    data.numero_proposta,
-    data.data_emissao,
-    normalizedItems
-  );
+  let proposalId;
+  try {
+    // Proposta + itens + histórico de preços em transação única — ou tudo ou nada.
+    proposalId = createProposalAtomic(
+      {
+        numero_proposta:         data.numero_proposta,
+        cliente_id:              clientId,
+        cidade_emissao:          data.cidade_emissao || '',
+        data_emissao:            data.data_emissao,
+        objeto_proposta:         data.objeto_proposta,
+        forma_pagamento:         data.condicoes.forma_pagamento,
+        prazo_pagamento:         data.condicoes.prazo_pagamento,
+        prazo_entrega:           data.condicoes.prazo_entrega,
+        garantia:                data.condicoes.garantia,
+        validade:                data.condicoes.validade,
+        valor_total:             total,
+        valor_total_extenso:     totalExtenso,
+        responsavel_nome:        data.responsavel.nome,
+        responsavel_cargo:       data.responsavel.cargo,
+        responsavel_email:       data.responsavel.email || '',
+        responsavel_telefone:    data.responsavel.telefone,
+        responsible_user_id:     data.responsible_user_id     || null,
+        responsible_name:        data.responsible_name        || data.responsavel.nome,
+        responsible_role:        data.responsible_role        || data.responsavel.cargo,
+        responsible_phone:       data.responsible_phone       || data.responsavel.telefone,
+        commercial_condition_id: data.commercial_condition_id || null,
+        pdf_path:                null,
+      },
+      normalizedItems,
+      { clientId, numeroProposta: data.numero_proposta, dataProposta: data.data_emissao }
+    );
+  } catch (error) {
+    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      throw Object.assign(
+        new Error(`Já existe uma proposta com o número ${data.numero_proposta}.`),
+        { code: "CONFLICT" }
+      );
+    }
+    throw error;
+  }
 
   // Auto-registro de peças: garante que price_history aponta para a peça correta.
   // Usa o part_id enviado pelo frontend quando disponível (peça selecionada do catálogo).

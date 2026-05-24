@@ -6,55 +6,164 @@
   <link rel="stylesheet" href="/css/styles.css">
   <title>GHTec — Nova Proposta Comercial</title>
   <style>
+    /* ── Page Header ─────────────────────────────────────────────── */
+    .np-pagebar {
+      background: linear-gradient(135deg, #003f22 0%, #006b35 100%);
+      padding: 14px 32px 18px;
+    }
+    .np-pagebar-inner { max-width: 1120px; margin: 0 auto; }
 
-    .field select {
-      padding: 9px 11px;
-      border: 1px solid #ccc;
+    .np-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .np-bread-link {
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.14s;
+    }
+    .np-bread-link:hover { color: rgba(255,255,255,0.9); }
+    .np-bread-sep  { font-size: 12px; color: rgba(255,255,255,0.3); }
+    .np-bread-cur  { font-size: 12px; color: rgba(255,255,255,0.85); font-weight: 600; }
+    .np-page-title { font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 3px; letter-spacing: -0.3px; }
+    .np-page-sub   { font-size: 12px; color: rgba(255,255,255,0.52); margin: 0; }
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    .np-container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 24px 80px;
+    }
+    .np-layout {
+      display: grid;
+      grid-template-columns: 1fr 296px;
+      gap: 24px;
+      align-items: start;
+    }
+    .np-form-col { min-width: 0; }
+
+    /* ── Card & Section Titles ───────────────────────────────────── */
+    .np-card { margin-bottom: 16px; }
+    .np-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 14px;
+      letter-spacing: -0.2px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .np-optional {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--color-muted);
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    .np-card-hint {
+      font-size: 12px;
+      color: var(--color-muted);
+      margin: -6px 0 12px;
+      line-height: 1.55;
+    }
+
+    /* ── Entity Cards (cliente, objeto selecionado) ───────────────── */
+    .np-select-btns {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .np-entity-card {
+      background: var(--color-primary-bg);
+      border: 1px solid rgba(46,125,50,0.22);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+    }
+    .np-entity-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 2px;
+    }
+    .np-entity-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: #111827;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .np-entity-change {
+      flex-shrink: 0;
+      background: #fff;
+      border: 1px solid var(--color-border);
       border-radius: var(--radius);
-      font-size: 13.5px;
-      font-family: inherit;
-      color: var(--text);
-      transition: border-color 0.15s;
-      background: #fff;
-    }
-/* ── Autocomplete dropdown ── */
-    .ac-dropdown {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-top: none;
-      border-radius: 0 0 var(--radius) var(--radius);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-      z-index: 100;
-      max-height: 240px;
-      overflow-y: auto;
-    }
-
-    .ac-item {
-      padding: 9px 12px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 13px;
-      border-bottom: 1px solid #f0f0f0;
-      transition: background 0.1s;
+      color: #374151;
+      font-family: inherit;
+      white-space: nowrap;
+      transition: background 0.12s, border-color 0.12s;
     }
+    .np-entity-change:hover { background: #f5f5f5; border-color: #aaa; }
 
-    .ac-item:last-child { border-bottom: none; }
-    .ac-item:hover, .ac-item.active { background: var(--green-bg); }
+    /* ── Responsible card ────────────────────────────────────────── */
+    .np-resp-card {
+      background: var(--color-primary-bg);
+      border: 1px solid rgba(46,125,50,0.22);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+    }
+    .np-resp-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: #111827;
+      margin-bottom: 4px;
+    }
+    .np-resp-detail { font-size: 12px; color: var(--color-muted); }
+    .np-resp-note {
+      font-size: 11px;
+      color: var(--color-muted);
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(46,125,50,0.15);
+      line-height: 1.55;
+    }
+    .np-resp-note a { color: var(--color-primary); }
 
-    .ac-item .ac-main { font-weight: 600; }
-    .ac-item .ac-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    /* Skeleton loader */
+    .np-skel {
+      background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+      background-size: 200% 100%;
+      border-radius: 4px;
+      animation: np-shimmer 1.4s ease-in-out infinite;
+    }
+    @keyframes np-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .np-skel-name { height: 18px; width: 55%; margin-bottom: 8px; }
+    .np-skel-sub  { height: 12px; width: 75%; }
 
-    /* ── Items table ── */
+    /* ── Items table ─────────────────────────────────────────────── */
+    .np-table-wrap { overflow-x: auto; margin-bottom: 12px; }
+
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 12px;
       font-size: 13px;
     }
-
     .items-table th {
       background: var(--color-primary-bg);
       font-size: 11px;
@@ -65,15 +174,14 @@
       padding: 8px 10px;
       border: 1px solid var(--color-border);
       text-align: left;
+      white-space: nowrap;
     }
-
     .items-table td {
-      border: 1px solid #e8e8e8;
+      border: 1px solid #eaebec;
       padding: 4px 5px;
       vertical-align: top;
       position: relative;
     }
-
     .items-table input {
       width: 100%;
       padding: 6px 8px;
@@ -81,217 +189,229 @@
       background: transparent;
       font-size: 13px;
       font-family: inherit;
-      color: var(--text);
+      color: var(--color-text);
     }
-
     .items-table input:focus {
-      outline: 2px solid var(--green-light);
+      outline: 2px solid var(--color-primary-light);
       border-radius: 3px;
       background: #fff;
     }
+    .col-num   { width: 38px; text-align: center; color: var(--color-muted); font-size: 12px; font-weight: 700; vertical-align: middle !important; }
+    .col-qty   { width: 62px; }
+    .col-desc  { }
+    .col-price { width: 126px; }
+    .col-total { width: 100px; text-align: right; }
+    .col-ncm   { width: 88px; }
+    .col-del   { width: 36px; text-align: center; vertical-align: middle !important; }
 
-    .col-num  { width: 42px; text-align: center; color: var(--muted); font-size: 12px; font-weight: 700; vertical-align: middle !important; }
-    .col-qty  { width: 68px; }
-    .col-desc { }
-    .col-price { width: 130px; }
-    .col-ncm  { width: 92px; }
-    .col-del  { width: 36px; text-align: center; vertical-align: middle !important; }
+    .col-total td, td.col-total {
+      text-align: right;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text);
+      vertical-align: middle !important;
+      padding-right: 10px;
+    }
 
     .btn-del-row {
       background: none;
       border: none;
       cursor: pointer;
-      color: #bbb;
+      color: #d1d5db;
       font-size: 18px;
       padding: 2px 6px;
       border-radius: 3px;
       line-height: 1;
       transition: color 0.15s;
     }
+    .btn-del-row:hover { color: var(--color-danger); }
 
-    .btn-del-row:hover { color: var(--danger); }
-
-    /* ── Price hint ── */
+    /* ── Price hint ──────────────────────────────────────────────── */
     .price-hint {
       display: none;
       font-size: 11px;
-      color: var(--hint);
+      color: var(--color-info);
       padding: 3px 8px 4px;
       cursor: pointer;
-      background: #e3f2fd;
+      background: var(--color-info-bg);
       border-radius: 0 0 4px 4px;
       user-select: none;
     }
-
     .price-hint:hover { background: #bbdefb; }
 
-    /* ── Items footer ── */
+    /* ── Items footer ────────────────────────────────────────────── */
     .items-footer {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-top: 4px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-
+    .np-item-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-start;
+    }
     .btn-add-item {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 7px 14px;
-      background: var(--green-bg);
-      border: 1px dashed var(--green-light);
+      background: var(--color-primary-bg);
+      border: 1px solid var(--color-primary-light);
       border-radius: var(--radius);
-      color: var(--green);
+      color: var(--color-primary);
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
+      font-family: inherit;
       transition: background 0.15s;
     }
-
     .btn-add-item:hover { background: #dcedc8; }
+    .np-link-action {
+      font-size: 12px;
+      color: var(--color-primary);
+      font-weight: 700;
+      text-decoration: none;
+      padding-left: 2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .np-link-action:hover { text-decoration: underline; }
 
     .total-display {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--green);
-    }
-
-    .total-display span {
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--muted);
-      margin-right: 6px;
-    }
-
-    /* ── Submit ── */
-    .submit-area {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--color-primary);
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      gap: 14px;
-      margin-top: 24px;
+      gap: 8px;
     }
-
-    .btn-submit {
-      padding: 12px 32px;
-      background: var(--green);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 700;
-      border: none;
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: background 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .btn-submit:hover { background: var(--green-light); }
-    .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
-
-    #result {
-      display: none;
-      padding: 18px 22px;
-      border-radius: var(--radius);
-      margin-top: 20px;
-      font-size: 14px;
-    }
-
-    #result.success {
-      background: #e8f5e9;
-      border: 1px solid #a5d6a7;
-      color: #1b5e20;
-    }
-
-    #result.error {
-      background: #ffebee;
-      border: 1px solid #ef9a9a;
-      color: var(--danger);
-    }
-
-    #result.warn {
-      background: #fff8e1;
-      border: 1px solid #ffe082;
-      color: #5d4037;
-    }
-
-    #result a { color: var(--green); font-weight: 700; }
-
-    .spinner {
-      display: none;
-      width: 18px;
-      height: 18px;
-      border: 3px solid #fff;
-      border-top-color: transparent;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      flex-shrink: 0;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .btn-submit.loading .spinner { display: block; }
-    .btn-submit.loading .btn-text { display: none; }
-
-    /* ── Suggestions panel ── */
-    #suggestions { display: none; margin-top: 20px; }
-
-    .sug-section { margin-bottom: 18px; }
-    .sug-section:last-child { margin-bottom: 0; }
-
-    .sug-label {
-      font-size: 11px;
+    .total-display span:first-child {
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--muted);
-      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+      color: var(--color-muted);
     }
 
-    .sug-info {
+    /* ── Conditions ──────────────────────────────────────────────── */
+    .np-cond-question {
       font-size: 13px;
-      padding: 10px 14px;
-      border-radius: var(--radius);
-      margin-bottom: 8px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 12px;
     }
-
-    .sug-info.new-client  { background: #e8f5e9; border: 1px solid #a5d6a7; color: #1b5e20; }
-    .sug-info.warn-dup    { background: #fff8e1; border: 1px solid #ffe082; color: #5d4037; }
-
-    .sug-dup-list { list-style: none; margin: 6px 0 0 0; padding: 0; }
-    .sug-dup-list li {
-      font-size: 12px;
-      padding: 4px 0;
-      border-bottom: 1px solid #ffe082;
+    .np-cond-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
     }
-    .sug-dup-list li:last-child { border-bottom: none; }
-
-    .sug-client-form { margin-top: 12px; display: none; }
-    .sug-client-form .field input { font-size: 13px; }
-
-    .btn-sug {
+    .cond-mode-btn {
+      padding: 12px 14px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+      background: #fff;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .cond-mode-btn:hover {
+      border-color: var(--color-primary-light);
+      background: var(--color-primary-bg);
+    }
+    .cond-mode-btn.active {
+      background: var(--color-primary-bg);
+      border-color: var(--color-primary);
+    }
+    .cmo-title {
       font-size: 12px;
       font-weight: 700;
-      padding: 6px 14px;
-      border-radius: var(--radius);
-      border: none;
-      cursor: pointer;
-      transition: background 0.15s;
+      color: #374151;
+      display: block;
     }
+    .cmo-desc {
+      font-size: 11px;
+      color: var(--color-muted);
+      display: block;
+      line-height: 1.4;
+    }
+    .cond-mode-btn.active .cmo-title { color: var(--color-primary); }
+    .cond-mode-btn.active .cmo-desc  { color: rgba(46,125,50,0.65); }
 
-    .btn-sug.green  { background: var(--green); color: #fff; }
-    .btn-sug.green:hover  { background: var(--green-light); }
-    .btn-sug.outline { background: #fff; color: var(--green); border: 1px solid var(--green); margin-left: 8px; }
-    .btn-sug.outline:hover { background: var(--green-bg); }
-    .btn-sug.grey   { background: #eee; color: #555; margin-left: 8px; }
-    .btn-sug.grey:hover { background: #ddd; }
+    /* ── Procurar / entity select buttons ────────────────────────── */
+    .btn-procurar {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #fff;
+      border: 1px solid var(--color-primary-light);
+      border-radius: var(--radius);
+      color: var(--color-primary);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn-procurar:hover { background: var(--color-primary-bg); }
 
-    /* ── Entity preview ── */
+    .btn-criar-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 14px;
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      color: var(--color-primary);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-criar-link:hover { background: var(--color-primary-bg); border-color: var(--color-primary-light); }
+
+    /* ── Autocomplete dropdown ───────────────────────────────────── */
+    .ac-dropdown {
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+      z-index: 100;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .ac-item {
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.1s;
+    }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover, .ac-item.active { background: var(--color-primary-bg); }
+    .ac-item .ac-main { font-weight: 600; }
+    .ac-item .ac-sub  { font-size: 11px; color: var(--color-muted); margin-top: 1px; }
+
+    /* ── Entity preview (inside selected card) ───────────────────── */
     .entity-preview {
       margin-top: 10px;
       padding-top: 10px;
-      border-top: 1px solid var(--border);
+      border-top: 1px solid rgba(46,125,50,0.15);
       display: grid;
       grid-template-columns: auto 1fr;
       gap: 4px 14px;
@@ -299,97 +419,277 @@
     .ep-label {
       font-size: 10px;
       font-weight: 700;
-      color: var(--muted);
+      color: var(--color-muted);
       text-transform: uppercase;
       letter-spacing: 0.4px;
       padding-top: 2px;
       white-space: nowrap;
     }
-    .ep-value { font-size: 12px; color: var(--text); }
+    .ep-value { font-size: 12px; color: var(--color-text); }
     .ep-block {
       grid-column: span 2;
       font-size: 12px;
-      color: var(--text);
+      color: var(--color-text);
       line-height: 1.6;
       white-space: pre-wrap;
     }
 
-    /* ── Modal ── */
+    /* ── Cond entity preview ─────────────────────────────────────── */
+    .np-cond-selected {
+      margin-top: 12px;
+      background: var(--color-primary-bg);
+      border: 1px solid rgba(46,125,50,0.22);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+    }
+    .np-cond-sel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .np-cond-sel-name { font-weight: 700; font-size: 13px; color: #111827; }
+
+    /* ── Textarea auto-size ──────────────────────────────────────── */
+    .np-textarea {
+      resize: vertical;
+      min-height: 80px;
+      line-height: 1.6;
+    }
+
+    /* ── Submit area ─────────────────────────────────────────────── */
+    .btn-submit {
+      padding: 12px 20px;
+      background: var(--color-primary);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      line-height: 1;
+    }
+    .btn-submit:hover:not(:disabled) { background: var(--color-primary-hover); }
+    .btn-submit:disabled { background: #aaa; cursor: not-allowed; }
+
+    .btn-submit .spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: np-spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes np-spin { to { transform: rotate(360deg); } }
+    .btn-submit.loading .spinner  { display: block; }
+    .btn-submit.loading .btn-text { display: none; }
+
+    /* ── Result div ──────────────────────────────────────────────── */
+    #result {
+      display: none;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      margin-top: 16px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    #result.success { background: var(--color-success-bg); border: 1px solid var(--color-success-border); color: var(--color-success); }
+    #result.error   { background: var(--color-danger-bg);  border: 1px solid var(--color-danger-border);  color: var(--color-danger); }
+    #result.warn    { background: var(--color-warning-bg); border: 1px solid var(--color-warning-border); color: var(--color-warning); }
+    #result a       { color: var(--color-primary); font-weight: 700; }
+
+    /* ── Suggestions panel ───────────────────────────────────────── */
+    #suggestions    { display: none; margin-top: 16px; }
+    .sug-section    { margin-bottom: 18px; }
+    .sug-section:last-child { margin-bottom: 0; }
+    .sug-label      { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--color-muted); margin-bottom: 10px; }
+    .sug-info       { font-size: 13px; padding: 10px 14px; border-radius: var(--radius); margin-bottom: 8px; }
+    .sug-info.new-client  { background: var(--color-success-bg); border: 1px solid var(--color-success-border); color: var(--color-success); }
+    .sug-info.warn-dup    { background: var(--color-warning-bg); border: 1px solid var(--color-warning-border); color: var(--color-warning); }
+    .sug-dup-list   { list-style: none; margin: 6px 0 0 0; padding: 0; }
+    .sug-dup-list li { font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--color-warning-border); }
+    .sug-dup-list li:last-child { border-bottom: none; }
+    .btn-sug        { font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: var(--radius); border: none; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+    .btn-sug.green  { background: var(--color-primary); color: #fff; }
+    .btn-sug.green:hover  { background: var(--color-primary-hover); }
+    .btn-sug.outline { background: #fff; color: var(--color-primary); border: 1px solid var(--color-primary); margin-left: 8px; }
+    .btn-sug.outline:hover { background: var(--color-primary-bg); }
+    .btn-sug.grey   { background: #eee; color: #555; margin-left: 8px; }
+    .btn-sug.grey:hover { background: #e0e0e0; }
+
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    .np-sidebar {
+      position: sticky;
+      top: 16px;
+    }
+    .np-sb-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .np-sb-head {
+      background: #1b5e20;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .np-sb-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.65);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .np-sb-status {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      background: rgba(255,255,255,0.13);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      color: rgba(255,255,255,0.85);
+      letter-spacing: 0.4px;
+    }
+    .np-sb-rows {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .np-sb-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 5px 0;
+      font-size: 12px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .np-sb-row:last-child { border-bottom: none; }
+    .np-sb-label { color: var(--color-muted); flex-shrink: 0; }
+    .np-sb-val   {
+      font-weight: 600;
+      color: #111827;
+      text-align: right;
+      max-width: 170px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .np-sb-val.empty { color: #d1d5db; font-weight: 400; }
+    .np-sb-total {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .np-sb-total-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-muted);
+      margin-bottom: 4px;
+    }
+    .np-sb-total-val {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--color-primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .np-sb-actions {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .np-sb-note {
+      font-size: 11px;
+      color: var(--color-muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .np-sb-note a { color: var(--color-primary); }
+
+    /* ── Condition "new" form ────────────────────────────────────── */
+    #condNewMsg {
+      display: none;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Modal ───────────────────────────────────────────────────── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 300;
       display: flex; align-items: center; justify-content: center;
     }
     .modal-box {
-      background: #fff; border-radius: var(--radius); width: 560px;
+      background: #fff; border-radius: var(--radius-lg); width: 560px;
       max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18); overflow: hidden;
+      box-shadow: var(--shadow-lg); overflow: hidden;
     }
     .modal-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+      padding: 16px 20px; border-bottom: 1px solid var(--color-border); flex-shrink: 0;
     }
-    .modal-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
-    .modal-close {
-      background: none; border: none; cursor: pointer; font-size: 20px;
-      color: var(--muted); line-height: 1; padding: 2px 6px; border-radius: 3px;
-    }
-    .modal-close:hover { color: var(--text); background: #f0f0f0; }
-    .modal-search-wrap {
-      padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
-    .modal-search-wrap input {
-      width: 100%; padding: 8px 12px; border: 1px solid #ccc;
-      border-radius: var(--radius); font-size: 13px; font-family: inherit;
-    }
-    .modal-search-wrap input:focus {
-      outline: none; border-color: var(--green-light);
-      box-shadow: 0 0 0 3px rgba(67,160,71,0.15);
-    }
+    .modal-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--color-text); }
+    .modal-close { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--color-muted); line-height: 1; padding: 2px 6px; border-radius: 3px; transition: background 0.12s; }
+    .modal-close:hover { color: var(--color-text); background: #f0f0f0; }
+    .modal-search-wrap { padding: 12px 16px; border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
+    .modal-search-wrap input { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: var(--radius); font-size: 13px; font-family: inherit; }
+    .modal-search-wrap input:focus { outline: none; border-color: var(--color-primary-light); box-shadow: 0 0 0 3px rgba(67,160,71,0.14); }
     .modal-list { overflow-y: auto; flex: 1; }
-    .modal-item {
-      padding: 11px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
-      transition: background 0.1s;
-    }
-    .modal-item:hover { background: var(--green-bg); }
+    .modal-item { padding: 11px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
+    .modal-item:hover { background: var(--color-primary-bg); }
     .modal-item:last-child { border-bottom: none; }
     .modal-item .mi-main { font-weight: 600; font-size: 13px; }
-    .modal-item .mi-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .modal-empty { text-align: center; color: var(--muted); padding: 32px 16px; font-size: 13px; }
+    .modal-item .mi-sub  { font-size: 11px; color: var(--color-muted); margin-top: 2px; }
+    .modal-empty { text-align: center; color: var(--color-muted); padding: 32px 16px; font-size: 13px; }
 
-    /* ── Procurar/criar buttons ── */
-    .btn-procurar {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 9px 18px; background: #fff; border: 1px solid var(--green-light);
-      border-radius: var(--radius); color: var(--green); font-size: 13px;
-      font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit;
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .np-layout { grid-template-columns: 1fr; }
+      .np-sidebar { position: static; order: 2; }
+      .np-form-col { order: 1; }
+      .np-cond-options { grid-template-columns: 1fr; }
     }
-    .btn-procurar:hover { background: var(--green-bg); }
-    .btn-criar-link {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 9px 14px; background: var(--green-bg);
-      border: 1px dashed var(--green-light); border-radius: var(--radius);
-      color: var(--green); font-size: 13px; font-weight: 700;
-      text-decoration: none; transition: background 0.15s;
+    @media (max-width: 760px) {
+      .np-container { padding: 16px 16px 80px; }
+      .np-pagebar   { padding: 12px 16px 16px; }
     }
-    .btn-criar-link:hover { background: #dcedc8; }
-
-    /* ── Back button ── */
-/* ── Condition mode selector ── */
-    .cond-mode-btn {
-      padding: 8px 16px; border-radius: var(--radius); border: 1px solid #ccc;
-      background: #fff; color: #555; font-size: 13px; font-weight: 600;
-      cursor: pointer; transition: all 0.15s; font-family: inherit;
-    }
-    .cond-mode-btn:hover { border-color: var(--green-light); color: var(--green); background: var(--green-bg); }
-    .cond-mode-btn.active { background: var(--green); color: #fff; border-color: var(--green); }
-
     @media (max-width: 640px) {
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    /* ── Sticky submit on mobile ─────────────────────────────────── */
+    .np-sticky-footer { display: none; }
+    @media (max-width: 900px) {
+      .np-sticky-footer {
+        display: block;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: #fff;
+        border-top: 1px solid var(--color-border);
+        padding: 10px 16px;
+        z-index: 100;
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+      }
     }
   </style>
 </head>
 <body>
 
+<!-- ── Navbar ─────────────────────────────────────────────────────────── -->
 <nav class="nav">
   <a class="nav-brand" href="/">
     <img src="/assets/logoGHTEC.png" alt="GHTec" class="app-logo">
@@ -397,18 +697,18 @@
   <div class="nav-group" data-group="comercial">
     <button class="nav-group-btn">Comercial <span class="nav-arrow">&#9662;</span></button>
     <div class="nav-dropdown">
-      <a href="/proposals.html" class="nav-dd-link">Propostas</a>
-      <a href="/kanban.html" class="nav-dd-link">Kanban</a>
-      <a href="/clients.html" class="nav-dd-link">Clientes</a>
-      <a href="/objetos.html" class="nav-dd-link">Objetos e Condições</a>
+      <a href="/proposals.html"  class="nav-dd-link">Propostas</a>
+      <a href="/kanban.html"     class="nav-dd-link">Kanban</a>
+      <a href="/clients.html"    class="nav-dd-link">Clientes</a>
+      <a href="/objetos.html"    class="nav-dd-link">Objetos e Condições</a>
     </div>
   </div>
   <div class="nav-group" data-group="operacional">
     <button class="nav-group-btn">Operacional <span class="nav-arrow">&#9662;</span></button>
     <div class="nav-dropdown">
-      <a href="/parts.html" class="nav-dd-link">Peças</a>
-      <a href="/stock.html" class="nav-dd-link">Estoque</a>
-      <a href="/fornecedores.html" class="nav-dd-link">Fornecedores</a>
+      <a href="/parts.html"           class="nav-dd-link">Peças</a>
+      <a href="/stock.html"           class="nav-dd-link">Estoque</a>
+      <a href="/fornecedores.html"    class="nav-dd-link">Fornecedores</a>
       <a href="/notas-recebidas.html" class="nav-dd-link">Notas Recebidas</a>
     </div>
   </div>
@@ -416,7 +716,7 @@
     <button class="nav-group-btn">Financeiro <span class="nav-arrow">&#9662;</span></button>
     <div class="nav-dropdown">
       <a href="/contas-pagar.html" class="nav-dd-link">Contas a Pagar</a>
-      <a href="/financeiro.html" class="nav-dd-link">Financeiro</a>
+      <a href="/financeiro.html"   class="nav-dd-link">Financeiro</a>
     </div>
   </div>
   <div class="nav-right">
@@ -425,212 +725,304 @@
     <button class="btn-logout" onclick="logout()">Sair</button>
   </div>
 </nav>
-<div class="page-bar">
-  <h1>Nova Proposta Comercial</h1>
-  Preencha os dados abaixo e clique em Gerar PDF
+
+<!-- ── Page Header ────────────────────────────────────────────────────── -->
+<div class="np-pagebar">
+  <div class="np-pagebar-inner">
+    <nav class="np-breadcrumb" aria-label="Navegação">
+      <a href="/proposals.html" class="np-bread-link">Propostas</a>
+      <span class="np-bread-sep">/</span>
+      <span class="np-bread-cur">Nova proposta</span>
+    </nav>
+    <h1 class="np-page-title">Nova Proposta Comercial</h1>
+    <p class="np-page-sub">Monte uma proposta com cliente, objeto, itens, condições comerciais e responsável.</p>
+  </div>
 </div>
 
-<div class="container">
-  <div style="margin-bottom:16px;">
-    <a href="/proposals.html" class="btn-back">← Voltar para Propostas</a>
-  </div>
-  <form id="proposalForm">
+<!-- ── Main Layout ────────────────────────────────────────────────────── -->
+<div class="np-container">
+  <form id="proposalForm" class="np-layout">
 
-    <!-- Identificação -->
-    <div class="card">
-      <div class="card-title">Identificação da Proposta</div>
-      <div class="field" style="max-width:240px">
-        <label>Nº da Proposta *</label>
-        <input type="text" name="numero_proposta" placeholder="2024-001" required />
-      </div>
-    </div>
+    <!-- ═══ LEFT: Form Column ════════════════════════════════════════ -->
+    <div class="np-form-col">
 
-    <!-- Cliente -->
-    <div class="card">
-      <div class="card-title">Hospital / Cliente</div>
-      <div id="cliente-buttons" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <button type="button" class="btn-procurar" id="btnProcurarCliente">&#128269; Procurar cliente</button>
-        <a class="btn-criar-link" href="/clients.html?new=1" target="_blank">+ Criar novo cliente</a>
-      </div>
-      <div id="cliente-selecionado" style="display:none; background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; font-size:13px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <div style="min-width:0;">
-            <div id="cs-nome" style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
-          </div>
-          <button type="button" id="btnTrocarCliente" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted); white-space:nowrap;">Trocar</button>
-        </div>
-        <div id="cs-preview"></div>
-      </div>
-    </div>
-
-    <!-- Objeto -->
-    <div class="card">
-      <div class="card-title">Objeto da Proposta</div>
-      <div id="objeto-buttons" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;">
-        <button type="button" class="btn-procurar" id="btnProcurarObjeto">&#128269; Procurar objeto</button>
-        <a class="btn-criar-link" href="/objetos.html?new=1" target="_blank">+ Criar novo objeto</a>
-      </div>
-      <div id="objeto-selecionado" style="display:none; background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; font-size:13px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-          <div id="ob-nome" style="font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
-          <button type="button" id="btnTrocarObjeto" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted); white-space:nowrap;">Trocar</button>
-        </div>
-        <div id="ob-preview"></div>
-      </div>
-      <input type="hidden" name="objeto_proposta" />
-    </div>
-
-    <!-- Itens -->
-    <div class="card">
-      <div class="card-title">Itens da Proposta</div>
-      <table class="items-table" id="itemsTable">
-        <thead>
-          <tr>
-            <th class="col-num">#</th>
-            <th class="col-qty">Qtd *</th>
-            <th class="col-desc">Descrição *</th>
-            <th class="col-price">Valor Unitário (R$) *</th>
-            <th class="col-ncm">NCM</th>
-            <th class="col-del"></th>
-          </tr>
-        </thead>
-        <tbody id="itemsBody"></tbody>
-      </table>
-      <div class="items-footer">
-        <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start;">
-          <button type="button" class="btn-add-item" id="btnAddItem">+ Adicionar item</button>
-          <a href="/parts.html?new=1" target="_blank" style="font-size:12px; color:var(--green); font-weight:700; text-decoration:none; padding-left:2px;">+ Criar nova peça no catálogo</a>
-        </div>
-        <div class="total-display"><span>TOTAL</span><span id="totalDisplay">R$ 0,00</span></div>
-      </div>
-    </div>
-
-    <!-- Condições -->
-    <div class="card" id="condCard">
-      <div class="card-title">Condições Comerciais</div>
-
-      <!-- Seletor de modo -->
-      <div id="condModeSelector" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
-        <button type="button" class="cond-mode-btn active" data-mode="catalog" id="condModeCatalog">
-          Escolher condição
-        </button>
-        <button type="button" class="cond-mode-btn" data-mode="new" id="condModeNew">
-          Criar nova condição
-        </button>
-        <button type="button" class="cond-mode-btn" data-mode="manual" id="condModeManual">
-          Elaborar condição específica
-        </button>
-      </div>
-
-      <!-- Modo: Escolher condição do catálogo -->
-      <div id="condModeCatalogPanel">
-        <div id="cond-buttons" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-          <button type="button" class="btn-procurar" id="btnProcurarCondicao">&#128269; Procurar condição</button>
-        </div>
-        <div id="cond-selecionada" style="display:none; background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; font-size:13px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-            <div id="cs-cond-nome" style="font-weight:700;"></div>
-            <button type="button" id="btnTrocarCondicao" style="flex-shrink:0; background:none; border:1px solid #ccc; border-radius:var(--radius); padding:4px 10px; font-size:11px; cursor:pointer; color:var(--muted);">Trocar</button>
-          </div>
-          <div id="cs-cond-preview" style="margin-top:6px;"></div>
+      <!-- 1. Identificação -->
+      <div class="card np-card">
+        <div class="np-card-title">Identificação da proposta</div>
+        <div class="field" style="max-width:220px">
+          <label>Nº da Proposta *</label>
+          <input type="text" name="numero_proposta" id="numero_proposta" placeholder="Ex: 2026-001" required autocomplete="off" />
         </div>
       </div>
 
-      <!-- Modo: Criar nova condição -->
-      <div id="condModeNewPanel" style="display:none;">
-        <div class="grid-2" style="margin-bottom:14px">
-          <div class="field">
-            <label>Nome da Condição *</label>
-            <input type="text" id="cnf_name" placeholder="Ex: Pagamento 30 dias" autocomplete="off" />
-          </div>
-          <div class="field">
-            <label>Forma de Pagamento *</label>
-            <input type="text" id="cnf_forma" placeholder="Boleto bancário" />
-          </div>
+      <!-- 2. Hospital / Cliente -->
+      <div class="card np-card">
+        <div class="np-card-title">Hospital / Cliente</div>
+        <div id="cliente-buttons" class="np-select-btns">
+          <button type="button" class="btn-procurar" id="btnProcurarCliente">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Procurar cliente
+          </button>
+          <a class="btn-criar-link" href="/clients.html?new=1" target="_blank">+ Criar novo cliente</a>
         </div>
-        <div class="grid-2" style="margin-bottom:14px">
-          <div class="field">
-            <label>Prazo de Pagamento *</label>
-            <input type="text" id="cnf_prazo_pag" placeholder="30 dias após entrega" />
+        <div id="cliente-selecionado" class="np-entity-card" style="display:none">
+          <div class="np-entity-header">
+            <div id="cs-nome" class="np-entity-name"></div>
+            <button type="button" id="btnTrocarCliente" class="np-entity-change">Alterar cliente</button>
           </div>
-          <div class="field">
-            <label>Prazo de Entrega *</label>
-            <input type="text" id="cnf_prazo_ent" placeholder="30 dias úteis" />
-          </div>
-        </div>
-        <div class="grid-2" style="margin-bottom:14px">
-          <div class="field">
-            <label>Validade da Proposta *</label>
-            <input type="text" id="cnf_validade" placeholder="30 dias" />
-          </div>
-          <div class="field">
-            <label>Garantia <span style="font-weight:400; text-transform:none; letter-spacing:0;">(opcional)</span></label>
-            <input type="text" id="cnf_garantia" placeholder="12 meses (opcional)" />
-          </div>
-        </div>
-        <div id="condNewMsg" style="display:none; padding:8px 12px; border-radius:var(--radius); font-size:13px; margin-bottom:12px;"></div>
-        <button type="button" id="condNewBtn" class="btn-procurar" style="border-color:var(--green); background:var(--green); color:#fff;">Criar e usar esta condição</button>
-      </div>
-
-      <!-- Modo: Elaborar condição específica (comportamento atual) -->
-      <div id="condModeManualPanel" style="display:none;">
-        <div class="grid-2" style="margin-bottom:14px">
-          <div class="field">
-            <label>Forma de Pagamento *</label>
-            <input type="text" name="forma_pagamento" placeholder="Boleto bancário" />
-          </div>
-          <div class="field">
-            <label>Prazo de Pagamento *</label>
-            <input type="text" name="prazo_pagamento" placeholder="30 dias após entrega" />
-          </div>
-        </div>
-        <div class="grid-3">
-          <div class="field">
-            <label>Prazo de Entrega *</label>
-            <input type="text" name="prazo_entrega" placeholder="30 dias úteis" />
-          </div>
-          <div class="field">
-            <label>Garantia</label>
-            <input type="text" name="garantia" placeholder="12 meses (opcional)" />
-          </div>
-          <div class="field">
-            <label>Validade da Proposta *</label>
-            <input type="text" name="validade" placeholder="30 dias" />
-          </div>
+          <div id="cs-preview"></div>
         </div>
       </div>
-    </div>
 
-    <!-- Observações -->
-    <div class="card">
-      <div class="card-title">Observações <span style="font-size:11px; font-weight:400; color:var(--muted); text-transform:none; letter-spacing:0;">(opcional)</span></div>
-      <div class="field">
-        <textarea name="observacoes" placeholder="Informações adicionais que devem constar na proposta..." style="min-height:80px;"></textarea>
+      <!-- 3. Objeto da Proposta -->
+      <div class="card np-card">
+        <div class="np-card-title">Objeto da proposta</div>
+        <div id="objeto-buttons" class="np-select-btns">
+          <button type="button" class="btn-procurar" id="btnProcurarObjeto">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Procurar objeto
+          </button>
+          <a class="btn-criar-link" href="/objetos.html?new=1" target="_blank">+ Criar novo objeto</a>
+        </div>
+        <div id="objeto-selecionado" class="np-entity-card" style="display:none">
+          <div class="np-entity-header">
+            <div id="ob-nome" class="np-entity-name"></div>
+            <button type="button" id="btnTrocarObjeto" class="np-entity-change">Alterar objeto</button>
+          </div>
+          <div id="ob-preview"></div>
+        </div>
+        <input type="hidden" name="objeto_proposta" />
       </div>
-    </div>
 
-    <!-- Responsável (assinatura automática do usuário logado) -->
-    <div class="card">
-      <div class="card-title">Responsável pela Proposta</div>
-      <div id="resp-assinatura" style="background:var(--green-bg); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; font-size:13px;">
-        <div style="font-weight:700;" id="sig-nome">Carregando...</div>
-        <div id="sig-preview" style="margin-top:4px; font-size:12px; color:var(--muted);"></div>
+      <!-- 4. Itens da Proposta -->
+      <div class="card np-card">
+        <div class="np-card-title">Itens da proposta</div>
+        <div class="np-table-wrap">
+          <table class="items-table" id="itemsTable">
+            <thead>
+              <tr>
+                <th class="col-num">#</th>
+                <th class="col-qty">Qtd *</th>
+                <th class="col-desc">Peça / Descrição *</th>
+                <th class="col-price">Valor unitário (R$) *</th>
+                <th class="col-total">Total</th>
+                <th class="col-ncm">NCM</th>
+                <th class="col-del"></th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+        </div>
+        <div class="items-footer">
+          <div class="np-item-actions">
+            <button type="button" class="btn-add-item" id="btnAddItem">+ Adicionar peça do catálogo</button>
+            <a href="/parts.html?new=1" target="_blank" class="np-link-action">+ Criar nova peça no catálogo</a>
+          </div>
+          <div class="total-display">
+            <span>Total</span>
+            <span id="totalDisplay">R$ 0,00</span>
+          </div>
+        </div>
       </div>
-      <div style="font-size:11px; color:var(--muted); margin-top:6px;">A proposta será gerada em seu nome. Para alterar cargo ou telefone, acesse <a href="/usuarios.html" style="color:var(--green);">Usuários</a>.</div>
-    </div>
 
-    <div class="submit-area">
-      <button type="submit" class="btn-submit" id="btnSubmit">
-        <span class="btn-text">Gerar Proposta PDF</span>
-        <span class="spinner"></span>
-      </button>
-    </div>
+      <!-- 5. Condições Comerciais -->
+      <div class="card np-card" id="condCard">
+        <div class="np-card-title">Condições comerciais</div>
+        <p class="np-card-hint">Como deseja definir as condições comerciais desta proposta?</p>
 
-    <div id="result"></div>
-    <div id="suggestions" class="card"></div>
+        <div id="condModeSelector" class="np-cond-options">
+          <button type="button" class="cond-mode-btn" data-mode="catalog" id="condModeCatalog">
+            <span class="cmo-title">Usar condição cadastrada</span>
+            <span class="cmo-desc">Selecionar de uma lista de condições já salvas</span>
+          </button>
+          <button type="button" class="cond-mode-btn" data-mode="new" id="condModeNew">
+            <span class="cmo-title">Criar nova condição padrão</span>
+            <span class="cmo-desc">Preencher campos e salvar para uso futuro</span>
+          </button>
+          <button type="button" class="cond-mode-btn" data-mode="manual" id="condModeManual">
+            <span class="cmo-title">Condição específica</span>
+            <span class="cmo-desc">Usar somente nesta proposta, sem salvar</span>
+          </button>
+        </div>
+
+        <!-- Modo: Catálogo -->
+        <div id="condModeCatalogPanel" style="display:none">
+          <div id="cond-buttons">
+            <button type="button" class="btn-procurar" id="btnProcurarCondicao">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Procurar condição cadastrada
+            </button>
+          </div>
+          <div id="cond-selecionada" class="np-cond-selected" style="display:none">
+            <div class="np-cond-sel-header">
+              <div id="cs-cond-nome" class="np-cond-sel-name"></div>
+              <button type="button" id="btnTrocarCondicao" class="np-entity-change">Trocar</button>
+            </div>
+            <div id="cs-cond-preview"></div>
+          </div>
+        </div>
+
+        <!-- Modo: Nova condição -->
+        <div id="condModeNewPanel" style="display:none">
+          <div class="grid-2" style="margin-bottom:14px">
+            <div class="field">
+              <label>Nome da Condição *</label>
+              <input type="text" id="cnf_name" placeholder="Ex: Pagamento 30 dias" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label>Forma de Pagamento *</label>
+              <input type="text" id="cnf_forma" placeholder="Boleto bancário" />
+            </div>
+          </div>
+          <div class="grid-2" style="margin-bottom:14px">
+            <div class="field">
+              <label>Prazo de Pagamento *</label>
+              <input type="text" id="cnf_prazo_pag" placeholder="30 dias após entrega" />
+            </div>
+            <div class="field">
+              <label>Prazo de Entrega *</label>
+              <input type="text" id="cnf_prazo_ent" placeholder="30 dias úteis" />
+            </div>
+          </div>
+          <div class="grid-2" style="margin-bottom:14px">
+            <div class="field">
+              <label>Validade da Proposta *</label>
+              <input type="text" id="cnf_validade" placeholder="30 dias" />
+            </div>
+            <div class="field">
+              <label>Garantia <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:11px;">(opcional)</span></label>
+              <input type="text" id="cnf_garantia" placeholder="12 meses (opcional)" />
+            </div>
+          </div>
+          <div id="condNewMsg"></div>
+          <button type="button" id="condNewBtn" class="btn-procurar" style="border-color:var(--color-primary); background:var(--color-primary); color:#fff;">Criar e usar esta condição</button>
+        </div>
+
+        <!-- Modo: Manual -->
+        <div id="condModeManualPanel" style="display:none">
+          <div class="msg msg-warn" style="margin-bottom:12px; font-size:12px;">
+            Esta condição será usada apenas nesta proposta e não será salva como padrão.
+          </div>
+          <div class="grid-2" style="margin-bottom:14px">
+            <div class="field">
+              <label>Forma de Pagamento *</label>
+              <input type="text" name="forma_pagamento" placeholder="Boleto bancário" />
+            </div>
+            <div class="field">
+              <label>Prazo de Pagamento *</label>
+              <input type="text" name="prazo_pagamento" placeholder="30 dias após entrega" />
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="field">
+              <label>Prazo de Entrega *</label>
+              <input type="text" name="prazo_entrega" placeholder="30 dias úteis" />
+            </div>
+            <div class="field">
+              <label>Garantia <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:11px;">(opcional)</span></label>
+              <input type="text" name="garantia" placeholder="12 meses" />
+            </div>
+            <div class="field">
+              <label>Validade da Proposta *</label>
+              <input type="text" name="validade" placeholder="30 dias" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Observações -->
+      <div class="card np-card">
+        <div class="np-card-title">
+          Observações
+          <span class="np-optional">(opcional)</span>
+        </div>
+        <p class="np-card-hint">Use este campo para informações extras que devem aparecer no PDF, como prazo especial, instruções de entrega ou observações técnicas.</p>
+        <div class="field">
+          <textarea name="observacoes" id="observacoes" class="np-textarea"
+            placeholder="Ex: Entrega prevista para o primeiro semestre. Verificar disponibilidade com o almoxarifado."></textarea>
+        </div>
+      </div>
+
+      <!-- 7. Responsável -->
+      <div class="card np-card">
+        <div class="np-card-title">Responsável pela proposta</div>
+        <div id="resp-assinatura" class="np-resp-card">
+          <div id="resp-loading">
+            <div class="np-skel np-skel-name"></div>
+            <div class="np-skel np-skel-sub"></div>
+          </div>
+          <div id="resp-loaded" style="display:none">
+            <div class="np-resp-name" id="sig-nome"></div>
+            <div class="np-resp-detail" id="sig-preview"></div>
+            <div class="np-resp-note">
+              A proposta será gerada em seu nome.
+              Para alterar cargo ou telefone, acesse <a href="/usuarios.html">Usuários</a>.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result + Suggestions -->
+      <div id="result"></div>
+      <div id="suggestions" class="card"></div>
+
+    </div><!-- /.np-form-col -->
+
+    <!-- ═══ RIGHT: Sidebar ══════════════════════════════════════════ -->
+    <aside class="np-sidebar">
+      <div class="np-sb-card">
+        <div class="np-sb-head">
+          <span class="np-sb-title">Resumo da proposta</span>
+          <span class="np-sb-status">Rascunho</span>
+        </div>
+
+        <div class="np-sb-rows">
+          <div class="np-sb-row">
+            <span class="np-sb-label">Proposta</span>
+            <span class="np-sb-val empty" id="sb-numero">—</span>
+          </div>
+          <div class="np-sb-row">
+            <span class="np-sb-label">Cliente</span>
+            <span class="np-sb-val empty" id="sb-cliente">Não selecionado</span>
+          </div>
+          <div class="np-sb-row">
+            <span class="np-sb-label">Itens</span>
+            <span class="np-sb-val" id="sb-itens">0</span>
+          </div>
+          <div class="np-sb-row">
+            <span class="np-sb-label">Responsável</span>
+            <span class="np-sb-val empty" id="sb-resp">—</span>
+          </div>
+        </div>
+
+        <div class="np-sb-total">
+          <div class="np-sb-total-label">Total da proposta</div>
+          <div class="np-sb-total-val" id="sb-total">R$ 0,00</div>
+        </div>
+
+        <div class="np-sb-actions">
+          <button type="submit" class="btn-submit" id="btnSubmit" style="width:100%">
+            <span class="btn-text">Gerar Proposta PDF</span>
+            <span class="spinner"></span>
+          </button>
+          <p class="np-sb-note">
+            O PDF será gerado e disponibilizado para download imediato.
+          </p>
+        </div>
+      </div>
+    </aside>
+
   </form>
 </div>
 
+<!-- ── Sticky Submit (mobile only) ──────────────────────────────────── -->
+<div class="np-sticky-footer">
+  <button type="submit" form="proposalForm" class="btn-submit" style="width:100%">
+    Gerar Proposta PDF
+  </button>
+</div>
+
+<!-- ── Scripts ────────────────────────────────────────────────────────── -->
 <script>
   // ─── Utilities ────────────────────────────────────────────────────────────
 
@@ -643,7 +1035,6 @@
   function parseNumber(str) {
     if (str === null || str === undefined) return 0;
     const cleaned = String(str).replace(/[^\d,\.]/g, '');
-    // handle Brazilian format "1.234,56" and plain "1234.56"
     const normalized = cleaned.includes(',')
       ? cleaned.replace(/\./g, '').replace(',', '.')
       : cleaned;
@@ -664,7 +1055,7 @@
   let itemCount = 0;
   let currentClientId   = null;
   let currentClientData = null;
-  let condMode = 'catalog';
+  let condMode = null;               // starts unselected — user must choose
   let currentConditionId   = null;
   let currentConditionData = null;
   let currentObjetoId   = null;
@@ -678,6 +1069,33 @@
   function setField(name, value) {
     const el = document.querySelector(`[name="${name}"]`);
     if (el) el.value = value;
+  }
+
+  // ─── Sidebar update ───────────────────────────────────────────────────────
+
+  function updateSidebar() {
+    const num = (document.getElementById('numero_proposta') || {}).value || '';
+    const sbNum = document.getElementById('sb-numero');
+    if (sbNum) {
+      sbNum.textContent = num.trim() || '—';
+      sbNum.classList.toggle('empty', !num.trim());
+    }
+
+    const sbCliente = document.getElementById('sb-cliente');
+    if (sbCliente) {
+      const nome = currentClientData ? currentClientData.nome : null;
+      sbCliente.textContent = nome || 'Não selecionado';
+      sbCliente.classList.toggle('empty', !nome);
+    }
+
+    const sbItens = document.getElementById('sb-itens');
+    if (sbItens) sbItens.textContent = document.querySelectorAll('#itemsBody tr').length;
+
+    const sbTotal = document.getElementById('sb-total');
+    if (sbTotal) {
+      const tEl = document.getElementById('totalDisplay');
+      if (tEl) sbTotal.textContent = tEl.textContent;
+    }
   }
 
   // ─── Modal genérico de entidades ─────────────────────────────────────────
@@ -776,6 +1194,7 @@
     if (c.contato_responsavel) rows.push(['Contato', c.contato_responsavel]);
     document.getElementById('cs-preview').innerHTML = buildPreview(rows);
     clientPanel.style.display = 'block';
+    updateSidebar();
     scheduleSave();
   }
 
@@ -785,6 +1204,7 @@
     document.getElementById('cliente-buttons').style.display = 'flex';
     document.getElementById('cs-preview').innerHTML = '';
     clientPanel.style.display = 'none';
+    updateSidebar();
     scheduleSave();
   }
 
@@ -890,7 +1310,7 @@
   function clearCondSelection() {
     currentConditionId   = null;
     currentConditionData = null;
-    document.getElementById('cond-buttons').style.display = 'flex';
+    document.getElementById('cond-buttons').style.display = '';
     document.getElementById('cs-cond-preview').innerHTML = '';
     condPanel.style.display = 'none';
     scheduleSave();
@@ -919,7 +1339,7 @@
 
     function cnfVal(id) { return document.getElementById(id).value.trim(); }
     function cnfShowError(text) {
-      msgEl.style.cssText = 'display:block; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; padding:8px 12px; border-radius:6px; font-size:13px; margin-bottom:12px;';
+      msgEl.style.cssText = 'display:block; background:var(--color-danger-bg); border:1px solid var(--color-danger-border); color:var(--color-danger); padding:8px 12px; border-radius:6px; font-size:13px; margin-bottom:12px;';
       msgEl.textContent = text;
     }
 
@@ -930,11 +1350,11 @@
     const validade = cnfVal('cnf_validade');
     const garantia = document.getElementById('cnf_garantia').value.trim();
 
-    if (!name)     { cnfShowError('Nome da condição é obrigatório.');     document.getElementById('cnf_name').focus();      return; }
-    if (!forma)    { cnfShowError('Forma de pagamento é obrigatória.');   document.getElementById('cnf_forma').focus();     return; }
-    if (!prazoPag) { cnfShowError('Prazo de pagamento é obrigatório.');  document.getElementById('cnf_prazo_pag').focus(); return; }
-    if (!prazoEnt) { cnfShowError('Prazo de entrega é obrigatório.');    document.getElementById('cnf_prazo_ent').focus(); return; }
-    if (!validade) { cnfShowError('Validade é obrigatória.');             document.getElementById('cnf_validade').focus();  return; }
+    if (!name)     { cnfShowError('Nome da condição é obrigatório.');    document.getElementById('cnf_name').focus();      return; }
+    if (!forma)    { cnfShowError('Forma de pagamento é obrigatória.');  document.getElementById('cnf_forma').focus();     return; }
+    if (!prazoPag) { cnfShowError('Prazo de pagamento é obrigatório.'); document.getElementById('cnf_prazo_pag').focus(); return; }
+    if (!prazoEnt) { cnfShowError('Prazo de entrega é obrigatório.');   document.getElementById('cnf_prazo_ent').focus(); return; }
+    if (!validade) { cnfShowError('Validade é obrigatória.');            document.getElementById('cnf_validade').focus();  return; }
 
     const btn = document.getElementById('condNewBtn');
     btn.disabled = true;
@@ -945,16 +1365,13 @@
       const res = await fetch('/commercial-conditions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name, forma_pagamento: forma, prazo_pagamento: prazoPag,
-          prazo_entrega: prazoEnt, validade, garantia: garantia || null
-        })
+        body: JSON.stringify({ name, forma_pagamento: forma, prazo_pagamento: prazoPag, prazo_entrega: prazoEnt, validade, garantia: garantia || null })
       });
       const data = await res.json();
       if (!res.ok) { cnfShowError(data.message || 'Erro ao criar condição.'); return; }
 
       const condRes = await fetch(`/commercial-conditions/${data.id}`);
-      if (!condRes.ok) { cnfShowError('Condição criada, mas erro ao carregá-la. Use "Escolher condição" para selecioná-la.'); return; }
+      if (!condRes.ok) { cnfShowError('Condição criada, mas erro ao carregá-la. Use "Procurar condição" para selecioná-la.'); return; }
       const newCond = await condRes.json();
 
       ['cnf_name','cnf_forma','cnf_prazo_pag','cnf_prazo_ent','cnf_validade','cnf_garantia'].forEach(id => {
@@ -971,10 +1388,7 @@
   });
 
   document.getElementById('condModeNewPanel').addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('condNewBtn').click();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('condNewBtn').click(); }
   });
 
   // ─── Items table ──────────────────────────────────────────────────────────
@@ -982,11 +1396,15 @@
   function updateTotal() {
     let total = 0;
     document.querySelectorAll('#itemsBody tr').forEach(tr => {
-      const qty = parseFloat(tr.querySelector('[data-field="quantidade"]')?.value) || 0;
+      const qty   = parseFloat(tr.querySelector('[data-field="quantidade"]')?.value) || 0;
       const price = parseNumber(tr.querySelector('[data-field="valor_unitario"]')?.value);
       total += qty * price;
     });
     document.getElementById('totalDisplay').textContent = formatBRL(total);
+    const sbTotal = document.getElementById('sb-total');
+    if (sbTotal) sbTotal.textContent = formatBRL(total);
+    const sbItens = document.getElementById('sb-itens');
+    if (sbItens) sbItens.textContent = document.querySelectorAll('#itemsBody tr').length;
   }
 
   function addItem() {
@@ -1005,23 +1423,27 @@
           <input type="hidden" data-field="descricao" data-row="${idx}" />
           <input type="hidden" data-field="part_id" data-row="${idx}" />
           <span data-field="part-display" data-row="${idx}" style="display:none; font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-          <button type="button" data-field="btn-procurar-peca" data-row="${idx}" class="btn-procurar" style="padding:5px 12px; font-size:12px; white-space:nowrap;">Procurar peça</button>
-          <button type="button" data-field="btn-trocar-peca" data-row="${idx}" style="display:none; flex-shrink:0; background:none; border:1px solid #ccc; border-radius:3px; padding:3px 8px; font-size:11px; cursor:pointer; color:var(--muted); font-family:inherit;">Trocar</button>
+          <button type="button" data-field="btn-procurar-peca" data-row="${idx}" class="btn-procurar" style="padding:5px 10px; font-size:12px; white-space:nowrap;">Procurar peça</button>
+          <button type="button" data-field="btn-trocar-peca" data-row="${idx}" style="display:none; flex-shrink:0; background:none; border:1px solid var(--color-border); border-radius:3px; padding:3px 8px; font-size:11px; cursor:pointer; color:var(--color-muted); font-family:inherit; transition:background 0.12s;">Trocar</button>
         </div>
       </td>
       <td class="col-price">
         <input type="text" placeholder="0,00" data-field="valor_unitario" data-row="${idx}" />
         <div class="price-hint" data-row="${idx}"></div>
       </td>
+      <td class="col-total" style="vertical-align:middle; text-align:right; padding-right:10px;">
+        <span data-field="row-total" style="font-size:12px; font-weight:600; color:var(--color-text); white-space:nowrap;">—</span>
+      </td>
       <td class="col-ncm">
-        <input type="text" placeholder="—" data-field="ncm" data-row="${idx}" readonly style="background:#f5f5f5; color:var(--muted); cursor:default;" />
+        <input type="text" placeholder="—" data-field="ncm" data-row="${idx}" readonly style="background:#f9f9f9; color:var(--color-muted); cursor:default;" />
       </td>
       <td class="col-del">
-        <button type="button" class="btn-del-row" data-row="${idx}" title="Remover">×</button>
+        <button type="button" class="btn-del-row" data-row="${idx}" title="Remover item">×</button>
       </td>
     `;
     tbody.appendChild(tr);
     wireItemRow(tr, idx);
+    updateTotal();
     scheduleSave();
   }
 
@@ -1036,9 +1458,16 @@
     const partDisplay = tr.querySelector('[data-field="part-display"]');
     const btnProcurar = tr.querySelector('[data-field="btn-procurar-peca"]');
     const btnTrocar   = tr.querySelector('[data-field="btn-trocar-peca"]');
+    const rowTotal    = tr.querySelector('[data-field="row-total"]');
 
-    qtyInput.addEventListener('input', () => { updateTotal(); scheduleSave(); });
-    priceInput.addEventListener('input', () => { updateTotal(); scheduleSave(); });
+    function updateRowTotal() {
+      const qty   = parseFloat(qtyInput.value) || 0;
+      const price = parseNumber(priceInput.value);
+      if (rowTotal) rowTotal.textContent = (qty > 0 && price > 0) ? formatBRL(qty * price) : '—';
+    }
+
+    qtyInput.addEventListener('input',   () => { updateRowTotal(); updateTotal(); scheduleSave(); });
+    priceInput.addEventListener('input', () => { updateRowTotal(); updateTotal(); scheduleSave(); });
 
     delBtn.addEventListener('click', () => {
       tr.remove();
@@ -1082,6 +1511,7 @@
       partDisplay.style.display = 'none';
       btnProcurar.style.display = '';
       btnTrocar.style.display   = 'none';
+      if (rowTotal) rowTotal.textContent = '—';
       scheduleSave();
     });
   }
@@ -1099,18 +1529,17 @@
       const data = await res.json();
 
       if (data && data.valor_unitario != null) {
-        const formatted = formatBRL(data.valor_unitario);
+        const formatted      = formatBRL(data.valor_unitario);
         const valorFormatado = Number(data.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
-        // Auto-preenche o valor apenas se o campo estiver vazio ou zerado
         if (!parseNumber(priceInput.value)) {
           priceInput.value = valorFormatado;
           updateTotal();
         }
 
         priceHint.textContent = data.numero_proposta
-          ? `Preço sugerido com base na proposta Nº ${data.numero_proposta}: ${formatted} — clique para restaurar`
-          : `Referência manual de preço: ${formatted} — clique para aplicar`;
+          ? `Último preço nesta proposta (Nº ${data.numero_proposta}): ${formatted} — clique para aplicar`
+          : `Referência de preço para este cliente: ${formatted} — clique para aplicar`;
         priceHint.style.display = 'block';
 
         priceHint.onclick = () => {
@@ -1198,13 +1627,19 @@
       return;
     }
 
+    if (condMode === null) {
+      showResult('error', 'Selecione como deseja definir as condições comerciais desta proposta.');
+      document.getElementById('condCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     if (condMode === 'catalog' && !currentConditionId) {
-      showResult('error', 'Selecione uma condição comercial cadastrada ou escolha "Elaborar condição específica".');
+      showResult('error', 'Selecione uma condição comercial cadastrada ou escolha outra opção.');
       document.getElementById('btnProcurarCondicao').focus();
       return;
     }
     if (condMode === 'new') {
-      showResult('error', 'Preencha os dados da nova condição e clique em "Criar e usar esta condição" antes de gerar a proposta.');
+      showResult('error', 'Preencha os campos da nova condição e clique em "Criar e usar esta condição" antes de gerar.');
       return;
     }
     if (condMode === 'manual') {
@@ -1219,7 +1654,7 @@
     const bad = items.find(it => !it.descricao || it.valor_unitario <= 0);
     if (bad) { showResult('error', 'Preencha descrição e valor unitário em todos os itens.'); return; }
     const semPeca = items.find(it => !it.part_id);
-    if (semPeca) { showResult('error', 'Selecione cada peça a partir do catálogo usando o botão "Procurar peça", ou clique em "+ Criar nova peça no catálogo" para cadastrar uma nova.'); return; }
+    if (semPeca) { showResult('error', 'Selecione cada peça a partir do catálogo usando "Procurar peça", ou clique em "+ Criar nova peça no catálogo" para cadastrar.'); return; }
 
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true;
@@ -1243,7 +1678,6 @@
         showResult('success', `Proposta gerada com sucesso!<br><br><a href="${url}" target="_blank">Abrir PDF: proposta-${numero}.pdf</a>`);
         showSuggestions(data);
       } else if (res.status === 409 && data.code === 'CLIENT_DATA_CONFLICT') {
-        // Conflito de dados de cliente — exibe mensagem detalhada
         let html = `<strong>Conflito de dados do cliente</strong><br>${data.message}`;
         if (data.existingClientId) {
           html += `<br><br><a href="/clients.html?id=${data.existingClientId}" target="_blank">Ver cliente cadastrado (id=${data.existingClientId})</a>`;
@@ -1269,20 +1703,14 @@
     el.style.display = 'block';
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
-
-  function hideResult() {
-    document.getElementById('result').style.display = 'none';
-  }
-
-  // ─── Suggestions panel ───────────────────────────────────────────────────
+  function hideResult() { document.getElementById('result').style.display = 'none'; }
 
   function hideSuggestions() {
     const el = document.getElementById('suggestions');
     el.style.display = 'none';
     el.innerHTML = '';
   }
-
-  function showSuggestions() { /* Clientes vêm sempre do cadastro — sem sugestões pós-criação. */ }
+  function showSuggestions() { /* sem sugestões pós-criação */ }
 
   // ─── Draft / Rascunho ─────────────────────────────────────────────────────
 
@@ -1334,9 +1762,7 @@
   function saveDraft() {
     if (!draftKey) return;
     const draft = collectDraft();
-    if (hasMeaningfulContent(draft)) {
-      localStorage.setItem(draftKey, JSON.stringify(draft));
-    }
+    if (hasMeaningfulContent(draft)) localStorage.setItem(draftKey, JSON.stringify(draft));
   }
 
   function clearDraft() {
@@ -1353,55 +1779,38 @@
     }
     if (draft.observacoes) {
       const el = document.querySelector('[name="observacoes"]');
-      if (el) el.value = draft.observacoes;
+      if (el) { el.value = draft.observacoes; el.style.height = el.scrollHeight + 'px'; }
     }
 
     if (draft.clientId) {
       try {
         const res = await fetch(`/clients/${draft.clientId}`);
-        if (res.ok) {
-          selectClient(await res.json());
-        } else {
-          warnings.push('Cliente do rascunho não existe mais — campo de cliente limpo.');
-        }
-      } catch {
-        warnings.push('Não foi possível verificar o cliente do rascunho.');
-      }
+        if (res.ok) { selectClient(await res.json()); }
+        else { warnings.push('Cliente do rascunho não existe mais — campo de cliente limpo.'); }
+      } catch { warnings.push('Não foi possível verificar o cliente do rascunho.'); }
     }
 
     if (draft.objetoId) {
       try {
         const res = await fetch(`/objetos/${draft.objetoId}`);
-        if (res.ok) {
-          selectObjeto(await res.json());
-        } else {
-          warnings.push('Objeto do rascunho não existe mais — campo de objeto limpo.');
-        }
-      } catch {
-        warnings.push('Não foi possível verificar o objeto do rascunho.');
-      }
+        if (res.ok) { selectObjeto(await res.json()); }
+        else { warnings.push('Objeto do rascunho não existe mais — campo de objeto limpo.'); }
+      } catch { warnings.push('Não foi possível verificar o objeto do rascunho.'); }
     }
 
     if (draft.condMode === 'catalog' && draft.conditionId) {
       try {
         const res = await fetch(`/commercial-conditions/${draft.conditionId}`);
-        if (res.ok) {
-          setCondMode('catalog');
-          selectCondition(await res.json());
-        } else {
-          warnings.push('Condição comercial do rascunho não existe mais — campo limpo.');
-          setCondMode('catalog');
-        }
-      } catch {
-        warnings.push('Não foi possível verificar a condição comercial do rascunho.');
-      }
+        if (res.ok) { setCondMode('catalog'); selectCondition(await res.json()); }
+        else { warnings.push('Condição comercial do rascunho não existe mais — campo limpo.'); setCondMode('catalog'); }
+      } catch { warnings.push('Não foi possível verificar a condição comercial do rascunho.'); }
     } else if (draft.condMode === 'manual') {
       setCondMode('manual');
       ['forma_pagamento','prazo_pagamento','prazo_entrega','garantia','validade'].forEach(f => {
         if (draft[f]) setField(f, draft[f]);
       });
     } else {
-      setCondMode(draft.condMode || 'catalog');
+      setCondMode(draft.condMode || null);
     }
 
     if (draft.items && draft.items.length) {
@@ -1428,6 +1837,7 @@
     }
 
     draftRestoring = false;
+    updateSidebar();
 
     if (warnings.length) {
       showResult('warn', 'Rascunho restaurado com avisos:<br>• ' + warnings.join('<br>• '));
@@ -1456,6 +1866,7 @@
   });
 
   // ─── Assinatura do usuário logado ─────────────────────────────────────────
+
   (async function loadSignaturePreview() {
     try {
       const res  = await fetch('/auth/me');
@@ -1463,51 +1874,73 @@
       const data = await res.json();
       const user = data.user;
       if (!user) return;
-      document.getElementById('sig-nome').textContent = user.nome;
-      const rows = [];
-      if (user.signature_cargo)    rows.push(`Cargo: ${user.signature_cargo}`);
-      if (user.signature_telefone) rows.push(`Telefone: ${user.signature_telefone}`);
-      document.getElementById('sig-preview').innerHTML =
-        rows.length
-          ? rows.join(' &middot; ')
-          : '<span style="color:var(--danger)">Assinatura incompleta — configure cargo e telefone em <a href="/usuarios.html" style="color:var(--danger)">Usuários</a> antes de gerar propostas.</span>';
 
-    draftKey = `draft_new_proposal_user_${user.id}`;
-    const raw = localStorage.getItem(draftKey);
-    if (raw) {
-      try {
-        const draft = JSON.parse(raw);
-        if (hasMeaningfulContent(draft)) {
-          showDraftModal();
-        } else {
-          clearDraft();
-        }
-      } catch {
-        clearDraft();
+      document.getElementById('sig-nome').textContent = user.nome;
+
+      // Atualiza sidebar
+      const sbResp = document.getElementById('sb-resp');
+      if (sbResp) {
+        sbResp.textContent = user.nome.split(' ')[0];
+        sbResp.classList.remove('empty');
       }
-    }
+
+      const rows = [];
+      if (user.signature_cargo)    rows.push(`${user.signature_cargo}`);
+      if (user.signature_telefone) rows.push(`${user.signature_telefone}`);
+
+      document.getElementById('sig-preview').innerHTML = rows.length
+        ? rows.join(' &middot; ')
+        : `<span style="color:var(--color-danger)">Assinatura incompleta — configure cargo e telefone em <a href="/usuarios.html" style="color:var(--color-danger)">Usuários</a> antes de gerar propostas.</span>`;
+
+      // Revela o card, esconde skeleton
+      document.getElementById('resp-loading').style.display = 'none';
+      document.getElementById('resp-loaded').style.display  = '';
+
+      draftKey = `draft_new_proposal_user_${user.id}`;
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        try {
+          const draft = JSON.parse(raw);
+          if (hasMeaningfulContent(draft)) { showDraftModal(); }
+          else { clearDraft(); }
+        } catch { clearDraft(); }
+      }
     } catch { /* silencioso */ }
   })();
 
-  // Auto-save on plain text field changes
+  // ─── Auto-save listeners ──────────────────────────────────────────────────
+
   ['numero_proposta','observacoes','forma_pagamento','prazo_pagamento','prazo_entrega','garantia','validade'].forEach(name => {
     const el = document.querySelector(`[name="${name}"]`);
     if (el) el.addEventListener('input', scheduleSave);
   });
 
-  // Start with one empty row
+  // Atualiza sidebar com o número da proposta
+  const numInput = document.getElementById('numero_proposta');
+  if (numInput) numInput.addEventListener('input', updateSidebar);
+
+  // Auto-resize textarea de observações
+  const obsTextarea = document.getElementById('observacoes');
+  if (obsTextarea) {
+    obsTextarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
+  }
+
+  // Inicia com uma linha vazia
   addItem();
 </script>
 <script src="/auth.js"></script>
 
-<!-- Draft modal -->
+<!-- ── Draft modal ───────────────────────────────────────────────────── -->
 <div id="draftModal" class="modal-overlay" style="display:none; z-index:400;">
   <div class="modal-box" style="width:420px;">
     <div class="modal-header">
       <h3>Continuar de onde parou?</h3>
     </div>
-    <div style="padding:20px 20px 16px;">
-      <p style="margin:0 0 20px; font-size:13px; color:#333; line-height:1.6;">
+    <div style="padding:20px 20px 20px;">
+      <p style="margin:0 0 20px; font-size:13px; color:#374151; line-height:1.65;">
         Existe um rascunho salvo desta proposta.<br>Deseja continuar de onde parou ou começar do zero?
       </p>
       <div style="display:flex; gap:10px; justify-content:flex-end;">

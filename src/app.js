@@ -4,6 +4,7 @@ const fs = require("fs");
 const session = require("express-session");
 const multer = require("multer");
 const requireAuth = require("./middleware/requireAuth");
+const BetterSQLiteStore = require("./middleware/sessionStore");
 
 // ── Multer: upload de comprovantes de aprovação ───────────────────────────────
 const approvalDir = path.resolve(__dirname, "../output/approvals");
@@ -208,18 +209,26 @@ const {
   getResumoHandler,
 } = require("./modules/conta_pagar/conta_pagar.controller");
 
+const db = require("./db/connection");
 const app = express();
 
+const isProd = process.env.NODE_ENV === "production";
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
   console.warn("[AVISO] SESSION_SECRET não definido. Usando secret de desenvolvimento — NÃO use em produção.");
 }
 
 app.use(session({
+  store: new BetterSQLiteStore({ ttl: 8 * 60 * 60 }),
   secret: sessionSecret || "ghtec-dev-secret-nao-use-em-producao",
   resave: false,
   saveUninitialized: false,
-  cookie: { httpOnly: true, maxAge: 8 * 60 * 60 * 1000 },
+  cookie: {
+    httpOnly: true,
+    maxAge: 8 * 60 * 60 * 1000,
+    sameSite: "lax",
+    secure: isProd,
+  },
 }));
 
 app.use(requireAuth);
@@ -243,7 +252,15 @@ app.put("/users/me/signature",  updateSignatureHandler);
 app.put("/users/:id/role",     changeUserRoleHandler);
 app.delete("/users/:id",       deleteUserHandler);
 
-app.get("/health", (req, res) => res.json({ ok: true }));
+app.get("/health", (req, res) => {
+  try {
+    db.prepare("SELECT 1").get();
+    res.json({ ok: true, db: "ok", env: process.env.NODE_ENV || "development" });
+  } catch (e) {
+    console.error("[HEALTH] DB inacessível:", e.message);
+    res.status(503).json({ ok: false, db: "error", message: "Banco de dados indisponível." });
+  }
+});
 
 // Clientes — rotas específicas devem vir antes de /:id
 app.get("/clients",                  listClientsHandler);

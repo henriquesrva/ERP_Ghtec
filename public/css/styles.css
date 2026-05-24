@@ -79,13 +79,14 @@ a { color: var(--color-primary); }
 
 /* ── Navbar ──────────────────────────────────────────────────────── */
 .nav {
-  background: var(--color-primary);
+  background: #fff;
   display: flex;
   align-items: stretch;
   padding: 0 24px;
   position: relative;
   z-index: 200;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* Logo/Brand */
@@ -95,7 +96,7 @@ a { color: var(--color-primary); }
   text-decoration: none;
   padding: 0 20px 0 0;
   margin-right: 8px;
-  border-right: 1px solid rgba(255,255,255,0.2);
+  border-right: 1px solid var(--color-border);
   flex-shrink: 0;
 }
 .app-logo {
@@ -119,22 +120,29 @@ a { color: var(--color-primary); }
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
-  color: rgba(255,255,255,0.82);
+  color: #374151;
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 0.15s, border-bottom-color 0.15s;
+  transition: color 0.15s, border-bottom-color 0.15s, background 0.15s;
   height: 52px;
 }
 .nav-group-btn:hover {
-  color: #fff;
-  border-bottom-color: rgba(255,255,255,0.45);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border-bottom-color: var(--color-primary-light);
 }
 .nav-group.active > .nav-group-btn {
-  color: #fff;
-  border-bottom-color: #fff;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+.nav-group:hover > .nav-group-btn,
+.nav-group.open > .nav-group-btn {
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
+  border-bottom-color: var(--color-primary-light);
 }
 .nav-arrow {
   font-size: 9px;
@@ -194,12 +202,12 @@ a { color: var(--color-primary); }
   align-items: center;
   gap: 4px;
   padding-left: 12px;
-  border-left: 1px solid rgba(255,255,255,0.15);
+  border-left: 1px solid var(--color-border);
   margin-left: auto;
 }
 
 #navUserLabel {
-  color: rgba(255,255,255,0.72);
+  color: var(--color-muted);
   font-size: 12px;
   padding: 0 8px;
   white-space: nowrap;
@@ -215,21 +223,21 @@ a { color: var(--color-primary); }
   width: 34px;
   height: 34px;
   border-radius: var(--radius);
-  color: rgba(255,255,255,0.8);
+  color: #9ca3af;
   font-size: 16px;
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
 .nav-icon-link:hover,
 .nav-icon-link.active {
-  background: rgba(255,255,255,0.15);
-  color: #fff;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
 }
 
 .btn-logout {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.25);
-  color: rgba(255,255,255,0.88);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
   padding: 6px 14px;
   border-radius: var(--radius);
   cursor: pointer;
@@ -239,7 +247,7 @@ a { color: var(--color-primary); }
   transition: background 0.15s;
   white-space: nowrap;
 }
-.btn-logout:hover { background: rgba(255,255,255,0.22); }
+.btn-logout:hover { background: #f3f4f6; }
 
 /* ── Page Bar ────────────────────────────────────────────────────── */
 .page-bar {
