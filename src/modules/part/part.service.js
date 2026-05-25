@@ -1,36 +1,4 @@
-const {
-  listAllParts,
-  findPartById,
-  findPartByInternalCode,
-  searchParts,
-  createPart,
-  updatePart,
-  deletePart,
-  getPartPriceHistory,
-  getPartPriceHistoryByClient,
-  getPartLastPricePerClient,
-  getClientPriceRefs,
-  upsertClientPriceRef,
-} = require("./part.repository");
-
-// Hybrid migration: category.repository uses Prisma (async). Parts remain on SQLite.
-// Query part_categories directly via SQLite to keep buildInternalCode synchronous.
-const db = require("../../db/connection");
-function findCategoryByIdSync(id) {
-  return db.prepare("SELECT id, name, code FROM part_categories WHERE id = ?").get(id) || null;
-}
-
-function getAllParts() {
-  return listAllParts();
-}
-
-function getPartById(id) {
-  return findPartById(id);
-}
-
-function searchPartsByQuery(q) {
-  return searchParts(q);
-}
+const repo = require("./part.repository");
 
 function parsePrecoCompra(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -39,9 +7,9 @@ function parsePrecoCompra(value) {
   return isNaN(num) ? null : num;
 }
 
-function buildInternalCode(data) {
+async function buildInternalCode(data) {
   if (!data.category_id || !data.identity_code) return data.codigo_interno ?? null;
-  const cat = findCategoryByIdSync(Number(data.category_id));
+  const cat = await repo.findCategoryById(Number(data.category_id));
   if (!cat) {
     const err = new Error("Categoria não encontrada.");
     err.code = "VALIDATION";
@@ -50,7 +18,19 @@ function buildInternalCode(data) {
   return `${cat.code}-${String(data.identity_code).trim()}`;
 }
 
-function createNewPart(data) {
+async function getAllParts() {
+  return repo.listAllParts();
+}
+
+async function getPartById(id) {
+  return repo.findPartById(id);
+}
+
+async function searchPartsByQuery(q) {
+  return repo.searchParts(q);
+}
+
+async function createNewPart(data) {
   if (!data.nome || !String(data.nome).trim()) {
     throw new Error("O campo 'nome' é obrigatório.");
   }
@@ -61,13 +41,11 @@ function createNewPart(data) {
   }
   data = { ...data, preco_compra: preco };
 
-  // Gera código interno a partir da categoria + identity_code
-  const codigoInterno = buildInternalCode(data);
+  const codigoInterno = await buildInternalCode(data);
   data = { ...data, codigo_interno: codigoInterno };
 
-  // Valida unicidade do código interno
   if (codigoInterno) {
-    const dup = findPartByInternalCode(codigoInterno);
+    const dup = await repo.findPartByInternalCode(codigoInterno);
     if (dup) {
       const err = new Error(`Já existe uma peça cadastrada com o código interno "${codigoInterno}".`);
       err.code = "DUPLICATE_INTERNAL_CODE";
@@ -76,12 +54,12 @@ function createNewPart(data) {
     }
   }
 
-  const id = createPart(data);
-  return findPartById(id);
+  const id = await repo.createPart(data);
+  return repo.findPartById(id);
 }
 
-function updateExistingPart(id, data) {
-  const existing = findPartById(id);
+async function updateExistingPart(id, data) {
+  const existing = await repo.findPartById(id);
   if (!existing) {
     const err = new Error("Peça não encontrada.");
     err.code = "NOT_FOUND";
@@ -98,13 +76,11 @@ function updateExistingPart(id, data) {
   }
   data = { ...data, preco_compra: preco };
 
-  // Gera código interno a partir da categoria + identity_code
-  const codigoInterno = buildInternalCode(data);
+  const codigoInterno = await buildInternalCode(data);
   data = { ...data, codigo_interno: codigoInterno };
 
-  // Valida unicidade do código interno (excluindo a própria peça)
   if (codigoInterno) {
-    const dup = findPartByInternalCode(codigoInterno);
+    const dup = await repo.findPartByInternalCode(codigoInterno);
     if (dup && dup.id !== id) {
       const err = new Error(`Já existe outra peça com o código interno "${codigoInterno}".`);
       err.code = "DUPLICATE_INTERNAL_CODE";
@@ -113,62 +89,62 @@ function updateExistingPart(id, data) {
     }
   }
 
-  updatePart(id, data);
-  return findPartById(id);
+  await repo.updatePart(id, data);
+  return repo.findPartById(id);
 }
 
-function getPartPriceHistoryService(id) {
-  const part = findPartById(id);
+async function getPartPriceHistoryService(id) {
+  const part = await repo.findPartById(id);
   if (!part) {
     const err = new Error("Peça não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  return getPartPriceHistory(id);
+  return repo.getPartPriceHistory(id);
 }
 
-function getPartPriceHistoryByClientService(partId, clientId) {
-  const part = findPartById(partId);
+async function getPartPriceHistoryByClientService(partId, clientId) {
+  const part = await repo.findPartById(partId);
   if (!part) {
     const err = new Error("Peça não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  return getPartPriceHistoryByClient(partId, clientId);
+  return repo.getPartPriceHistoryByClient(partId, clientId);
 }
 
-function getPartPriceComparisonService(partId) {
-  const part = findPartById(partId);
+async function getPartPriceComparisonService(partId) {
+  const part = await repo.findPartById(partId);
   if (!part) {
     const err = new Error("Peça não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  return getPartLastPricePerClient(partId);
+  return repo.getPartLastPricePerClient(partId);
 }
 
-function deletePartService(id) {
-  const part = findPartById(id);
+async function deletePartService(id) {
+  const part = await repo.findPartById(id);
   if (!part) {
     const err = new Error("Peça não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  deletePart(id);
+  await repo.deletePart(id);
 }
 
-function getClientPriceRefsService(partId) {
-  const part = findPartById(partId);
+async function getClientPriceRefsService(partId) {
+  const part = await repo.findPartById(partId);
   if (!part) {
     const err = new Error("Peça não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  return getClientPriceRefs(partId);
+  return repo.getClientPriceRefs(partId);
 }
 
-function upsertClientPriceRefService(partId, clientId, data, userId) {
-  const part = findPartById(partId);
+async function upsertClientPriceRefService(partId, clientId, data, userId) {
+  const part = await repo.findPartById(partId);
   if (!part) {
     const err = new Error("Peça não encontrada.");
     err.code = "NOT_FOUND";
@@ -194,7 +170,7 @@ function upsertClientPriceRefService(partId, clientId, data, userId) {
     err.code = "VALIDATION";
     throw err;
   }
-  return upsertClientPriceRef(partId, Number(clientId), price, data.notes ?? null, userId);
+  return repo.upsertClientPriceRef(partId, Number(clientId), price, data.notes ?? null, userId);
 }
 
 module.exports = {

@@ -1,31 +1,36 @@
-# Feedback — Passo 3.5.5
+# Feedback — Passo 3.5.6: Migrar `part` + `part_client_price_references` para Prisma
 
 ## O que foi feito
 
-Migração completa do módulo `auth/user` de SQLite/better-sqlite3 para Prisma/PostgreSQL.
+- `part.repository.js` reescrito em Prisma async com mappers `mapPart()` e `mapPartRef()`
+- `part.service.js` totalmente async; `buildInternalCode` virou async; removida bridge `findCategoryByIdSync`; `const repo = require(...)` (não destructuring) para compatibilidade com `vi.spyOn`
+- `part.controller.js` todos os handlers virados async
+- `proposal.repository.js` recebeu bridge síncrona `createPart` (SQLite) para manter o fluxo de auto-registro de peças em propostas funcionando enquanto `proposal` não migra
+- `proposal.service.js` passou a importar `createPart` de `proposal.repository` (bridge) em vez de `part.repository` (agora async)
+- `tests/services/part.service.test.js` reescrito do zero com `vi.spyOn` — 52 testes, todos passando (281 total no suite)
+- `scripts/check-prisma-connection.js` — seção 8 adicionada (parts + price refs CRUD)
+- `docs/PRISMA_SETUP.md` e `docs/POSTGRES_CUTOVER_PLAN.md` atualizados
 
-**Arquivos alterados:**
-- `src/modules/auth/auth.repository.js` — reescrito com Prisma async
-- `src/modules/auth/auth.service.js` — todas as funções async/await
-- `src/modules/auth/auth.controller.js` — todos os handlers async
-- `src/modules/proposal/proposal.controller.js` — fix de uma linha: `await findAuthUserById`
-- `tests/services/auth.service.test.js` — reescrito com vi.spyOn (33 testes, sem SQLite)
-- `scripts/seed-postgres.js` — criado (idempotente, cria admin/admin123 se não existir)
-- `scripts/check-prisma-connection.js` — seção 7 adicionada (CRUD seguro de usuário)
-- `docs/PRISMA_SETUP.md` — atualizado para Passo 3.5.5
-- `docs/POSTGRES_CUTOVER_PLAN.md` — Fase 1 marcada como concluída
+## Decisões de projeto
 
-## Resultados
+**Bridges SQLite mantidas em `part.repository.js`:**
+- `getPartPriceHistory`, `getPartPriceHistoryByClient`, `getPartLastPricePerClient` — `price_history` ainda é SQLite
+- `findPartByComposition` — usada sincronamente por `proposal.service.js` e `migrate.js`; manter sync até proposal migrar
 
-- `npm test` → 248 testes passando (0 falhas)
-- `node scripts/seed-postgres.js` → admin criado no PostgreSQL
-- `node scripts/check-prisma-connection.js` → ✅ todas as 7 seções
-- `npm run prisma:status` → `Database schema is up to date!`
+**`deletePart` híbrido:** checa `stock_movements` no SQLite, nulifica `price_history` e `itens_nota_recebida` no SQLite, depois deleta `part_client_price_references` e `parts` no PostgreSQL via Prisma.
 
-## Ponto crítico resolvido
+**`getClientPriceRefs` híbrido:** refs manuais vêm do PostgreSQL; histórico de preços vem do SQLite; merge feito no service.
 
-`proposal.controller.js` chamava `findAuthUserById` sem `await`. Após a migração, esse método retorna uma Promise. Sem o `await`, a variável `user` seria um objeto Promise (truthy) — o guard `if (!user)` nunca dispararia e `user.nome`, `user.signature_cargo`, etc., seriam `undefined`, corrompendo silenciosamente os dados das propostas criadas.
+**Decimal → Number:** `mapPart` e `mapPartRef` convertem via `Number(p.precoCompra)` para não vazar o tipo Decimal do Prisma para o cliente.
 
-## Próximo passo
+## Riscos conhecidos (a resolver quando `proposal` migrar)
 
-Fase 2: migrar `part` + `part_client_price_references` para Prisma.
+- `proposal.repository.js → getLastItemPriceForClient` consulta SQLite `part_client_price_references` — refs manuais novas (PostgreSQL) não aparecem nas sugestões de preço durante criação de propostas
+- Bridge `createPart` em `proposal.repository.js` insere peças no SQLite — IDs podem divergir do PostgreSQL
+- `findPartByComposition` é bridge SQLite; peças criadas via Prisma direto não são encontradas por ela (mas no fluxo atual de propostas isso não ocorre)
+
+## Armadilhas encontradas
+
+- Mock de `findPartById` no teste "cria peça sem categoria" estava retornando `FAKE_PART` com `nome: "Resistor"` em vez de `"Peça Mínima"` — corrigido sobrescrevendo o campo no mock
+- `vi.spyOn` só funciona quando o service usa `const repo = require(...)` (não destructuring) — padrão obrigatório mantido
+- Funções de bridge síncrona nos testes precisam de `.mockReturnValue()` (não `.mockResolvedValue()`) — misturar os dois causa falhas silenciosas

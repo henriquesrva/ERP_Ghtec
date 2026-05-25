@@ -20,12 +20,12 @@ Isso muda fundamentalmente a estratégia.
 | `condition` | `commercial_conditions` |
 | `client` | `clients` |
 | `auth/user` ✅ | `users` |
+| `part` ✅ | `parts`, `part_client_price_references` |
 
 ### Módulos em SQLite/better-sqlite3
 
 | Módulo | Tabela(s) | Linhas no repository |
 |--------|-----------|---------------------|
-| `part` | `parts`, `part_client_price_references` | 265 |
 | `proposal` | `proposals`, `proposal_items`, `price_history` | 429 |
 | `stock` | `stock_movements` | 224 |
 | `kanban` | `kanban_tasks`, `kanban_comments` | 142 |
@@ -268,19 +268,33 @@ Grupo 8: conta_pagar
 
 ---
 
-### Fase 2 — Migrar `part` + `part_client_price_references`
+### Fase 2 — Migrar `part` + `part_client_price_references` ✅ CONCLUÍDA
 
 **Escopo:** `src/modules/part/part.repository.js`, `part.service.js`, `part.controller.js`
 
-**Dependências Prisma já migradas:** `part_categories` (category), `clients` (client)
+**Dependências Prisma já migradas:** `part_categories` (category), `clients` (client), `users` (Fase 1)
 
-**Bridges a criar:** nenhuma
+**Arquivos alterados:**
+- `src/modules/part/part.repository.js` — reescrito Prisma async; mappers `mapPart()` e `mapPartRef()`; `findCategoryById` async; bridges SQLite para price_history e `findPartByComposition`
+- `src/modules/part/part.service.js` — todas as funções async; `const repo = require(...)`; `buildInternalCode` async; sem `findCategoryByIdSync`
+- `src/modules/part/part.controller.js` — todos os handlers async
+- `src/modules/proposal/proposal.repository.js` — adicionada bridge sync `createPart` (auto-registro no fluxo de proposta)
+- `src/modules/proposal/proposal.service.js` — importa `createPart` de `proposal.repository` (bridge sync) em vez de `part.repository`
+- `tests/services/part.service.test.js` — reescrito para vi.spyOn (52 testes, sem SQLite)
+- `scripts/check-prisma-connection.js` — seção 8 adicionada (CRUD de peça e ref de preço)
 
-**Pontos de atenção:**
-- `findCategoryByIdSync` em `part.service.js` consulta `part_categories` via SQLite. Substituir por `await repo.findCategoryById(id)` (Prisma async).
-- `findPartByComposition` e `createPart` são chamados em `proposal.service.js` de forma síncrona dentro de `createProposalFlow`. Com `part` Prisma async, essas chamadas precisarão de `await`. `createProposalFlow` já é `async` — o problema é que elas ficam dentro do loop `for (const item of normalizedItems)` que não está num contexto que aguarda. Isso será corrigido definitivamente na Fase 3 (migração de proposal). **Solução temporária:** não há, pois `part` e `proposal` devem migrar juntos ou `proposal` logo após. Ver nota abaixo.
+**Bridges temporárias criadas:**
+- `findPartByComposition` (sync SQLite) em `part.repository.js` — usada por `proposal.service.js` e `migrate.js`; remover quando `proposal` migrar para Prisma
+- `createPart` (sync SQLite) em `proposal.repository.js` — auto-registro de peças no fluxo de proposta; remover quando `proposal` migrar para Prisma
+- `getPartPriceHistory`, `getPartPriceHistoryByClient`, `getPartLastPricePerClient` (sync SQLite) em `part.repository.js` — `price_history` não migrado; remover quando `proposal` migrar
+- `getClientPriceRefs` em `part.repository.js` — híbrido: refs manuais de PostgreSQL + histórico de SQLite; remover quando `proposal` migrar
 
-**Nota sobre ordem:** Se o time preferir, Fase 2 e Fase 3 podem ser executadas juntas como um único passo maior. Isso é mais seguro do que migrar `part` sozinho e ter o `proposal.service.js` chamando Prisma async sem await.
+**Risco temporário — manual price refs vs proposal price suggestion:**
+- `proposal.repository.js` → `getLastItemPriceForClient` consulta `part_client_price_references` no SQLite
+- Novos refs criados via UI de Peças (Prisma) ficam no PostgreSQL — **não aparecerão na sugestão de preço** durante criação de proposta enquanto `proposal` não migrar
+- Workaround: criar refs via API diretamente atualizará PostgreSQL; sugestão de preço continuará usando `price_history` do SQLite
+
+**Resultado:** `npm test` → 281 passando. `node scripts/check-prisma-connection.js` → ✅ 8 seções.
 
 ---
 

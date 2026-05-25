@@ -1,116 +1,165 @@
+const prisma = require("../../db/prisma");
 const db = require("../../db/connection");
 
-function listAllParts() {
-  return db.prepare(`
-    SELECT
-      p.id, p.nome, p.descricao, p.categoria,
-      p.ncm, p.codigo_interno, p.preco_compra,
-      p.category_id, p.identity_code,
-      p.stock_quantity,
-      pc.name AS category_name, pc.code AS category_code,
-      p.created_at, p.updated_at
-    FROM parts p
-    LEFT JOIN part_categories pc ON pc.id = p.category_id
-    ORDER BY p.nome ASC
-  `).all();
+function mapPart(p) {
+  if (!p) return null;
+  return {
+    id:             p.id,
+    nome:           p.nome,
+    descricao:      p.descricao,
+    marca:          p.marca,
+    modelo:         p.modelo,
+    categoria:      null, // campo legado — não mais usado
+    category_id:    p.categoryId,
+    identity_code:  p.identityCode,
+    codigo_interno: p.codigoInterno,
+    ncm:            p.ncm,
+    preco_compra:   p.precoCompra !== null && p.precoCompra !== undefined
+                      ? Number(p.precoCompra) : null,
+    stock_quantity: p.stockQuantity,
+    observacoes:    p.observacoes,
+    category_name:  p.category?.name ?? null,
+    category_code:  p.category?.code ?? null,
+    created_at:     p.createdAt,
+    updated_at:     p.updatedAt,
+  };
 }
 
-function findPartById(id) {
-  return db.prepare(`
-    SELECT
-      p.*,
-      pc.name AS category_name, pc.code AS category_code
-    FROM parts p
-    LEFT JOIN part_categories pc ON pc.id = p.category_id
-    WHERE p.id = ?
-  `).get(id);
+function mapPartRef(r) {
+  if (!r) return null;
+  return {
+    id:                  r.id,
+    part_id:             r.partId,
+    client_id:           r.clientId,
+    reference_price:     r.referencePrice !== null && r.referencePrice !== undefined
+                           ? Number(r.referencePrice) : null,
+    source:              r.source,
+    notes:               r.notes,
+    created_by_user_id:  r.createdByUserId,
+    updated_by_user_id:  r.updatedByUserId,
+    created_at:          r.createdAt,
+    updated_at:          r.updatedAt,
+  };
 }
 
-function findPartByInternalCode(codigo) {
+// ── CRUD Prisma/PostgreSQL ────────────────────────────────────────────────────
+
+async function listAllParts() {
+  const rows = await prisma.part.findMany({
+    include: { category: { select: { name: true, code: true } } },
+    orderBy: { nome: "asc" },
+  });
+  return rows.map(mapPart);
+}
+
+async function findPartById(id) {
+  const p = await prisma.part.findUnique({
+    where: { id },
+    include: { category: { select: { name: true, code: true } } },
+  });
+  return mapPart(p);
+}
+
+async function findPartByInternalCode(codigo) {
   if (!codigo) return null;
-  return db.prepare(`
-    SELECT id FROM parts WHERE codigo_interno = ? LIMIT 1
-  `).get(codigo);
-}
-
-function searchParts(q) {
-  const term = `%${q}%`;
-  return db.prepare(`
-    SELECT
-      p.id, p.nome, p.descricao, p.categoria,
-      p.ncm, p.codigo_interno, p.category_id, p.identity_code,
-      pc.name AS category_name, pc.code AS category_code
-    FROM parts p
-    LEFT JOIN part_categories pc ON pc.id = p.category_id
-    WHERE p.nome           LIKE ?
-       OR p.categoria      LIKE ?
-       OR p.codigo_interno LIKE ?
-       OR p.identity_code  LIKE ?
-    ORDER BY p.nome ASC
-    LIMIT 10
-  `).all(term, term, term, term);
-}
-
-function createPart(data) {
-  const result = db.prepare(`
-    INSERT INTO parts (
-      nome, descricao, categoria,
-      ncm, codigo_interno, observacoes, preco_compra,
-      category_id, identity_code
-    ) VALUES (
-      @nome, @descricao, @categoria,
-      @ncm, @codigo_interno, @observacoes, @preco_compra,
-      @category_id, @identity_code
-    )
-  `).run({
-    nome:           data.nome           ?? null,
-    descricao:      data.descricao      ?? null,
-    categoria:      data.categoria      ?? null,
-    ncm:            data.ncm            ?? null,
-    codigo_interno: data.codigo_interno ?? null,
-    observacoes:    data.observacoes    ?? null,
-    preco_compra:   data.preco_compra   ?? null,
-    category_id:    data.category_id    ?? null,
-    identity_code:  data.identity_code  ?? null,
+  const p = await prisma.part.findUnique({
+    where: { codigoInterno: codigo },
+    select: { id: true },
   });
-  return result.lastInsertRowid;
+  return p || null;
 }
 
-function updatePart(id, data) {
-  db.prepare(`
-    UPDATE parts SET
-      nome           = @nome,
-      descricao      = @descricao,
-      categoria      = @categoria,
-      ncm            = @ncm,
-      codigo_interno = @codigo_interno,
-      observacoes    = @observacoes,
-      preco_compra   = @preco_compra,
-      category_id    = @category_id,
-      identity_code  = @identity_code
-    WHERE id = @id
-  `).run({
-    id,
-    nome:           data.nome           ?? null,
-    descricao:      data.descricao      ?? null,
-    categoria:      data.categoria      ?? null,
-    ncm:            data.ncm            ?? null,
-    codigo_interno: data.codigo_interno ?? null,
-    observacoes:    data.observacoes    ?? null,
-    preco_compra:   data.preco_compra   ?? null,
-    category_id:    data.category_id    ?? null,
-    identity_code:  data.identity_code  ?? null,
+async function searchParts(q) {
+  const rows = await prisma.part.findMany({
+    where: {
+      OR: [
+        { nome:          { contains: q, mode: "insensitive" } },
+        { codigoInterno: { contains: q, mode: "insensitive" } },
+        { identityCode:  { contains: q, mode: "insensitive" } },
+      ],
+    },
+    include: { category: { select: { name: true, code: true } } },
+    orderBy: { nome: "asc" },
+    take: 10,
+  });
+  return rows.map(mapPart);
+}
+
+async function createPart(data) {
+  const row = await prisma.part.create({
+    data: {
+      nome:          data.nome           ?? null,
+      descricao:     data.descricao      ?? null,
+      marca:         data.marca          ?? null,
+      modelo:        data.modelo         ?? null,
+      ncm:           data.ncm            ?? null,
+      codigoInterno: data.codigo_interno ?? null,
+      observacoes:   data.observacoes    ?? null,
+      precoCompra:   data.preco_compra   ?? 0,
+      categoryId:    data.category_id    != null ? Number(data.category_id) : null,
+      identityCode:  data.identity_code  ?? null,
+    },
+  });
+  return row.id;
+}
+
+async function updatePart(id, data) {
+  await prisma.part.update({
+    where: { id },
+    data: {
+      nome:          data.nome           ?? null,
+      descricao:     data.descricao      ?? null,
+      marca:         data.marca          ?? null,
+      modelo:        data.modelo         ?? null,
+      ncm:           data.ncm            ?? null,
+      codigoInterno: data.codigo_interno ?? null,
+      observacoes:   data.observacoes    ?? null,
+      precoCompra:   data.preco_compra   ?? 0,
+      categoryId:    data.category_id    != null ? Number(data.category_id) : null,
+      identityCode:  data.identity_code  ?? null,
+    },
   });
 }
+
+async function deletePart(id) {
+  // stock_movements ainda em SQLite — verificação de dependência best-effort
+  // Nota: IDs de parts em SQLite e PostgreSQL podem divergir durante fase híbrida
+  const hasMovements = db.prepare(
+    "SELECT 1 FROM stock_movements WHERE part_id = ? LIMIT 1"
+  ).get(id);
+  if (hasMovements) {
+    const err = new Error(
+      "Não é possível excluir esta peça pois ela possui movimentações de estoque vinculadas."
+    );
+    err.code = "HAS_DEPENDENCIES";
+    throw err;
+  }
+
+  // Nulifica referências em tabelas SQLite ainda não migradas
+  db.prepare("UPDATE price_history SET part_id = NULL WHERE part_id = ?").run(id);
+  db.prepare("UPDATE itens_nota_recebida SET produto_id = NULL WHERE produto_id = ?").run(id);
+
+  // Remove referências de preço e a peça do PostgreSQL
+  await prisma.partClientPriceRef.deleteMany({ where: { partId: id } });
+  await prisma.part.delete({ where: { id } });
+}
+
+// Usado por part.service.js para resolver category.code ao gerar codigo_interno
+async function findCategoryById(id) {
+  const cat = await prisma.partCategory.findUnique({
+    where: { id },
+    select: { id: true, name: true, code: true },
+  });
+  return cat || null;
+}
+
+// ── Bridges SQLite — price_history ainda não migrado ─────────────────────────
+// Remover quando proposal + price_history migrarem para Prisma.
 
 function getPartPriceHistory(partId) {
   return db.prepare(`
-    SELECT
-      c.nome          AS cliente_nome,
-      ph.valor_unitario,
-      ph.numero_proposta,
-      ph.data_proposta,
-      ph.quantidade
+    SELECT c.nome AS cliente_nome, ph.valor_unitario, ph.numero_proposta,
+           ph.data_proposta, ph.quantidade
     FROM price_history ph
     JOIN clients c ON c.id = ph.client_id
     WHERE ph.part_id = ?
@@ -120,12 +169,8 @@ function getPartPriceHistory(partId) {
 
 function getPartPriceHistoryByClient(partId, clientId) {
   return db.prepare(`
-    SELECT
-      c.nome          AS cliente_nome,
-      ph.valor_unitario,
-      ph.numero_proposta,
-      ph.data_proposta,
-      ph.quantidade
+    SELECT c.nome AS cliente_nome, ph.valor_unitario, ph.numero_proposta,
+           ph.data_proposta, ph.quantidade
     FROM price_history ph
     JOIN clients c ON c.id = ph.client_id
     WHERE ph.part_id = ? AND ph.client_id = ?
@@ -135,12 +180,8 @@ function getPartPriceHistoryByClient(partId, clientId) {
 
 function getPartLastPricePerClient(partId) {
   return db.prepare(`
-    SELECT
-      c.id            AS client_id,
-      c.nome          AS cliente_nome,
-      ph.valor_unitario,
-      ph.data_proposta,
-      ph.numero_proposta
+    SELECT c.id AS client_id, c.nome AS cliente_nome,
+           ph.valor_unitario, ph.data_proposta, ph.numero_proposta
     FROM price_history ph
     JOIN clients c ON c.id = ph.client_id
     WHERE ph.part_id = ?
@@ -152,114 +193,138 @@ function getPartLastPricePerClient(partId) {
   `).all(partId, partId);
 }
 
-function deletePart(id) {
-  const hasMovements = db.prepare(
-    `SELECT 1 FROM stock_movements WHERE part_id = ? LIMIT 1`
-  ).get(id);
-  if (hasMovements) {
-    const err = new Error("Não é possível excluir esta peça pois ela possui movimentações de estoque vinculadas.");
-    err.code = "HAS_DEPENDENCIES";
-    throw err;
-  }
+// ── part_client_price_references — Prisma/PostgreSQL + bridge price_history ──
+// Manual refs vêm do PostgreSQL (autoritativo após migração).
+// Histórico de propostas vem do SQLite (bridge — price_history não migrado).
+// Clientes sem ref manual mas com histórico SQLite aparecem via bridge.
+// Remover bridge de price_history quando proposal migrar para Prisma.
 
-  db.transaction(() => {
-    db.prepare(`UPDATE price_history        SET part_id    = NULL WHERE part_id    = ?`).run(id);
-    db.prepare(`UPDATE itens_nota_recebida  SET produto_id = NULL WHERE produto_id = ?`).run(id);
-    db.prepare(`DELETE FROM part_client_price_references WHERE part_id = ?`).run(id);
-    db.prepare(`DELETE FROM parts WHERE id = ?`).run(id);
-  })();
-}
+async function getClientPriceRefs(partId) {
+  // Refs manuais do PostgreSQL
+  const refs = await prisma.partClientPriceRef.findMany({
+    where: { partId },
+    include: { client: { select: { id: true, nome: true, cnpj: true } } },
+    orderBy: { client: { nome: "asc" } },
+  });
 
-// ── part_client_price_references ─────────────────────────────────────────────
-
-function getClientPriceRefs(partId) {
-  return db.prepare(`
-    SELECT
-      c.id            AS client_id,
-      c.nome          AS client_nome,
-      c.cnpj,
-      COALESCE(r.reference_price, ph_last.valor_unitario) AS reference_price,
-      CASE WHEN r.id IS NOT NULL THEN 'manual' ELSE 'proposal' END AS source,
-      COALESCE(r.updated_at, ph_last.data_proposta)        AS updated_at,
-      r.notes,
-      ph_last.numero_proposta,
-      r.id            AS ref_id
-    FROM clients c
-    LEFT JOIN part_client_price_references r
-      ON r.part_id = ? AND r.client_id = c.id
-    LEFT JOIN (
-      SELECT client_id, MAX(id) AS max_id
-      FROM price_history
-      WHERE part_id = ?
-      GROUP BY client_id
-    ) ph_agg ON ph_agg.client_id = c.id
-    LEFT JOIN price_history ph_last ON ph_last.id = ph_agg.max_id
-    WHERE r.id IS NOT NULL OR ph_last.id IS NOT NULL
-    ORDER BY c.nome ASC
+  // Último preço por cliente do SQLite (price_history bridge)
+  const histRows = db.prepare(`
+    SELECT ph.client_id, ph.valor_unitario, ph.data_proposta, ph.numero_proposta
+    FROM price_history ph
+    WHERE ph.part_id = ?
+      AND ph.id = (
+        SELECT MAX(id) FROM price_history WHERE part_id = ? AND client_id = ph.client_id
+      )
   `).all(partId, partId);
-}
 
-function upsertClientPriceRef(partId, clientId, referencePrice, notes, userId) {
-  const existing = db.prepare(
-    `SELECT id FROM part_client_price_references WHERE part_id = ? AND client_id = ?`
-  ).get(partId, clientId);
+  const histByClientId = {};
+  for (const h of histRows) histByClientId[h.client_id] = h;
 
-  if (existing) {
-    db.prepare(`
-      UPDATE part_client_price_references
-      SET reference_price = ?, notes = ?, source = 'manual', updated_by_user_id = ?
-      WHERE part_id = ? AND client_id = ?
-    `).run(referencePrice, notes ?? null, userId, partId, clientId);
-  } else {
-    db.prepare(`
-      INSERT INTO part_client_price_references
-        (part_id, client_id, reference_price, notes, source, created_by_user_id, updated_by_user_id)
-      VALUES (?, ?, ?, ?, 'manual', ?, ?)
-    `).run(partId, clientId, referencePrice, notes ?? null, userId, userId);
+  const refClientIds = new Set(refs.map(r => r.clientId));
+
+  const result = refs.map(r => ({
+    client_id:       r.clientId,
+    client_nome:     r.client.nome,
+    cnpj:            r.client.cnpj,
+    reference_price: Number(r.referencePrice),
+    source:          "manual",
+    updated_at:      r.updatedAt,
+    notes:           r.notes,
+    numero_proposta: histByClientId[r.clientId]?.numero_proposta ?? null,
+    ref_id:          r.id,
+  }));
+
+  // Clientes apenas no histórico SQLite (sem ref manual no PostgreSQL)
+  for (const [clientId, hist] of Object.entries(histByClientId)) {
+    const cid = Number(clientId);
+    if (refClientIds.has(cid)) continue;
+    const client = db.prepare("SELECT nome, cnpj FROM clients WHERE id = ?").get(cid);
+    if (!client) continue;
+    result.push({
+      client_id:       cid,
+      client_nome:     client.nome,
+      cnpj:            client.cnpj,
+      reference_price: hist.valor_unitario,
+      source:          "proposal",
+      updated_at:      hist.data_proposta,
+      notes:           null,
+      numero_proposta: hist.numero_proposta,
+      ref_id:          null,
+    });
   }
 
-  return db.prepare(
-    `SELECT * FROM part_client_price_references WHERE part_id = ? AND client_id = ?`
-  ).get(partId, clientId);
+  result.sort((a, b) => (a.client_nome || "").localeCompare(b.client_nome || "", "pt-BR"));
+  return result;
 }
 
-function getManualPriceRef(partId, clientId) {
-  return db.prepare(`
-    SELECT reference_price AS valor_unitario, NULL AS numero_proposta, updated_at AS data_proposta
-    FROM part_client_price_references
-    WHERE part_id = ? AND client_id = ?
-    LIMIT 1
-  `).get(partId, clientId);
+async function upsertClientPriceRef(partId, clientId, referencePrice, notes, userId) {
+  const result = await prisma.partClientPriceRef.upsert({
+    where: { partId_clientId: { partId, clientId } },
+    update: {
+      referencePrice,
+      notes:          notes   ?? null,
+      source:         "manual",
+      updatedByUserId: userId ?? null,
+    },
+    create: {
+      partId,
+      clientId,
+      referencePrice,
+      notes:           notes   ?? null,
+      source:          "manual",
+      createdByUserId: userId  ?? null,
+      updatedByUserId: userId  ?? null,
+    },
+  });
+  return mapPartRef(result);
 }
 
-// Mantida para compatibilidade com migrate.js backfill
+// Retorna preço de referência manual para um par (part, client).
+// Nota: após migração, novos registros estão em PostgreSQL. proposal.repository.js
+// ainda consulta SQLite diretamente em getLastItemPriceForClient — bridge separada.
+async function getManualPriceRef(partId, clientId) {
+  const r = await prisma.partClientPriceRef.findUnique({
+    where: { partId_clientId: { partId, clientId } },
+    select: { referencePrice: true, updatedAt: true },
+  });
+  if (!r) return null;
+  return {
+    valor_unitario:  Number(r.referencePrice),
+    numero_proposta: null,
+    data_proposta:   r.updatedAt,
+  };
+}
+
+// ── Bridge síncrona para proposal flow (proposal.service.js) ─────────────────
+// findPartByComposition permanece síncrona para manter:
+//   1. proposal.service.js sem await no loop de auto-registro (proposal ainda em SQLite)
+//   2. compatibilidade com migrate.js backfill
+// Remover quando proposal migrar para Prisma.
+
 function findPartByComposition(nome, marca, modelo) {
   return db.prepare(`
     SELECT * FROM parts
-    WHERE nome    IS ?
-      AND marca   IS ?
-      AND modelo  IS ?
+    WHERE nome  IS ?
+      AND marca  IS ?
+      AND modelo IS ?
     LIMIT 1
-  `).get(
-    nome   || null,
-    marca  || null,
-    modelo || null
-  );
+  `).get(nome || null, marca || null, modelo || null);
 }
 
 module.exports = {
   listAllParts,
   findPartById,
-  deletePart,
   findPartByInternalCode,
-  findPartByComposition,
   searchParts,
   createPart,
   updatePart,
+  deletePart,
+  findCategoryById,
   getPartPriceHistory,
   getPartPriceHistoryByClient,
   getPartLastPricePerClient,
   getClientPriceRefs,
   upsertClientPriceRef,
   getManualPriceRef,
+  findPartByComposition,
 };

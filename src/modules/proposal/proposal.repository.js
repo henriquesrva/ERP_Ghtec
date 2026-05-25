@@ -389,6 +389,35 @@ function setProposalKanbanStatus(proposalId, newStatus) {
   `).run(newStatus, proposalId);
 }
 
+// Bridge síncrona para auto-registro de peças no fluxo de criação de proposta.
+// part.repository.createPart é agora async Prisma — o loop de auto-registro em
+// proposal.service.js permanece síncrono enquanto proposal não migra para Prisma.
+// Remover quando proposal migrar para Prisma e createProposalFlow virar async completo.
+function createPart(data) {
+  const result = db.prepare(`
+    INSERT INTO parts (
+      nome, descricao, categoria,
+      ncm, codigo_interno, observacoes, preco_compra,
+      category_id, identity_code
+    ) VALUES (
+      @nome, @descricao, @categoria,
+      @ncm, @codigo_interno, @observacoes, @preco_compra,
+      @category_id, @identity_code
+    )
+  `).run({
+    nome:           data.nome           ?? null,
+    descricao:      data.descricao      ?? null,
+    categoria:      data.categoria      ?? null,
+    ncm:            data.ncm            ?? null,
+    codigo_interno: data.codigo_interno ?? null,
+    observacoes:    data.observacoes    ?? null,
+    preco_compra:   data.preco_compra   ?? null,
+    category_id:    data.category_id    ?? null,
+    identity_code:  data.identity_code  ?? null,
+  });
+  return Number(result.lastInsertRowid);
+}
+
 // Cria proposta, itens e histórico de preços em uma única transação atômica.
 // Se qualquer etapa falhar, nada é persistido — evita proposta em estado parcial.
 function createProposalAtomic(proposalData, items, { clientId, numeroProposta, dataProposta }) {
@@ -401,6 +430,7 @@ function createProposalAtomic(proposalData, items, { clientId, numeroProposta, d
 }
 
 module.exports = {
+  createPart,
   findClientByCnpj,
   findClientsByName,
   findClientsByExactName,

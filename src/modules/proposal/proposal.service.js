@@ -9,6 +9,7 @@ const {
   findClientsByExactName,
   findClientById,
   createClient,
+  createPart,           // bridge síncrona SQLite para auto-registro de peças
   createProposalAtomic,
   updatePriceHistoryPartId,
   updateProposalPdfPath,
@@ -33,7 +34,6 @@ const {
 
 const {
   findPartByComposition,
-  createPart,
 } = require("../part/part.repository");
 
 const { addComment: addKanbanComment } = require("../kanban/kanban.repository");

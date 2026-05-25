@@ -1,14 +1,14 @@
 # Prisma — Setup e Guia de Uso
 
-## Estado atual (Passo 3.5.5 — concluído)
+## Estado atual (Passo 3.5.6 — concluído)
 
-Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Módulos `category`, `responsavel`, `objeto`, `condition`, `client` e `auth/user` migrados para Prisma** — repositories, services e controllers todos async/await. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
+Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Módulos `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user` e `part` migrados para Prisma** — repositories, services e controllers todos async/await. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
 
 `npm run prisma:status` → `Database schema is up to date!`
-`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD de categorias, responsáveis, objetos, condições comerciais, clientes e usuários
+`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD de categorias, responsáveis, objetos, condições comerciais, clientes, usuários, peças e referências de preço
 `node scripts/seed-postgres.js` → cria usuário admin inicial no PostgreSQL (idempotente)
 
-**Runtime híbrido**: `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user` → Prisma/PostgreSQL. Os demais módulos ainda usam `better-sqlite3` via `src/db/connection.js`.
+**Runtime híbrido**: `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part` → Prisma/PostgreSQL. Os demais módulos ainda usam `better-sqlite3` via `src/db/connection.js`.
 
 **Nota crítica — `deleteCondition`**: ao deletar uma condição comercial, o código primeiro nulifica `commercial_condition_id` nas propostas via SQLite (tabela `proposals` ainda não migrada), depois deleta do PostgreSQL via Prisma. Isso preserva integridade referencial durante a fase híbrida.
 
@@ -54,16 +54,22 @@ src/modules/auth/
   auth.repository.js                         # migrado para Prisma (async) — findUserById sem password_hash
   auth.service.js                            # async/await — usa const repo = require(...)
   auth.controller.js                         # async/await
+src/modules/part/
+  part.repository.js                         # migrado para Prisma (async) + SQLite bridges price_history + bridge findPartByComposition
+  part.service.js                            # async/await — usa const repo = require(...)
+  part.controller.js                         # async/await
 src/modules/proposal/
-  proposal.repository.js                     # SQLite bridges locais para 6 funções de cliente (proposal flow síncrono)
+  proposal.repository.js                     # SQLite bridges: 6 funções de cliente + createPart (auto-registro)
   proposal.controller.js                     # fix: await findAuthUserById (uma linha)
+  proposal.service.js                        # import createPart de proposal.repository (bridge sync)
 tests/services/category.service.test.js      # 18 testes — mock via vi.spyOn
 tests/services/responsavel.service.test.js   # 11 testes — mock via vi.spyOn
 tests/services/objeto.service.test.js        # 16 testes — mock via vi.spyOn
 tests/services/condition.service.test.js     # 20 testes — mock via vi.spyOn
 tests/services/client.service.test.js        # 23 testes — mock via vi.spyOn
 tests/services/auth.service.test.js          # 33 testes — mock via vi.spyOn (reescrito para Prisma)
-scripts/check-prisma-connection.js           # validação de conexão real (rodar manualmente)
+tests/services/part.service.test.js          # 52 testes — mock via vi.spyOn (reescrito para Prisma)
+scripts/check-prisma-connection.js           # validação de conexão real (seções 1-8)
 scripts/seed-postgres.js                     # cria usuário admin inicial no PostgreSQL (idempotente)
 ```
 
@@ -179,8 +185,9 @@ npm run prisma:status
 - ~~**Passo 3.5.2:** Migrar `responsavel`, `objeto`, `condition`~~ — **concluído**
 - ~~**Passo 3.5.3:** Migrar `client`~~ — **concluído**
 - ~~**Passo 3.5.5:** Migrar `auth/user`~~ — **concluído**
+- ~~**Passo 3.5.6:** Migrar `part` + `part_client_price_references`~~ — **concluído**
 - **Passo 3.5.x:** Migrar demais repositories de better-sqlite3 para Prisma Client
-  - Ordem recomendada: `part` → `fornecedor`/`categoria_despesa` → `stock` → `kanban` → `nota_recebida`/`conta_pagar` → `proposal` (por último)
+  - Ordem recomendada: `proposal` (maior passo — remove todas as bridges) → `fornecedor`/`categoria_despesa` → `stock` → `kanban` → `nota_recebida`/`conta_pagar`
   - Ao migrar `part.repository`, remover `findCategoryByIdSync` de `part.service.js` e usar o category repository async
   - Ao migrar `proposal`, substituir as 6 bridges locais de client em `proposal.repository.js` por chamadas async ao `client.repository`, e migrar `countClientProposals`/`getProfitAnalysis` de `client.repository.js` para Prisma
   - Padrão obrigatório: services usam `const repo = require(...)` (não destructuring) para que `vi.spyOn` funcione nos testes

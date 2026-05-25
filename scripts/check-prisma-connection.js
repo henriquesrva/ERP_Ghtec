@@ -162,6 +162,75 @@ async function main() {
   await prisma.user.delete({ where: { id: createdUser.id } });
   console.log(`   ✅  usuário de teste deletado`);
 
+  // 8. parts + part_client_price_references — CRUD
+  console.log("\n8. parts + part_client_price_references — CRUD...");
+  const partCount = await prisma.part.count();
+  console.log(`   ✅  ${partCount} peça(s) encontrada(s)`);
+
+  // Categoria de teste (reutiliza se já existir)
+  const CAT_CODE_PART = "TST_PART_CHECK";
+  let testCatForPart = await prisma.partCategory.findUnique({ where: { code: CAT_CODE_PART } });
+  if (!testCatForPart) {
+    testCatForPart = await prisma.partCategory.create({
+      data: { name: "Categoria Teste Part Check", code: CAT_CODE_PART },
+    });
+  }
+  console.log(`   ✅  categoria de teste: id=${testCatForPart.id}`);
+
+  // Peça de teste
+  const TEST_PART_CODE = "TST_PART_CHECK-001";
+  const existingTestPart = await prisma.part.findUnique({ where: { codigoInterno: TEST_PART_CODE } });
+  if (existingTestPart) await prisma.part.delete({ where: { id: existingTestPart.id } });
+
+  const testPart = await prisma.part.create({
+    data: {
+      nome:          "Peça Teste Prisma Check",
+      codigoInterno: TEST_PART_CODE,
+      identityCode:  "001",
+      precoCompra:   99.90,
+      categoryId:    testCatForPart.id,
+    },
+  });
+  console.log(`   ✅  peça criada: id=${testPart.id}, codigo_interno="${testPart.codigoInterno}"`);
+
+  const foundPart = await prisma.part.findUnique({
+    where: { id: testPart.id },
+    include: { category: { select: { name: true, code: true } } },
+  });
+  console.log(`   ✅  peça encontrada: nome="${foundPart.nome}", category="${foundPart.category?.code}"`);
+
+  await prisma.part.update({
+    where: { id: testPart.id },
+    data: { precoCompra: 149.90 },
+  });
+  console.log(`   ✅  preço atualizado`);
+
+  // Cliente de teste para price_ref (reutiliza o cliente já criado pelo check de clientes)
+  const testClientForRef = await prisma.client.create({
+    data: { nome: "Cliente Teste Part Ref Check", cidade: "BH", estado: "MG" },
+  });
+  console.log(`   ✅  cliente de teste para ref: id=${testClientForRef.id}`);
+
+  // Upsert de referência de preço
+  const priceRef = await prisma.partClientPriceRef.upsert({
+    where: { partId_clientId: { partId: testPart.id, clientId: testClientForRef.id } },
+    update: { referencePrice: 200.00, source: "manual" },
+    create: { partId: testPart.id, clientId: testClientForRef.id, referencePrice: 200.00, source: "manual" },
+  });
+  console.log(`   ✅  referência de preço upsert: id=${priceRef.id}, price=${priceRef.referencePrice}`);
+
+  const refFound = await prisma.partClientPriceRef.findUnique({
+    where: { partId_clientId: { partId: testPart.id, clientId: testClientForRef.id } },
+  });
+  console.log(`   ✅  referência encontrada: price=${refFound.referencePrice}`);
+
+  // Limpeza
+  await prisma.partClientPriceRef.deleteMany({ where: { partId: testPart.id } });
+  await prisma.part.delete({ where: { id: testPart.id } });
+  await prisma.client.delete({ where: { id: testClientForRef.id } });
+  await prisma.partCategory.delete({ where: { id: testCatForPart.id } });
+  console.log(`   ✅  dados de teste removidos`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 
