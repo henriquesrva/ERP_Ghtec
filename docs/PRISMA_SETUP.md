@@ -1,13 +1,15 @@
 # Prisma — Setup e Guia de Uso
 
-## Estado atual (Passo 3.5.1.1 — concluído)
+## Estado atual (Passo 3.5.2 — concluído)
 
-Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Módulo `category` migrado para Prisma** — repository, service e controller todos async/await. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
+Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Módulos `category`, `responsavel`, `objeto` e `condition` migrados para Prisma** — repositories, services e controllers todos async/await. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
 
 `npm run prisma:status` → `Database schema is up to date!`
-`node scripts/check-prisma-connection.js` → ✅ SELECT 1, listagem e CRUD de categorias reais
+`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD de categorias, responsáveis, objetos e condições comerciais
 
-**Runtime híbrido**: `category` → Prisma/PostgreSQL. Todos os outros módulos ainda usam `better-sqlite3` via `src/db/connection.js`.
+**Runtime híbrido**: `category`, `responsavel`, `objeto`, `condition` → Prisma/PostgreSQL. Os demais módulos ainda usam `better-sqlite3` via `src/db/connection.js`.
+
+**Nota crítica — `deleteCondition`**: ao deletar uma condição comercial, o código primeiro nulifica `commercial_condition_id` nas propostas via SQLite (tabela `proposals` ainda não migrada), depois deleta do PostgreSQL via Prisma. Isso preserva integridade referencial durante a fase híbrida.
 
 ---
 
@@ -15,20 +17,35 @@ Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma complet
 
 ```
 prisma/
-  schema.prisma                          # generator prisma-client-js + datasource PostgreSQL + 19 models
+  schema.prisma                              # generator prisma-client-js + datasource PostgreSQL + 19 models
   migrations/
     20260525153903_init_schema/
-      migration.sql                      # DDL completo: enums, tabelas, constraints, indexes, FKs
-prisma.config.ts                         # config Prisma 7 — datasource URL via DATABASE_URL
-docker-compose.yml                       # PostgreSQL 16-alpine local para desenvolvimento
-src/generated/prisma/                    # client gerado por `prisma generate` (gitignored)
-src/db/prisma.js                         # singleton PrismaClient com @prisma/adapter-pg + pg.Pool
+      migration.sql                          # DDL completo: enums, tabelas, constraints, indexes, FKs
+prisma.config.ts                             # config Prisma 7 — datasource URL via DATABASE_URL
+docker-compose.yml                           # PostgreSQL 16-alpine local para desenvolvimento
+src/generated/prisma/                        # client gerado por `prisma generate` (gitignored)
+src/db/prisma.js                             # singleton PrismaClient com @prisma/adapter-pg + pg.Pool
 src/modules/category/
-  category.repository.js                 # migrado para Prisma (async)
-  category.service.js                    # async/await
-  category.controller.js                 # async/await
-tests/services/category.service.test.js  # 18 testes — mock via vi.spyOn, sem conexão ao banco
-scripts/check-prisma-connection.js       # validação de conexão real (rodar manualmente)
+  category.repository.js                     # migrado para Prisma (async)
+  category.service.js                        # async/await — usa const repo = require(...)
+  category.controller.js                     # async/await
+src/modules/responsavel/
+  responsavel.repository.js                  # migrado para Prisma (async)
+  responsavel.service.js                     # async/await — usa const repo = require(...)
+  responsavel.controller.js                  # async/await
+src/modules/objeto/
+  objeto.repository.js                       # migrado para Prisma (async)
+  objeto.service.js                          # async/await — usa const repo = require(...)
+  objeto.controller.js                       # async/await
+src/modules/condition/
+  condition.repository.js                    # migrado para Prisma (async) + SQLite para proposals
+  condition.service.js                       # async/await — usa const repo = require(...)
+  condition.controller.js                    # async/await
+tests/services/category.service.test.js      # 18 testes — mock via vi.spyOn
+tests/services/responsavel.service.test.js   # 11 testes — mock via vi.spyOn
+tests/services/objeto.service.test.js        # 16 testes — mock via vi.spyOn
+tests/services/condition.service.test.js     # 20 testes — mock via vi.spyOn
+scripts/check-prisma-connection.js           # validação de conexão real (rodar manualmente)
 ```
 
 ---
@@ -140,9 +157,11 @@ npm run prisma:status
 - ~~**Passo 3.4:** Criar primeira migration (`20260525153903_init_schema`)~~ — **concluído**
 - ~~**Passo 3.5.1:** Migrar módulo `category`~~ — **concluído**
 - ~~**Passo 3.5.1.1:** Configurar driver adapter PostgreSQL (`@prisma/adapter-pg` + `pg`)~~ — **concluído**
+- ~~**Passo 3.5.2:** Migrar `responsavel`, `objeto`, `condition`~~ — **concluído**
 - **Passo 3.5.x:** Migrar demais repositories de better-sqlite3 para Prisma Client
-  - Ordem recomendada: `responsavel`/`objeto`/`condition` → `client` → `part` → `auth` → `fornecedor`/`categoria_despesa` → `stock` → `kanban` → `nota_recebida`/`conta_pagar` → `proposal` (por último)
+  - Ordem recomendada: `client` → `part` → `auth` → `fornecedor`/`categoria_despesa` → `stock` → `kanban` → `nota_recebida`/`conta_pagar` → `proposal` (por último)
   - Ao migrar `part.repository`, remover `findCategoryByIdSync` de `part.service.js` e usar o category repository async
+  - Padrão obrigatório: services usam `const repo = require(...)` (não destructuring) para que `vi.spyOn` funcione nos testes
   - Cada módulo: repository async + service com `await` + atualizar testes
 - **Passo 3.6:** Atualizar `errorHandler.js` para códigos de erro Prisma (`P2002`, `P2003`, `P2025`)
 - **Passo 3.7:** Deploy com PostgreSQL em produção

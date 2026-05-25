@@ -1,40 +1,39 @@
-# Feedback — Passo 3.5.1.1
+# Feedback — Passo 3.5.2
 
 ## O que foi feito
 
-- `npm install @prisma/adapter-pg pg` — instalados
-- `src/db/prisma.js` — reescrito com `pg.Pool` + `PrismaPg` adapter; removido guard `NODE_ENV=test`
-- `prisma/schema.prisma` — comentário desatualizado corrigido (provider era dito "prisma-client", agora "prisma-client-js" + nota sobre adapter)
-- `scripts/check-prisma-connection.js` — script de validação de conexão real (rodar manualmente)
-- `docs/PRISMA_SETUP.md` — atualizado: Passo 3.5.1.1 concluído, estrutura atualizada, pendência de runtime removida
-- `docs/SYSTEM_CONTEXT.md` — atualizado: Prisma em uso no runtime (category), DATABASE_URL agora afeta runtime
+Migração de `responsavel`, `objeto` e `condition` de better-sqlite3 para Prisma Client (PostgreSQL).
 
-**Validações:**
-- `npm test` → ✅ 157/157
-- `npm run prisma:generate` → ✅ Prisma Client gerado
-- `npm run prisma:status` → ✅ Database schema is up to date!
-- `node scripts/check-prisma-connection.js` → ✅ SELECT 1 + CRUD categorias no PostgreSQL real
+**9 arquivos migrados:**
+- `src/modules/responsavel/responsavel.repository.js` — Prisma async
+- `src/modules/responsavel/responsavel.service.js` — async/await
+- `src/modules/responsavel/responsavel.controller.js` — async/await
+- `src/modules/objeto/objeto.repository.js` — Prisma async
+- `src/modules/objeto/objeto.service.js` — async/await
+- `src/modules/objeto/objeto.controller.js` — async/await
+- `src/modules/condition/condition.repository.js` — Prisma async + SQLite híbrido
+- `src/modules/condition/condition.service.js` — async/await
+- `src/modules/condition/condition.controller.js` — async/await
 
----
+**3 arquivos de teste criados:**
+- `tests/services/responsavel.service.test.js` — 11 testes
+- `tests/services/objeto.service.test.js` — 16 testes
+- `tests/services/condition.service.test.js` — 20 testes
 
-## Decisões tomadas
+**2 arquivos atualizados:**
+- `scripts/check-prisma-connection.js` — CRUD de responsáveis, objetos e condições
+- `docs/PRISMA_SETUP.md` — estado atual e estrutura de arquivos
 
-### Adapter `@prisma/adapter-pg` em vez de `accelerateUrl`
+## Decisões técnicas
 
-O approach anterior (`PrismaClient({ accelerateUrl: DATABASE_URL })`) exige que a DATABASE_URL seja no formato `prisma+postgres://` (via `prisma dev`). O projeto usa `postgresql://` diretamente — isso funcionou para o CLI mas nunca para o runtime. O driver adapter é o caminho correto para produção com PostgreSQL real.
+**`condition.deleteCondition` híbrido:** proposals ainda estão no SQLite, então antes de deletar via Prisma, o código nulifica `commercial_condition_id` diretamente via `db.prepare(...)`. Isso preserva integridade referencial durante a fase híbrida, substituindo o `db.transaction()` original.
 
-### Remoção do guard `NODE_ENV=test`
+**`const repo = require(...)` nos services:** os services usam `const repo = require("./modulo.repository")` e chamam `repo.funcao()` em vez de destructuring. Isso é obrigatório para que `vi.spyOn(repo, "funcao")` consiga interceptar as chamadas nos testes. Padrão herdado do `category.service.js` — deve ser seguido em todos os futuros módulos migrados.
 
-Com o adapter, `pg.Pool` e `PrismaClient` têm construção lazy — não conectam ao banco na importação. Os testes de unidade mockam o repository via `vi.spyOn`, nunca acionando uma query real. Guardar `NODE_ENV=test → {}` era desnecessário e impedia testes de integração reais no futuro.
+**camelCase → snake_case:** cada repository tem uma função `mapX()` que converte os campos retornados pelo Prisma (camelCase) para o snake_case que o restante do código espera (`formaPagamento` → `forma_pagamento`, `createdAt` → `created_at`, etc.).
 
-### Script separado, não teste vitest
+**`createCond` retorna id (não objeto):** preservado o contrato original — `condition.service.createCond` retorna o id bruto, não o objeto completo. O controller usa `{ success: true, id }`.
 
-O teste de conexão real requer PostgreSQL rodando. Se incluído no `npm test`, quebraria CI/CD sem banco disponível. O script `scripts/check-prisma-connection.js` é a solução correta — manual, explicito, sem risco.
+## npm test
 
----
-
-## Estado de runtime confirmado
-
-- `DATABASE_URL=postgresql://ghtec:ghtec123@localhost:5432/ghtec_propostas` → funciona
-- Prisma conecta ao banco, executa SELECT 1, cria e deleta categorias reais
-- Módulo `category` está pronto para uso em produção via Prisma/PostgreSQL
+204 testes, 11 arquivos — todos passando.

@@ -6,18 +6,18 @@ const {
   deleteResponsavel,
 } = require("./responsavel.service");
 
-function listResponsaveisHandler(req, res) {
+async function listResponsaveisHandler(req, res) {
   try {
-    return res.json(getAllResponsaveis());
+    return res.json(await getAllResponsaveis());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar responsáveis." });
   }
 }
 
-function getResponsavelByIdHandler(req, res) {
+async function getResponsavelByIdHandler(req, res) {
   try {
-    const r = getResponsavelById(Number(req.params.id));
+    const r = await getResponsavelById(Number(req.params.id));
     if (!r) {
       return res.status(404).json({ success: false, message: "Responsável não encontrado." });
     }
@@ -28,20 +28,20 @@ function getResponsavelByIdHandler(req, res) {
   }
 }
 
-function searchResponsaveisHandler(req, res) {
+async function searchResponsaveisHandler(req, res) {
   try {
     const q = (req.query.q || "").trim();
     if (!q) return res.json([]);
-    return res.json(searchResponsaveisByQuery(q));
+    return res.json(await searchResponsaveisByQuery(q));
   } catch (err) {
     console.error(err);
     return res.status(500).json([]);
   }
 }
 
-function createResponsavelHandler(req, res) {
+async function createResponsavelHandler(req, res) {
   try {
-    const r = createNewResponsavel(req.body);
+    const r = await createNewResponsavel(req.body);
     return res.status(201).json({ success: true, responsavel: r });
   } catch (err) {
     console.error(err);
@@ -52,9 +52,9 @@ function createResponsavelHandler(req, res) {
   }
 }
 
-function deleteResponsavelHandler(req, res) {
+async function deleteResponsavelHandler(req, res) {
   try {
-    deleteResponsavel(Number(req.params.id));
+    await deleteResponsavel(Number(req.params.id));
     return res.json({ success: true, message: "Responsável excluído com sucesso." });
   } catch (err) {
     console.error(err);

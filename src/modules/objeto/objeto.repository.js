@@ -1,49 +1,55 @@
-const db = require("../../db/connection");
+const prisma = require("../../db/prisma");
 
-function listAllObjetos() {
-  return db.prepare(`
-    SELECT id, nome, descricao, created_at
-    FROM objetos
-    ORDER BY nome ASC
-  `).all();
+function mapObjeto(o) {
+  if (!o) return null;
+  return { id: o.id, nome: o.nome, descricao: o.descricao, created_at: o.createdAt };
 }
 
-function findObjetoById(id) {
-  return db.prepare(`SELECT * FROM objetos WHERE id = ?`).get(id);
+async function listAllObjetos() {
+  const rows = await prisma.objeto.findMany({ orderBy: { nome: "asc" } });
+  return rows.map(mapObjeto);
 }
 
-function searchObjetos(q) {
-  const term = `%${q}%`;
-  return db.prepare(`
-    SELECT id, nome, descricao
-    FROM objetos
-    WHERE nome LIKE ? OR descricao LIKE ?
-    ORDER BY nome ASC
-    LIMIT 20
-  `).all(term, term);
+async function findObjetoById(id) {
+  return mapObjeto(await prisma.objeto.findUnique({ where: { id } }));
 }
 
-function createObjeto(data) {
-  const result = db.prepare(`
-    INSERT INTO objetos (nome, descricao)
-    VALUES (@nome, @descricao)
-  `).run({
-    nome:     data.nome      ?? null,
-    descricao: data.descricao ?? null,
-  });
-  return result.lastInsertRowid;
-}
-
-function updateObjeto(id, data) {
-  db.prepare(`UPDATE objetos SET nome = @nome, descricao = @descricao WHERE id = @id`).run({
-    nome:      data.nome      ?? null,
-    descricao: data.descricao ?? null,
-    id,
+async function searchObjetos(q) {
+  return prisma.objeto.findMany({
+    where: {
+      OR: [
+        { nome:      { contains: q, mode: "insensitive" } },
+        { descricao: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { nome: "asc" },
+    take: 20,
+    select: { id: true, nome: true, descricao: true },
   });
 }
 
-function deleteObjetoById(id) {
-  db.prepare(`DELETE FROM objetos WHERE id = ?`).run(id);
+async function createObjeto(data) {
+  const row = await prisma.objeto.create({
+    data: {
+      nome:      data.nome      ?? null,
+      descricao: data.descricao ?? null,
+    },
+  });
+  return row.id;
+}
+
+async function updateObjeto(id, data) {
+  await prisma.objeto.update({
+    where: { id },
+    data: {
+      nome:      data.nome      ?? null,
+      descricao: data.descricao ?? null,
+    },
+  });
+}
+
+async function deleteObjetoById(id) {
+  await prisma.objeto.delete({ where: { id } });
 }
 
 module.exports = {

@@ -1,42 +1,46 @@
-const db = require("../../db/connection");
+const prisma = require("../../db/prisma");
 
-function listAllResponsaveis() {
-  return db.prepare(`
-    SELECT id, nome, telefone, cargo, created_at
-    FROM responsaveis
-    ORDER BY nome ASC
-  `).all();
+function mapResponsavel(r) {
+  if (!r) return null;
+  return { id: r.id, nome: r.nome, telefone: r.telefone, cargo: r.cargo, created_at: r.createdAt };
 }
 
-function findResponsavelById(id) {
-  return db.prepare(`SELECT * FROM responsaveis WHERE id = ?`).get(id);
+async function listAllResponsaveis() {
+  const rows = await prisma.responsavel.findMany({ orderBy: { nome: "asc" } });
+  return rows.map(mapResponsavel);
 }
 
-function searchResponsaveis(q) {
-  const term = `%${q}%`;
-  return db.prepare(`
-    SELECT id, nome, telefone, cargo
-    FROM responsaveis
-    WHERE nome LIKE ? OR cargo LIKE ?
-    ORDER BY nome ASC
-    LIMIT 10
-  `).all(term, term);
+async function findResponsavelById(id) {
+  return mapResponsavel(await prisma.responsavel.findUnique({ where: { id } }));
 }
 
-function createResponsavel(data) {
-  const result = db.prepare(`
-    INSERT INTO responsaveis (nome, telefone, cargo)
-    VALUES (@nome, @telefone, @cargo)
-  `).run({
-    nome:     data.nome     ?? null,
-    telefone: data.telefone ?? null,
-    cargo:    data.cargo    ?? null,
+async function searchResponsaveis(q) {
+  return prisma.responsavel.findMany({
+    where: {
+      OR: [
+        { nome: { contains: q, mode: "insensitive" } },
+        { cargo: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { nome: "asc" },
+    take: 10,
+    select: { id: true, nome: true, telefone: true, cargo: true },
   });
-  return result.lastInsertRowid;
 }
 
-function deleteResponsavelById(id) {
-  db.prepare(`DELETE FROM responsaveis WHERE id = ?`).run(id);
+async function createResponsavel(data) {
+  const row = await prisma.responsavel.create({
+    data: {
+      nome:     data.nome     ?? null,
+      telefone: data.telefone ?? null,
+      cargo:    data.cargo    ?? null,
+    },
+  });
+  return row.id;
+}
+
+async function deleteResponsavelById(id) {
+  await prisma.responsavel.delete({ where: { id } });
 }
 
 module.exports = {

@@ -1,52 +1,77 @@
+const prisma = require("../../db/prisma");
 const db = require("../../db/connection");
 
-function listConditions() {
-  return db.prepare("SELECT * FROM commercial_conditions ORDER BY name ASC").all();
+function mapCondition(c) {
+  if (!c) return null;
+  return {
+    id:              c.id,
+    name:            c.name,
+    forma_pagamento: c.formaPagamento,
+    prazo_pagamento: c.prazoPagamento,
+    prazo_entrega:   c.prazoEntrega,
+    garantia:        c.garantia,
+    validade:        c.validade,
+    created_at:      c.createdAt,
+    updated_at:      c.updatedAt,
+  };
 }
 
-function getConditionById(id) {
-  return db.prepare("SELECT * FROM commercial_conditions WHERE id = ?").get(id);
+async function listConditions() {
+  const rows = await prisma.commercialCondition.findMany({ orderBy: { name: "asc" } });
+  return rows.map(mapCondition);
 }
 
-function searchConditions(q) {
-  const pattern = `%${q}%`;
-  return db.prepare(`
-    SELECT * FROM commercial_conditions
-    WHERE name LIKE ? OR forma_pagamento LIKE ? OR prazo_pagamento LIKE ?
-    ORDER BY name ASC LIMIT 50
-  `).all(pattern, pattern, pattern);
+async function getConditionById(id) {
+  return mapCondition(await prisma.commercialCondition.findUnique({ where: { id } }));
 }
 
-function createCondition(data) {
-  const result = db.prepare(`
-    INSERT INTO commercial_conditions
-      (name, forma_pagamento, prazo_pagamento, prazo_entrega, garantia, validade)
-    VALUES
-      (@name, @forma_pagamento, @prazo_pagamento, @prazo_entrega, @garantia, @validade)
-  `).run(data);
-  return result.lastInsertRowid;
+async function searchConditions(q) {
+  const rows = await prisma.commercialCondition.findMany({
+    where: {
+      OR: [
+        { name:           { contains: q, mode: "insensitive" } },
+        { formaPagamento: { contains: q, mode: "insensitive" } },
+        { prazoPagamento: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { name: "asc" },
+    take: 50,
+  });
+  return rows.map(mapCondition);
 }
 
-function updateCondition(id, data) {
-  db.prepare(`
-    UPDATE commercial_conditions
-    SET name = @name,
-        forma_pagamento = @forma_pagamento,
-        prazo_pagamento = @prazo_pagamento,
-        prazo_entrega   = @prazo_entrega,
-        garantia        = @garantia,
-        validade        = @validade
-    WHERE id = @id
-  `).run({ ...data, id });
+async function createCondition(data) {
+  const row = await prisma.commercialCondition.create({
+    data: {
+      name:           data.name,
+      formaPagamento: data.forma_pagamento,
+      prazoPagamento: data.prazo_pagamento,
+      prazoEntrega:   data.prazo_entrega,
+      garantia:       data.garantia ?? null,
+      validade:       data.validade,
+    },
+  });
+  return row.id;
 }
 
-function deleteCondition(id) {
-  // Nullifica o vínculo em propostas antes de deletar (a condição é snapshot — os
-  // campos de texto nas propostas preservam os valores originais).
-  db.transaction(() => {
-    db.prepare(`UPDATE proposals SET commercial_condition_id = NULL WHERE commercial_condition_id = ?`).run(id);
-    db.prepare(`DELETE FROM commercial_conditions WHERE id = ?`).run(id);
-  })();
+async function updateCondition(id, data) {
+  await prisma.commercialCondition.update({
+    where: { id },
+    data: {
+      name:           data.name,
+      formaPagamento: data.forma_pagamento,
+      prazoPagamento: data.prazo_pagamento,
+      prazoEntrega:   data.prazo_entrega,
+      garantia:       data.garantia ?? null,
+      validade:       data.validade,
+    },
+  });
+}
+
+async function deleteCondition(id) {
+  // Proposals still in SQLite — nullify FK before deleting from PostgreSQL.
+  db.prepare("UPDATE proposals SET commercial_condition_id = NULL WHERE commercial_condition_id = ?").run(id);
+  await prisma.commercialCondition.delete({ where: { id } });
 }
 
 module.exports = {

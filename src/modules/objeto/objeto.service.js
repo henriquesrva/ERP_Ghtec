@@ -1,34 +1,27 @@
-const {
-  listAllObjetos,
-  findObjetoById,
-  searchObjetos,
-  createObjeto,
-  updateObjeto,
-  deleteObjetoById,
-} = require("./objeto.repository");
+const repo = require("./objeto.repository");
 
-function getAllObjetos() {
-  return listAllObjetos();
+async function getAllObjetos() {
+  return repo.listAllObjetos();
 }
 
-function getObjetoById(id) {
-  return findObjetoById(id);
+async function getObjetoById(id) {
+  return repo.findObjetoById(id);
 }
 
-function searchObjetosByQuery(q) {
-  return searchObjetos(q);
+async function searchObjetosByQuery(q) {
+  return repo.searchObjetos(q);
 }
 
-function createNewObjeto(data) {
+async function createNewObjeto(data) {
   if (!data.nome || !data.nome.trim()) {
     throw new Error("O campo 'nome' é obrigatório.");
   }
-  const id = createObjeto({ nome: data.nome.trim(), descricao: data.descricao?.trim() || null });
-  return findObjetoById(id);
+  const id = await repo.createObjeto({ nome: data.nome.trim(), descricao: data.descricao?.trim() || null });
+  return repo.findObjetoById(id);
 }
 
-function updateObjetoService(id, data) {
-  const existing = findObjetoById(id);
+async function updateObjetoService(id, data) {
+  const existing = await repo.findObjetoById(id);
   if (!existing) {
     const err = new Error("Objeto não encontrado.");
     err.code = "NOT_FOUND";
@@ -37,18 +30,18 @@ function updateObjetoService(id, data) {
   if (!data.nome || !data.nome.trim()) {
     throw new Error("O campo 'nome' é obrigatório.");
   }
-  updateObjeto(id, { nome: data.nome.trim(), descricao: data.descricao?.trim() || null });
-  return findObjetoById(id);
+  await repo.updateObjeto(id, { nome: data.nome.trim(), descricao: data.descricao?.trim() || null });
+  return repo.findObjetoById(id);
 }
 
-function deleteObjeto(id) {
-  const existing = findObjetoById(id);
+async function deleteObjeto(id) {
+  const existing = await repo.findObjetoById(id);
   if (!existing) {
     const err = new Error("Objeto não encontrado.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  deleteObjetoById(id);
+  await repo.deleteObjetoById(id);
 }
 
 module.exports = {

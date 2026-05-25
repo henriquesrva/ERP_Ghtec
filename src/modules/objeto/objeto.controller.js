@@ -7,18 +7,18 @@ const {
   deleteObjeto,
 } = require("./objeto.service");
 
-function listObjetosHandler(req, res) {
+async function listObjetosHandler(req, res) {
   try {
-    return res.json(getAllObjetos());
+    return res.json(await getAllObjetos());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar objetos." });
   }
 }
 
-function getObjetoByIdHandler(req, res) {
+async function getObjetoByIdHandler(req, res) {
   try {
-    const o = getObjetoById(Number(req.params.id));
+    const o = await getObjetoById(Number(req.params.id));
     if (!o) return res.status(404).json({ success: false, message: "Objeto não encontrado." });
     return res.json(o);
   } catch (err) {
@@ -27,20 +27,20 @@ function getObjetoByIdHandler(req, res) {
   }
 }
 
-function searchObjetosHandler(req, res) {
+async function searchObjetosHandler(req, res) {
   try {
     const q = (req.query.q || "").trim();
     if (!q) return res.json([]);
-    return res.json(searchObjetosByQuery(q));
+    return res.json(await searchObjetosByQuery(q));
   } catch (err) {
     console.error(err);
     return res.status(500).json([]);
   }
 }
 
-function createObjetoHandler(req, res) {
+async function createObjetoHandler(req, res) {
   try {
-    const o = createNewObjeto(req.body);
+    const o = await createNewObjeto(req.body);
     return res.status(201).json({ success: true, objeto: o });
   } catch (err) {
     console.error(err);
@@ -51,9 +51,9 @@ function createObjetoHandler(req, res) {
   }
 }
 
-function updateObjetoHandler(req, res) {
+async function updateObjetoHandler(req, res) {
   try {
-    const o = updateObjetoService(Number(req.params.id), req.body);
+    const o = await updateObjetoService(Number(req.params.id), req.body);
     return res.json({ success: true, objeto: o });
   } catch (err) {
     console.error(err);
@@ -63,9 +63,9 @@ function updateObjetoHandler(req, res) {
   }
 }
 
-function deleteObjetoHandler(req, res) {
+async function deleteObjetoHandler(req, res) {
   try {
-    deleteObjeto(Number(req.params.id));
+    await deleteObjeto(Number(req.params.id));
     return res.json({ success: true, message: "Objeto excluído com sucesso." });
   } catch (err) {
     console.error(err);

@@ -26,27 +26,73 @@ async function main() {
   const [{ "?column?": ping }] = await prisma.$queryRaw`SELECT 1`;
   console.log(`   ✅  ping = ${ping}`);
 
-  // 2. Listar categorias
-  console.log("\n2. Listando categorias (part_categories)...");
+  // 2. part_categories — CRUD
+  console.log("\n2. part_categories — listar e CRUD...");
   const cats = await prisma.partCategory.findMany({ orderBy: { name: "asc" } });
   console.log(`   ✅  ${cats.length} categoria(s) encontrada(s)`);
-  if (cats.length > 0) {
-    cats.forEach((c) => console.log(`      - [${c.code}] ${c.name}`));
-  }
 
-  // 3. Criar e deletar categoria de teste
-  console.log("\n3. Criando categoria de teste...");
-  const TEST_CODE = "TST_PRISMA_CHECK";
-  const existing = await prisma.partCategory.findUnique({ where: { code: TEST_CODE } });
-  if (existing) await prisma.partCategory.delete({ where: { code: TEST_CODE } });
-
-  const created = await prisma.partCategory.create({
-    data: { name: "Categoria de Teste (Prisma check)", code: TEST_CODE },
+  const CAT_CODE = "TST_PRISMA_CHECK";
+  const existingCat = await prisma.partCategory.findUnique({ where: { code: CAT_CODE } });
+  if (existingCat) await prisma.partCategory.delete({ where: { code: CAT_CODE } });
+  const createdCat = await prisma.partCategory.create({
+    data: { name: "Categoria de Teste (Prisma check)", code: CAT_CODE },
   });
-  console.log(`   ✅  criada: id=${created.id} code=${created.code}`);
+  console.log(`   ✅  categoria criada: id=${createdCat.id}`);
+  await prisma.partCategory.delete({ where: { id: createdCat.id } });
+  console.log(`   ✅  categoria deletada`);
 
-  await prisma.partCategory.delete({ where: { id: created.id } });
-  console.log(`   ✅  deletada`);
+  // 3. responsaveis — CRUD
+  console.log("\n3. responsaveis — CRUD...");
+  const responsaveis = await prisma.responsavel.findMany({ orderBy: { nome: "asc" } });
+  console.log(`   ✅  ${responsaveis.length} responsável(is) encontrado(s)`);
+
+  const createdResp = await prisma.responsavel.create({
+    data: { nome: "Teste Prisma Check", cargo: "QA", telefone: "00000000000" },
+  });
+  console.log(`   ✅  responsável criado: id=${createdResp.id}`);
+  await prisma.responsavel.delete({ where: { id: createdResp.id } });
+  console.log(`   ✅  responsável deletado`);
+
+  // 4. objetos — CRUD
+  console.log("\n4. objetos — CRUD...");
+  const objetos = await prisma.objeto.findMany({ orderBy: { nome: "asc" } });
+  console.log(`   ✅  ${objetos.length} objeto(s) encontrado(s)`);
+
+  const createdObj = await prisma.objeto.create({
+    data: { nome: "Objeto Teste Prisma Check", descricao: "Criado pelo script de validação" },
+  });
+  console.log(`   ✅  objeto criado: id=${createdObj.id}`);
+  const updatedObj = await prisma.objeto.update({
+    where: { id: createdObj.id },
+    data: { nome: "Objeto Teste Prisma Check (atualizado)" },
+  });
+  console.log(`   ✅  objeto atualizado: nome="${updatedObj.nome}"`);
+  await prisma.objeto.delete({ where: { id: createdObj.id } });
+  console.log(`   ✅  objeto deletado`);
+
+  // 5. commercial_conditions — CRUD
+  console.log("\n5. commercial_conditions — CRUD...");
+  const conditions = await prisma.commercialCondition.findMany({ orderBy: { name: "asc" } });
+  console.log(`   ✅  ${conditions.length} condição(ões) encontrada(s)`);
+
+  const createdCond = await prisma.commercialCondition.create({
+    data: {
+      name:           "Condição Teste Prisma Check",
+      formaPagamento: "Boleto",
+      prazoPagamento: "30 dias",
+      prazoEntrega:   "7 dias",
+      garantia:       null,
+      validade:       "30 dias",
+    },
+  });
+  console.log(`   ✅  condição criada: id=${createdCond.id}`);
+  await prisma.commercialCondition.update({
+    where: { id: createdCond.id },
+    data: { name: "Condição Teste Prisma Check (atualizada)" },
+  });
+  console.log(`   ✅  condição atualizada`);
+  await prisma.commercialCondition.delete({ where: { id: createdCond.id } });
+  console.log(`   ✅  condição deletada`);
 
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }

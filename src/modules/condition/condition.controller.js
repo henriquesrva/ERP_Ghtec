@@ -7,18 +7,18 @@ const {
   deleteCond,
 } = require("./condition.service");
 
-function listConditionsHandler(req, res) {
+async function listConditionsHandler(req, res) {
   try {
-    return res.json(getAllConditions());
+    return res.json(await getAllConditions());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar condições." });
   }
 }
 
-function getConditionHandler(req, res) {
+async function getConditionHandler(req, res) {
   try {
-    const cond = getCondition(Number(req.params.id));
+    const cond = await getCondition(Number(req.params.id));
     if (!cond) return res.status(404).json({ success: false, message: "Condição não encontrada." });
     return res.json(cond);
   } catch (err) {
@@ -27,20 +27,20 @@ function getConditionHandler(req, res) {
   }
 }
 
-function searchConditionsHandler(req, res) {
+async function searchConditionsHandler(req, res) {
   try {
     const q = (req.query.q || "").trim();
-    if (!q) return res.json(getAllConditions());
-    return res.json(searchConds(q));
+    if (!q) return res.json(await getAllConditions());
+    return res.json(await searchConds(q));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao buscar condições." });
   }
 }
 
-function createConditionHandler(req, res) {
+async function createConditionHandler(req, res) {
   try {
-    const id = createCond(req.body);
+    const id = await createCond(req.body);
     return res.status(201).json({ success: true, id });
   } catch (err) {
     console.error(err);
@@ -49,9 +49,9 @@ function createConditionHandler(req, res) {
   }
 }
 
-function updateConditionHandler(req, res) {
+async function updateConditionHandler(req, res) {
   try {
-    updateCond(Number(req.params.id), req.body);
+    await updateCond(Number(req.params.id), req.body);
     return res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -61,9 +61,9 @@ function updateConditionHandler(req, res) {
   }
 }
 
-function deleteConditionHandler(req, res) {
+async function deleteConditionHandler(req, res) {
   try {
-    deleteCond(Number(req.params.id));
+    await deleteCond(Number(req.params.id));
     return res.json({ success: true });
   } catch (err) {
     console.error(err);

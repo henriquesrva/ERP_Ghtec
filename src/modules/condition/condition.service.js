@@ -1,22 +1,15 @@
-const {
-  listConditions,
-  getConditionById,
-  searchConditions,
-  createCondition,
-  updateCondition,
-  deleteCondition,
-} = require("./condition.repository");
+const repo = require("./condition.repository");
 
-function getAllConditions() {
-  return listConditions();
+async function getAllConditions() {
+  return repo.listConditions();
 }
 
-function getCondition(id) {
-  return getConditionById(id);
+async function getCondition(id) {
+  return repo.getConditionById(id);
 }
 
-function searchConds(q) {
-  return searchConditions(q);
+async function searchConds(q) {
+  return repo.searchConditions(q);
 }
 
 function validateFields(data) {
@@ -27,9 +20,9 @@ function validateFields(data) {
   if (!data.validade?.trim())        throw Object.assign(new Error("Validade é obrigatória."),            { code: "VALIDATION" });
 }
 
-function createCond(data) {
+async function createCond(data) {
   validateFields(data);
-  return createCondition({
+  return repo.createCondition({
     name:            data.name.trim(),
     forma_pagamento: data.forma_pagamento.trim(),
     prazo_pagamento: data.prazo_pagamento.trim(),
@@ -39,11 +32,11 @@ function createCond(data) {
   });
 }
 
-function updateCond(id, data) {
-  const existing = getConditionById(id);
+async function updateCond(id, data) {
+  const existing = await repo.getConditionById(id);
   if (!existing) throw Object.assign(new Error("Condição não encontrada."), { code: "NOT_FOUND" });
   validateFields(data);
-  updateCondition(id, {
+  await repo.updateCondition(id, {
     name:            data.name.trim(),
     forma_pagamento: data.forma_pagamento.trim(),
     prazo_pagamento: data.prazo_pagamento.trim(),
@@ -53,10 +46,10 @@ function updateCond(id, data) {
   });
 }
 
-function deleteCond(id) {
-  const existing = getConditionById(id);
+async function deleteCond(id) {
+  const existing = await repo.getConditionById(id);
   if (!existing) throw Object.assign(new Error("Condição não encontrada."), { code: "NOT_FOUND" });
-  deleteCondition(id);
+  await repo.deleteCondition(id);
 }
 
 module.exports = {
