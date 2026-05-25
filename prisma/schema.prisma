@@ -1,0 +1,14 @@
+// Prisma schema — GHTec Propostas
+// Passo 3.1: datasource configurado, models ainda não definidos.
+// Os models serão adicionados em Passo 3.2 (schema completo).
+// Geração: npx prisma generate
+// Migração: NÃO execute até concluir todos os passos de preparação.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

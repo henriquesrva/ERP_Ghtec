@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const { generateProposalPdf } = require("./proposal-pdf.service");
+const pdfService = require("./proposal-pdf.service");
 
 const {
   findClientByCnpj,
@@ -274,7 +274,7 @@ async function createProposalFlow(data) {
   const pdfFileName = `proposta-${data.numero_proposta}.pdf`;
   const pdfPath = path.join(outputDir, pdfFileName);
 
-  await generateProposalPdf({
+  await pdfService.generateProposalPdf({
     ...data,
     cliente: resolvedClient,
     valor_total_extenso: totalExtenso,
@@ -462,6 +462,7 @@ module.exports = {
   deleteProposalService,
   getKanbanProposals,
   validateProposalItems,
+  calculateTotal,
   updateKanbanStatus,
   canMoveKanban,
   canMarkExecution,

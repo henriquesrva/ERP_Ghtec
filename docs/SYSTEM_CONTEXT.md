@@ -135,11 +135,20 @@ pdf-lib           — manipulação e merge de PDFs
 puppeteer         — renderização headless do PDF
 ```
 
+**Dependências de desenvolvimento (`devDependencies`):**
+```
+prisma            — CLI do Prisma (migrações, introspect, studio)
+vitest            — runner de testes
+```
+
+> **Prisma 7.x instalado mas NÃO em uso no runtime.** O runtime atual continua usando `better-sqlite3` via `src/db/connection.js`. O Prisma foi instalado como preparação para migração futura para PostgreSQL. PostgreSQL local disponível via `docker-compose.yml` na raiz (`docker compose up -d postgres`). `prisma generate` cria client em `src/generated/prisma/` (gitignored). Ver `docs/PRISMA_SETUP.md` para detalhes de uso.
+
 **Variáveis de ambiente (`.env`):**
 ```
 SESSION_SECRET    — segredo do cookie de sessão (obrigatório em produção)
 PORT              — porta do servidor (padrão: 3000)
 NODE_ENV          — development | production
+DATABASE_URL      — PostgreSQL (apenas Prisma/migrações — ainda não afeta runtime)
 ```
 
 **Como rodar:**
@@ -163,7 +172,7 @@ npm run dev        # sobe o servidor (migrate.js roda automaticamente)
 propostas_automaticas/
 ├── src/
 │   ├── server.js              # Entry point — carrega .env, roda migrate, sobe Express
-│   ├── app.js                 # Express app — middlewares, todas as rotas, configuração de uploads
+│   ├── app.js                 # Express app — middlewares globais, registro de rotas
 │   ├── assets/                # Imagens para geração do PDF (logo, marcas d'água)
 │   │   ├── LogoGHTEC.png
 │   │   ├── marcatopo.png      # Marca d'água: topo da página 1
@@ -176,7 +185,9 @@ propostas_automaticas/
 │   ├── middleware/
 │   │   ├── requireAuth.js     # Proteção de rotas (libera login, assets)
 │   │   ├── errorHandler.js    # Handler global de erros HTTP
-│   │   └── notFoundHandler.js # 404 padrão
+│   │   ├── notFoundHandler.js # 404 padrão
+│   │   ├── sessionStore.js    # Session store persistente (better-sqlite3)
+│   │   └── upload.js          # Multer: 3 instâncias (approval, nota, comprovante)
 │   ├── modules/               # Um módulo por domínio/entidade
 │   │   ├── auth/              # Login, usuários, roles, assinatura pessoal
 │   │   ├── proposal/          # Propostas: criação, PDF, kanban status
@@ -1156,4 +1167,4 @@ Expansão incremental: autosave de rascunho, relatórios de lucratividade, integ
 
 ---
 
-*Atualizado em 2026-05-25 — regras de domínio do Kanban extraídas para `src/shared/domain/kanban.js`; testes: 94 testes, 5 arquivos.*
+*Atualizado em 2026-05-25 — Passo 3.2: docker-compose.yml criado com PostgreSQL 16-alpine; DATABASE_URL no .env atualizada para bater com docker-compose; docs/PRISMA_SETUP.md revisado com docker compose como caminho recomendado; runtime continua em SQLite/better-sqlite3; 137 testes, 7 arquivos, todos passando.*
