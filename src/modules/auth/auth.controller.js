@@ -19,14 +19,22 @@ function logoutHandler(req, res) {
   });
 }
 
-function getMeHandler(req, res) {
-  const user = repo.findUserById(req.session.userId);
-  if (!user) return res.status(401).json({ success: false, message: "Não autenticado." });
-  res.json({ success: true, user });
+async function getMeHandler(req, res) {
+  try {
+    const user = await repo.findUserById(req.session.userId);
+    if (!user) return res.status(401).json({ success: false, message: "Não autenticado." });
+    res.json({ success: true, user });
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });
+  }
 }
 
-function listUsersHandler(req, res) {
-  res.json(svc.getAllUsers());
+async function listUsersHandler(req, res) {
+  try {
+    res.json(await svc.getAllUsers());
+  } catch (e) {
+    res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });
+  }
 }
 
 async function createUserHandler(req, res) {
@@ -50,34 +58,34 @@ async function changePasswordHandler(req, res) {
   }
 }
 
-function changeUserRoleHandler(req, res) {
+async function changeUserRoleHandler(req, res) {
   if (req.session.userRole !== "admin") {
     return res.status(403).json({ success: false, message: "Apenas administradores podem alterar classes." });
   }
   try {
-    svc.changeUserRole(Number(req.params.id), req.body.role, req.session.userId);
+    await svc.changeUserRole(Number(req.params.id), req.body.role, req.session.userId);
     res.json({ success: true });
   } catch (e) {
     res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });
   }
 }
 
-function deleteUserHandler(req, res) {
+async function deleteUserHandler(req, res) {
   if (req.session.userRole !== "admin") {
     return res.status(403).json({ success: false, message: "Apenas administradores podem excluir usuários." });
   }
   try {
-    svc.deleteUser(Number(req.params.id), req.session.userId);
+    await svc.deleteUser(Number(req.params.id), req.session.userId);
     res.json({ success: true });
   } catch (e) {
     res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });
   }
 }
 
-function updateSignatureHandler(req, res) {
+async function updateSignatureHandler(req, res) {
   try {
-    svc.updateSignature(req.session.userId, req.body);
-    const user = repo.findUserById(req.session.userId);
+    await svc.updateSignature(req.session.userId, req.body);
+    const user = await repo.findUserById(req.session.userId);
     res.json({ success: true, signature_cargo: user.signature_cargo, signature_telefone: user.signature_telefone });
   } catch (e) {
     res.status(e.status || 500).json({ success: false, message: e.message || "Erro interno." });

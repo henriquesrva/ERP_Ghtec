@@ -19,12 +19,12 @@ Isso muda fundamentalmente a estratégia.
 | `objeto` | `objetos` |
 | `condition` | `commercial_conditions` |
 | `client` | `clients` |
+| `auth/user` ✅ | `users` |
 
 ### Módulos em SQLite/better-sqlite3
 
 | Módulo | Tabela(s) | Linhas no repository |
 |--------|-----------|---------------------|
-| `auth` | `users` | 71 |
 | `part` | `parts`, `part_client_price_references` | 265 |
 | `proposal` | `proposals`, `proposal_items`, `price_history` | 429 |
 | `stock` | `stock_movements` | 224 |
@@ -247,22 +247,24 @@ Grupo 8: conta_pagar
 
 ---
 
-### Fase 1 — Migrar `auth/user`
+### Fase 1 — Migrar `auth/user` ✅ CONCLUÍDA
 
 **Escopo:** `src/modules/auth/auth.repository.js`, `auth.service.js`, `auth.controller.js`
 
 **Dependências Prisma já migradas:** nenhuma (auth é standalone)
 
-**Bridges a criar:** nenhuma
+**Bridges criadas:** nenhuma
 
-**Testes a criar:** `tests/services/auth.service.test.js` (já existe — verificar se precisa de atualização)
+**Arquivos alterados:**
+- `src/modules/auth/auth.repository.js` — reescrito para Prisma async; `findUserById` sem `password_hash`; `countUsers`/`countAdmins` assíncronos
+- `src/modules/auth/auth.service.js` — todas as funções async/await
+- `src/modules/auth/auth.controller.js` — todos os handlers async
+- `src/modules/proposal/proposal.controller.js` — fix: `await findAuthUserById` (uma linha)
+- `tests/services/auth.service.test.js` — reescrito para vi.spyOn (33 testes, sem SQLite)
+- `scripts/seed-postgres.js` — criado (idempotente, cria admin/admin123)
+- `scripts/check-prisma-connection.js` — seção 7 adicionada (CRUD de usuário)
 
-**Detalhe crítico:**
-- `sessionStore.js` usa `better-sqlite3` com `sessions.sqlite` — **não migrar**. É independente do banco principal e pode permanecer em SQLite indefinidamente.
-- O usuário admin padrão deve ser criado via seed, não via `migrate.js`.
-- `findUserById` e `findUserByUsername` precisam ser async Prisma.
-
-**Saída esperada:** `users` operando no PostgreSQL. SQLite `users` table vazia em produção, mas presente para compatibilidade dos outros módulos que ainda não migraram.
+**Resultado:** `npm test` → 248 passando. `node scripts/seed-postgres.js` → admin criado. `node scripts/check-prisma-connection.js` → ✅ 7 seções.
 
 ---
 
@@ -375,7 +377,7 @@ Após todas as fases:
 
 ## 8. Próxima Ação Recomendada
 
-**Executar a Fase 1: migrar `auth/user` para Prisma.**
+**Executar a Fase 2: migrar `part` + `part_client_price_references` para Prisma.**
 
 É o menor e mais seguro passo do Caminho B. Sem dependências SQLite cruzadas, sem bridges a criar, sem risco de regressão nas outras funcionalidades. Desbloqueia todas as fases seguintes.
 

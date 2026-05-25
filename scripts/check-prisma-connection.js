@@ -117,6 +117,51 @@ async function main() {
   await prisma.client.delete({ where: { id: createdClient.id } });
   console.log(`   ✅  cliente deletado`);
 
+  // 7. users — CRUD seguro (não toca no admin real)
+  console.log("\n7. users — CRUD...");
+  const userCount = await prisma.user.count();
+  console.log(`   ✅  ${userCount} usuário(s) encontrado(s)`);
+
+  const TEST_USERNAME = "prisma_check_test_user";
+  const bcrypt = require("bcryptjs");
+  const existingTestUser = await prisma.user.findUnique({ where: { username: TEST_USERNAME } });
+  if (existingTestUser) await prisma.user.delete({ where: { username: TEST_USERNAME } });
+
+  const testHash = await bcrypt.hash("teste123", 1);
+  const createdUser = await prisma.user.create({
+    data: {
+      nome:         "Usuário Teste Prisma Check",
+      username:     TEST_USERNAME,
+      passwordHash: testHash,
+      role:         "user",
+    },
+  });
+  console.log(`   ✅  usuário criado: id=${createdUser.id}`);
+
+  const foundByUsername = await prisma.user.findUnique({ where: { username: TEST_USERNAME } });
+  console.log(`   ✅  encontrado por username: "${foundByUsername.nome}"`);
+
+  const foundById = await prisma.user.findUnique({
+    where: { id: createdUser.id },
+    select: { id: true, nome: true, username: true, role: true, signatureCargo: true, signatureTelefone: true },
+  });
+  console.log(`   ✅  encontrado por id: role="${foundById.role}", password_hash ausente=${!("passwordHash" in foundById)}`);
+
+  await prisma.user.update({
+    where: { id: createdUser.id },
+    data: { signatureCargo: "Técnico", signatureTelefone: "(31) 9999-0000" },
+  });
+  console.log(`   ✅  assinatura atualizada`);
+
+  await prisma.user.update({
+    where: { id: createdUser.id },
+    data: { role: "comercial" },
+  });
+  console.log(`   ✅  role atualizado para "comercial"`);
+
+  await prisma.user.delete({ where: { id: createdUser.id } });
+  console.log(`   ✅  usuário de teste deletado`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 

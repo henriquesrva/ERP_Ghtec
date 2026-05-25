@@ -1,60 +1,104 @@
-const db = require("../../db/connection");
+const prisma = require("../../db/prisma");
 
-function findUserByUsername(username) {
-  return db.prepare(`SELECT * FROM users WHERE username = ?`).get(username);
+function mapUser(u) {
+  if (!u) return null;
+  return {
+    id:                 u.id,
+    nome:               u.nome,
+    username:           u.username,
+    password_hash:      u.passwordHash,
+    role:               u.role,
+    signature_cargo:    u.signatureCargo,
+    signature_telefone: u.signatureTelefone,
+    created_at:         u.createdAt,
+    updated_at:         u.updatedAt,
+  };
 }
 
-function findUserById(id) {
-  return db.prepare(`
-    SELECT id, nome, username, role, signature_cargo, signature_telefone, created_at
-    FROM users WHERE id = ?
-  `).get(id);
+async function findUserByUsername(username) {
+  return mapUser(await prisma.user.findUnique({ where: { username } }));
 }
 
-function listUsers() {
-  return db.prepare(`
-    SELECT id, nome, username, role, signature_cargo, signature_telefone, created_at
-    FROM users ORDER BY created_at ASC
-  `).all();
-}
-
-function createUser(data) {
-  const result = db.prepare(`
-    INSERT INTO users (nome, username, password_hash, role)
-    VALUES (@nome, @username, @password_hash, @role)
-  `).run({
-    nome:          data.nome,
-    username:      data.username,
-    password_hash: data.password_hash,
-    role:          data.role || "user",
+// Retorna usuário sem password_hash — preserva contrato original do SQLite.
+async function findUserById(id) {
+  const u = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true, nome: true, username: true, role: true,
+      signatureCargo: true, signatureTelefone: true, createdAt: true,
+    },
   });
-  return result.lastInsertRowid;
+  if (!u) return null;
+  return {
+    id:                 u.id,
+    nome:               u.nome,
+    username:           u.username,
+    role:               u.role,
+    signature_cargo:    u.signatureCargo,
+    signature_telefone: u.signatureTelefone,
+    created_at:         u.createdAt,
+  };
 }
 
-function updateUserPassword(id, newHash) {
-  db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(newHash, id);
+async function listUsers() {
+  const rows = await prisma.user.findMany({
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true, nome: true, username: true, role: true,
+      signatureCargo: true, signatureTelefone: true, createdAt: true,
+    },
+  });
+  return rows.map(u => ({
+    id:                 u.id,
+    nome:               u.nome,
+    username:           u.username,
+    role:               u.role,
+    signature_cargo:    u.signatureCargo,
+    signature_telefone: u.signatureTelefone,
+    created_at:         u.createdAt,
+  }));
 }
 
-function updateUserRole(id, role) {
-  db.prepare(`UPDATE users SET role = ? WHERE id = ?`).run(role, id);
+async function createUser(data) {
+  const row = await prisma.user.create({
+    data: {
+      nome:         data.nome,
+      username:     data.username,
+      passwordHash: data.password_hash,
+      role:         data.role || "user",
+    },
+  });
+  return row.id;
 }
 
-function updateUserSignature(id, { cargo, telefone }) {
-  db.prepare(`
-    UPDATE users SET signature_cargo = ?, signature_telefone = ? WHERE id = ?
-  `).run(cargo || null, telefone || null, id);
+async function updateUserPassword(id, newHash) {
+  await prisma.user.update({ where: { id }, data: { passwordHash: newHash } });
 }
 
-function deleteUserById(id) {
-  db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
+async function updateUserRole(id, role) {
+  await prisma.user.update({ where: { id }, data: { role } });
 }
 
-function countUsers() {
-  return db.prepare(`SELECT COUNT(*) AS n FROM users`).get().n;
+async function updateUserSignature(id, { cargo, telefone }) {
+  await prisma.user.update({
+    where: { id },
+    data: {
+      signatureCargo:    cargo    || null,
+      signatureTelefone: telefone || null,
+    },
+  });
 }
 
-function countAdmins() {
-  return db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'admin'`).get().n;
+async function deleteUserById(id) {
+  await prisma.user.delete({ where: { id } });
+}
+
+async function countUsers() {
+  return prisma.user.count();
+}
+
+async function countAdmins() {
+  return prisma.user.count({ where: { role: "admin" } });
 }
 
 module.exports = {

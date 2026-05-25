@@ -23,7 +23,7 @@ const { findUserById: findAuthUserById } = require("../auth/auth.repository");
 
 async function createProposal(req, res) {
   try {
-    const user = findAuthUserById(req.session.userId);
+    const user = await findAuthUserById(req.session.userId);
     if (!user) return res.status(401).json({ success: false, message: "Sessão inválida. Faça login novamente." });
 
     if (!user.signature_cargo && !user.signature_telefone) {
