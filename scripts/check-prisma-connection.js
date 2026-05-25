@@ -94,6 +94,29 @@ async function main() {
   await prisma.commercialCondition.delete({ where: { id: createdCond.id } });
   console.log(`   ✅  condição deletada`);
 
+  // 6. clients — CRUD
+  console.log("\n6. clients — CRUD...");
+  const clients = await prisma.client.findMany({ orderBy: { nome: "asc" } });
+  console.log(`   ✅  ${clients.length} cliente(s) encontrado(s)`);
+
+  const createdClient = await prisma.client.create({
+    data: {
+      nome:         "Cliente Teste Prisma Check",
+      razaoSocial:  "Empresa de Teste Ltda",
+      cnpj:         "00.000.000/0001-00",
+      cidade:       "Belo Horizonte",
+      estado:       "MG",
+    },
+  });
+  console.log(`   ✅  cliente criado: id=${createdClient.id}`);
+  await prisma.client.update({
+    where: { id: createdClient.id },
+    data: { nome: "Cliente Teste Prisma Check (atualizado)" },
+  });
+  console.log(`   ✅  cliente atualizado`);
+  await prisma.client.delete({ where: { id: createdClient.id } });
+  console.log(`   ✅  cliente deletado`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 

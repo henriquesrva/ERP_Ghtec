@@ -1,35 +1,24 @@
-const {
-  listAllClients,
-  findClientById,
-  findClientByCnpj,
-  searchClients,
-  createClient,
-  updateClient,
-  countClientProposals,
-  deleteClientById,
-  getProfitAnalysis,
-} = require("./client.repository");
+const repo = require("./client.repository");
 
-function getAllClients() {
-  return listAllClients();
+async function getAllClients() {
+  return repo.listAllClients();
 }
 
-function getClientById(id) {
-  return findClientById(id);
+async function getClientById(id) {
+  return repo.findClientById(id);
 }
 
-function searchClientsByQuery(q) {
-  return searchClients(q);
+async function searchClientsByQuery(q) {
+  return repo.searchClients(q);
 }
 
-function createNewClient(data) {
+async function createNewClient(data) {
   if (!data.nome || !data.nome.trim()) {
     throw Object.assign(new Error("O campo 'nome' é obrigatório."), { code: "VALIDATION" });
   }
 
-  // Bloqueia CNPJ duplicado
   if (data.cnpj && data.cnpj.trim()) {
-    const existing = findClientByCnpj(data.cnpj);
+    const existing = await repo.findClientByCnpj(data.cnpj);
     if (existing) {
       const err = new Error(`Já existe um cliente cadastrado com este CNPJ (id=${existing.id}: ${existing.nome}).`);
       err.code = "DUPLICATE_CNPJ";
@@ -38,12 +27,12 @@ function createNewClient(data) {
     }
   }
 
-  const id = createClient(data);
-  return findClientById(id);
+  const id = await repo.createClient(data);
+  return repo.findClientById(id);
 }
 
-function updateExistingClient(id, data) {
-  const existing = findClientById(id);
+async function updateExistingClient(id, data) {
+  const existing = await repo.findClientById(id);
   if (!existing) {
     const err = new Error("Cliente não encontrado.");
     err.code = "NOT_FOUND";
@@ -54,9 +43,8 @@ function updateExistingClient(id, data) {
     throw Object.assign(new Error("O campo 'nome' é obrigatório."), { code: "VALIDATION" });
   }
 
-  // Bloqueia conflito de CNPJ com outro cliente
   if (data.cnpj && data.cnpj.trim()) {
-    const byCnpj = findClientByCnpj(data.cnpj);
+    const byCnpj = await repo.findClientByCnpj(data.cnpj);
     if (byCnpj && byCnpj.id !== id) {
       const err = new Error(`Já existe outro cliente com este CNPJ (id=${byCnpj.id}: ${byCnpj.nome}).`);
       err.code = "DUPLICATE_CNPJ";
@@ -65,19 +53,19 @@ function updateExistingClient(id, data) {
     }
   }
 
-  updateClient(id, data);
-  return findClientById(id);
+  await repo.updateClient(id, data);
+  return repo.findClientById(id);
 }
 
-function deleteClient(id) {
-  const existing = findClientById(id);
+async function deleteClient(id) {
+  const existing = await repo.findClientById(id);
   if (!existing) {
     const err = new Error("Cliente não encontrado.");
     err.code = "NOT_FOUND";
     throw err;
   }
 
-  const proposalCount = countClientProposals(id);
+  const proposalCount = repo.countClientProposals(id);
   if (proposalCount > 0) {
     const err = new Error(
       `Este cliente possui ${proposalCount} proposta(s) vinculada(s) e não pode ser excluído. ` +
@@ -88,11 +76,11 @@ function deleteClient(id) {
     throw err;
   }
 
-  deleteClientById(id);
+  await repo.deleteClientById(id);
 }
 
-function getClientProfitAnalysis() {
-  return getProfitAnalysis();
+async function getClientProfitAnalysis() {
+  return repo.getProfitAnalysis();
 }
 
 module.exports = {

@@ -1,39 +1,36 @@
-# Feedback — Passo 3.5.2
+# Feedback — Passo 3.5.3
 
 ## O que foi feito
 
-Migração de `responsavel`, `objeto` e `condition` de better-sqlite3 para Prisma Client (PostgreSQL).
+Migração do módulo `client` de better-sqlite3 para Prisma Client (PostgreSQL).
 
-**9 arquivos migrados:**
-- `src/modules/responsavel/responsavel.repository.js` — Prisma async
-- `src/modules/responsavel/responsavel.service.js` — async/await
-- `src/modules/responsavel/responsavel.controller.js` — async/await
-- `src/modules/objeto/objeto.repository.js` — Prisma async
-- `src/modules/objeto/objeto.service.js` — async/await
-- `src/modules/objeto/objeto.controller.js` — async/await
-- `src/modules/condition/condition.repository.js` — Prisma async + SQLite híbrido
-- `src/modules/condition/condition.service.js` — async/await
-- `src/modules/condition/condition.controller.js` — async/await
+**3 arquivos migrados:**
+- `src/modules/client/client.repository.js` — Prisma async + SQLite bridges síncronas para `countClientProposals` e `getProfitAnalysis`
+- `src/modules/client/client.service.js` — async/await, `const repo = require(...)`, sem `await` nas bridges síncronas
+- `src/modules/client/client.controller.js` — async/await, `const service = require(...)`
 
-**3 arquivos de teste criados:**
-- `tests/services/responsavel.service.test.js` — 11 testes
-- `tests/services/objeto.service.test.js` — 16 testes
-- `tests/services/condition.service.test.js` — 20 testes
+**1 arquivo de bridge atualizado:**
+- `src/modules/proposal/proposal.repository.js` — removeu import de 6 funções do `client.repository`; substituiu por implementações SQLite locais idênticas ao comportamento pré-migração
+
+**1 arquivo de teste criado:**
+- `tests/services/client.service.test.js` — 23 testes
 
 **2 arquivos atualizados:**
-- `scripts/check-prisma-connection.js` — CRUD de responsáveis, objetos e condições
+- `scripts/check-prisma-connection.js` — CRUD de clientes (seção 6)
 - `docs/PRISMA_SETUP.md` — estado atual e estrutura de arquivos
 
 ## Decisões técnicas
 
-**`condition.deleteCondition` híbrido:** proposals ainda estão no SQLite, então antes de deletar via Prisma, o código nulifica `commercial_condition_id` diretamente via `db.prepare(...)`. Isso preserva integridade referencial durante a fase híbrida, substituindo o `db.transaction()` original.
+**Bridges síncronas em `client.repository.js`:** `countClientProposals` e `getProfitAnalysis` permanecem como funções síncronas SQLite. O primeiro consulta `proposals WHERE cliente_id = ?` (tabela ainda em SQLite); o segundo faz JOIN entre `proposals`, `proposal_items`, `price_history`, `parts` e `clients` — tabelas que ainda não foram migradas. O service chama `repo.countClientProposals(id)` sem `await` — sem Promise, sem bloqueio.
 
-**`const repo = require(...)` nos services:** os services usam `const repo = require("./modulo.repository")` e chamam `repo.funcao()` em vez de destructuring. Isso é obrigatório para que `vi.spyOn(repo, "funcao")` consiga interceptar as chamadas nos testes. Padrão herdado do `category.service.js` — deve ser seguido em todos os futuros módulos migrados.
+**Bridges locais em `proposal.repository.js`:** As 6 funções de cliente (`findClientByCnpj`, `findClientsByName`, `findClientsByExactName`, `findClientById`, `createClient`, `searchClients`) foram movidas para implementações SQLite locais no próprio `proposal.repository.js`. Isso mantém `findOrCreateClient` (chamado em `proposal.service.js`) completamente síncrono, preservando:
+1. O fluxo de criação de propostas (que mistura sync/async mas não pode ser facilmente convertido sem migrar proposals para Prisma).
+2. Os testes de integração que usam `createTestClient()` — que insere via SQLite em memória.
 
-**camelCase → snake_case:** cada repository tem uma função `mapX()` que converte os campos retornados pelo Prisma (camelCase) para o snake_case que o restante do código espera (`formaPagamento` → `forma_pagamento`, `createdAt` → `created_at`, etc.).
+**`has_parts_contract` nas bridges:** A coluna foi adicionada via migration ao SQLite (`ALTER TABLE clients ADD COLUMN has_parts_contract INTEGER DEFAULT 0`). As bridges a incluem no INSERT, mantendo consistência com o Prisma.
 
-**`createCond` retorna id (não objeto):** preservado o contrato original — `condition.service.createCond` retorna o id bruto, não o objeto completo. O controller usa `{ success: true, id }`.
+**`getProfitAnalysis` — limitação conhecida:** O JOIN `clients c ON c.id = p.cliente_id` consulta a tabela SQLite `clients`. Clientes criados após a migração (apenas no PostgreSQL) não aparecerão nessa análise. Documentado; aceitável durante a fase híbrida.
 
 ## npm test
 
-204 testes, 11 arquivos — todos passando.
+227 testes, 12 arquivos — todos passando.

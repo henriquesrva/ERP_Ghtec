@@ -2,15 +2,72 @@ const db = require("../../db/connection");
 const { normalizeText } = require("../../shared/utils/normalize");
 const { KANBAN_STATUSES } = require("../../shared/domain/kanban");
 
-// Funções de cliente delegadas ao módulo correto
-const {
-  findClientByCnpj,
-  findClientsByName,
-  findClientsByExactName,
-  findClientById,
-  createClient,
-  searchClients,
-} = require("../client/client.repository");
+// SQLite client bridges — proposal flow permanece síncrono até proposals migrar para Prisma.
+// Quando proposals migrar, substituir por chamadas ao client.repository async.
+
+function findClientByCnpj(cnpj) {
+  const digits = cnpj ? cnpj.replace(/\D/g, "") : null;
+  if (!digits) return null;
+  const rows = db.prepare("SELECT * FROM clients WHERE cnpj IS NOT NULL").all();
+  return rows.find(c => c.cnpj && c.cnpj.replace(/\D/g, "") === digits) || null;
+}
+
+function findClientsByName(nome) {
+  return db.prepare(
+    "SELECT id, nome, razao_social, cnpj, cidade, estado FROM clients WHERE nome LIKE ? ORDER BY id DESC LIMIT 5"
+  ).all(`%${nome}%`);
+}
+
+function findClientsByExactName(nome) {
+  if (!nome || !nome.trim()) return [];
+  const normInput = normalizeText(nome);
+  return db.prepare("SELECT * FROM clients").all()
+    .filter(c => normalizeText(c.nome) === normInput);
+}
+
+function findClientById(id) {
+  return db.prepare("SELECT * FROM clients WHERE id = ?").get(id) || null;
+}
+
+function createClient(data) {
+  const result = db.prepare(`
+    INSERT INTO clients (
+      nome, razao_social, nome_fantasia, cnpj, inscricao_estadual,
+      endereco, cidade, estado, cep, email, telefone,
+      contato_responsavel, observacoes, has_parts_contract
+    ) VALUES (
+      @nome, @razao_social, @nome_fantasia, @cnpj, @inscricao_estadual,
+      @endereco, @cidade, @estado, @cep, @email, @telefone,
+      @contato_responsavel, @observacoes, @has_parts_contract
+    )
+  `).run({
+    nome:                data.nome               ?? null,
+    razao_social:        data.razao_social        ?? null,
+    nome_fantasia:       data.nome_fantasia       ?? null,
+    cnpj:                data.cnpj                ?? null,
+    inscricao_estadual:  data.inscricao_estadual  ?? null,
+    endereco:            data.endereco            ?? null,
+    cidade:              data.cidade              ?? null,
+    estado:              data.estado              ?? null,
+    cep:                 data.cep                 ?? null,
+    email:               data.email               ?? null,
+    telefone:            data.telefone            ?? null,
+    contato_responsavel: data.contato_responsavel ?? null,
+    observacoes:         data.observacoes         ?? null,
+    has_parts_contract:  data.has_parts_contract ? 1 : 0,
+  });
+  return Number(result.lastInsertRowid);
+}
+
+function searchClients(q) {
+  const term = `%${q}%`;
+  return db.prepare(`
+    SELECT id, nome, razao_social, nome_fantasia, cnpj, cidade, estado, email, telefone
+    FROM clients
+    WHERE nome LIKE ? OR cnpj LIKE ? OR razao_social LIKE ? OR nome_fantasia LIKE ?
+    ORDER BY nome ASC LIMIT 10
+  `).all(term, term, term, term);
+}
 
 function createProposal(proposal) {
   const result = db.prepare(`

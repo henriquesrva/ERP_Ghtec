@@ -1,15 +1,19 @@
 # Prisma — Setup e Guia de Uso
 
-## Estado atual (Passo 3.5.2 — concluído)
+## Estado atual (Passo 3.5.3 — concluído)
 
-Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Módulos `category`, `responsavel`, `objeto` e `condition` migrados para Prisma** — repositories, services e controllers todos async/await. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
+Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Módulos `category`, `responsavel`, `objeto`, `condition` e `client` migrados para Prisma** — repositories, services e controllers todos async/await. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
 
 `npm run prisma:status` → `Database schema is up to date!`
-`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD de categorias, responsáveis, objetos e condições comerciais
+`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD de categorias, responsáveis, objetos, condições comerciais e clientes
 
-**Runtime híbrido**: `category`, `responsavel`, `objeto`, `condition` → Prisma/PostgreSQL. Os demais módulos ainda usam `better-sqlite3` via `src/db/connection.js`.
+**Runtime híbrido**: `category`, `responsavel`, `objeto`, `condition`, `client` → Prisma/PostgreSQL. Os demais módulos ainda usam `better-sqlite3` via `src/db/connection.js`.
 
 **Nota crítica — `deleteCondition`**: ao deletar uma condição comercial, o código primeiro nulifica `commercial_condition_id` nas propostas via SQLite (tabela `proposals` ainda não migrada), depois deleta do PostgreSQL via Prisma. Isso preserva integridade referencial durante a fase híbrida.
+
+**Nota crítica — bridges em `proposal.repository.js`**: as 6 funções de cliente (`findClientByCnpj`, `findClientsByName`, `findClientsByExactName`, `findClientById`, `createClient`, `searchClients`) foram movidas para implementações SQLite locais no próprio `proposal.repository.js`. Isso mantém o fluxo de criação de propostas síncrono e preserva os testes de integração (que inserem clientes via SQLite em memória). Ao migrar `proposals` para Prisma, substituir essas bridges por chamadas async ao `client.repository`.
+
+**Nota crítica — `countClientProposals` e `getProfitAnalysis`**: permanecem como bridges SQLite síncronas em `client.repository.js`. O service chama `repo.countClientProposals(id)` sem `await`. O `getProfitAnalysis` faz JOIN com `proposals`, `proposal_items`, `price_history` e `parts` — todos ainda em SQLite. Quando `proposals` migrar, essas funções devem ser reescritas em Prisma.
 
 ---
 
@@ -41,10 +45,17 @@ src/modules/condition/
   condition.repository.js                    # migrado para Prisma (async) + SQLite para proposals
   condition.service.js                       # async/await — usa const repo = require(...)
   condition.controller.js                    # async/await
+src/modules/client/
+  client.repository.js                       # migrado para Prisma (async) + SQLite bridges para countClientProposals/getProfitAnalysis
+  client.service.js                          # async/await — usa const repo = require(...)
+  client.controller.js                       # async/await — usa const service = require(...)
+src/modules/proposal/
+  proposal.repository.js                     # SQLite bridges locais para 6 funções de cliente (proposal flow síncrono)
 tests/services/category.service.test.js      # 18 testes — mock via vi.spyOn
 tests/services/responsavel.service.test.js   # 11 testes — mock via vi.spyOn
 tests/services/objeto.service.test.js        # 16 testes — mock via vi.spyOn
 tests/services/condition.service.test.js     # 20 testes — mock via vi.spyOn
+tests/services/client.service.test.js        # 23 testes — mock via vi.spyOn
 scripts/check-prisma-connection.js           # validação de conexão real (rodar manualmente)
 ```
 
@@ -158,9 +169,11 @@ npm run prisma:status
 - ~~**Passo 3.5.1:** Migrar módulo `category`~~ — **concluído**
 - ~~**Passo 3.5.1.1:** Configurar driver adapter PostgreSQL (`@prisma/adapter-pg` + `pg`)~~ — **concluído**
 - ~~**Passo 3.5.2:** Migrar `responsavel`, `objeto`, `condition`~~ — **concluído**
+- ~~**Passo 3.5.3:** Migrar `client`~~ — **concluído**
 - **Passo 3.5.x:** Migrar demais repositories de better-sqlite3 para Prisma Client
-  - Ordem recomendada: `client` → `part` → `auth` → `fornecedor`/`categoria_despesa` → `stock` → `kanban` → `nota_recebida`/`conta_pagar` → `proposal` (por último)
+  - Ordem recomendada: `part` → `auth` → `fornecedor`/`categoria_despesa` → `stock` → `kanban` → `nota_recebida`/`conta_pagar` → `proposal` (por último)
   - Ao migrar `part.repository`, remover `findCategoryByIdSync` de `part.service.js` e usar o category repository async
+  - Ao migrar `proposal`, substituir as 6 bridges locais de client em `proposal.repository.js` por chamadas async ao `client.repository`, e migrar `countClientProposals`/`getProfitAnalysis` de `client.repository.js` para Prisma
   - Padrão obrigatório: services usam `const repo = require(...)` (não destructuring) para que `vi.spyOn` funcione nos testes
   - Cada módulo: repository async + service com `await` + atualizar testes
 - **Passo 3.6:** Atualizar `errorHandler.js` para códigos de erro Prisma (`P2002`, `P2003`, `P2025`)

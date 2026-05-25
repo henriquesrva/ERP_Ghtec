@@ -1,147 +1,157 @@
+const prisma = require("../../db/prisma");
 const db = require("../../db/connection");
 const { normalizeText } = require("../../shared/utils/normalize");
 
-function stripCnpj(cnpj) {
-  if (!cnpj) return null;
-  return cnpj.replace(/\D/g, "");
+function mapClient(c) {
+  if (!c) return null;
+  return {
+    id:                  c.id,
+    nome:                c.nome,
+    razao_social:        c.razaoSocial,
+    nome_fantasia:       c.nomeFantasia,
+    cnpj:                c.cnpj,
+    inscricao_estadual:  c.inscricaoEstadual,
+    endereco:            c.endereco,
+    cidade:              c.cidade,
+    estado:              c.estado,
+    cep:                 c.cep,
+    email:               c.email,
+    telefone:            c.telefone,
+    contato_responsavel: c.contatoResponsavel,
+    observacoes:         c.observacoes,
+    has_parts_contract:  c.hasPartsContract ? 1 : 0,
+    created_at:          c.createdAt,
+    updated_at:          c.updatedAt,
+  };
 }
 
-function listAllClients() {
-  return db.prepare(`
-    SELECT
-      id, nome, razao_social, nome_fantasia, cnpj,
-      cidade, estado, email, telefone, contato_responsavel,
-      has_parts_contract,
-      created_at, updated_at
-    FROM clients
-    ORDER BY nome ASC
-  `).all();
+async function listAllClients() {
+  const rows = await prisma.client.findMany({ orderBy: { nome: "asc" } });
+  return rows.map(mapClient);
 }
 
-function findClientById(id) {
-  return db.prepare(`SELECT * FROM clients WHERE id = ?`).get(id);
+async function findClientById(id) {
+  return mapClient(await prisma.client.findUnique({ where: { id } }));
 }
 
-function findClientByCnpj(cnpj) {
-  const digits = stripCnpj(cnpj);
+async function findClientByCnpj(cnpj) {
+  const digits = cnpj ? cnpj.replace(/\D/g, "") : null;
   if (!digits) return null;
-  return db.prepare(`
-    SELECT * FROM clients
-    WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = ?
-    LIMIT 1
-  `).get(digits);
+  // Client-side filter: normaliza e compara dígitos (GHTec tem poucos clientes)
+  const candidates = await prisma.client.findMany({ where: { cnpj: { not: null } } });
+  const match = candidates.find(c => c.cnpj && c.cnpj.replace(/\D/g, "") === digits);
+  return mapClient(match || null);
 }
 
-function findClientsByName(nome) {
-  const term = `%${nome}%`;
-  return db.prepare(`
-    SELECT id, nome, razao_social, cnpj, cidade, estado
-    FROM clients
-    WHERE nome LIKE ?
-    ORDER BY id DESC
-    LIMIT 5
-  `).all(term);
-}
-
-function searchClients(q) {
-  const term = `%${q}%`;
-  return db.prepare(`
-    SELECT id, nome, razao_social, nome_fantasia, cnpj, cidade, estado, email, telefone
-    FROM clients
-    WHERE nome LIKE ? OR cnpj LIKE ? OR razao_social LIKE ? OR nome_fantasia LIKE ?
-    ORDER BY nome ASC
-    LIMIT 10
-  `).all(term, term, term, term);
-}
-
-function createClient(data) {
-  const result = db.prepare(`
-    INSERT INTO clients (
-      nome, razao_social, nome_fantasia, cnpj, inscricao_estadual,
-      endereco, cidade, estado, cep,
-      email, telefone, contato_responsavel, observacoes,
-      has_parts_contract
-    ) VALUES (
-      @nome, @razao_social, @nome_fantasia, @cnpj, @inscricao_estadual,
-      @endereco, @cidade, @estado, @cep,
-      @email, @telefone, @contato_responsavel, @observacoes,
-      @has_parts_contract
-    )
-  `).run({
-    nome:                data.nome                ?? null,
-    razao_social:        data.razao_social        ?? null,
-    nome_fantasia:       data.nome_fantasia       ?? null,
-    cnpj:                data.cnpj                ?? null,
-    inscricao_estadual:  data.inscricao_estadual  ?? null,
-    endereco:            data.endereco            ?? null,
-    cidade:              data.cidade              ?? null,
-    estado:              data.estado              ?? null,
-    cep:                 data.cep                 ?? null,
-    email:               data.email               ?? null,
-    telefone:            data.telefone            ?? null,
-    contato_responsavel: data.contato_responsavel ?? null,
-    observacoes:         data.observacoes         ?? null,
-    has_parts_contract:  data.has_parts_contract  ? 1 : 0,
+async function findClientsByName(nome) {
+  const rows = await prisma.client.findMany({
+    where: { nome: { contains: nome, mode: "insensitive" } },
+    orderBy: { id: "desc" },
+    take: 5,
+    select: { id: true, nome: true, razaoSocial: true, cnpj: true, cidade: true, estado: true },
   });
-  return result.lastInsertRowid;
+  return rows.map(r => ({
+    id:           r.id,
+    nome:         r.nome,
+    razao_social: r.razaoSocial,
+    cnpj:         r.cnpj,
+    cidade:       r.cidade,
+    estado:       r.estado,
+  }));
 }
 
-// Busca clientes com nome exatamente igual após normalização (sem acento, case-insensitive)
-function findClientsByExactName(nome) {
+async function findClientsByExactName(nome) {
   if (!nome || !nome.trim()) return [];
   const normInput = normalizeText(nome);
-  const rows = db.prepare(`SELECT * FROM clients`).all();
-  return rows.filter(c => normalizeText(c.nome) === normInput);
+  const all = await prisma.client.findMany();
+  return all.filter(c => normalizeText(c.nome) === normInput).map(mapClient);
 }
 
-function countClientProposals(clientId) {
-  return db.prepare(`SELECT COUNT(*) AS count FROM proposals WHERE cliente_id = ?`).get(clientId).count;
+async function searchClients(q) {
+  const rows = await prisma.client.findMany({
+    where: {
+      OR: [
+        { nome:         { contains: q, mode: "insensitive" } },
+        { cnpj:         { contains: q, mode: "insensitive" } },
+        { razaoSocial:  { contains: q, mode: "insensitive" } },
+        { nomeFantasia: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { nome: "asc" },
+    take: 10,
+    select: {
+      id: true, nome: true, razaoSocial: true, nomeFantasia: true,
+      cnpj: true, cidade: true, estado: true, email: true, telefone: true,
+    },
+  });
+  return rows.map(r => ({
+    id:            r.id,
+    nome:          r.nome,
+    razao_social:  r.razaoSocial,
+    nome_fantasia: r.nomeFantasia,
+    cnpj:          r.cnpj,
+    cidade:        r.cidade,
+    estado:        r.estado,
+    email:         r.email,
+    telefone:      r.telefone,
+  }));
 }
 
-function deleteClientById(clientId) {
-  db.prepare(`DELETE FROM clients WHERE id = ?`).run(clientId);
+async function createClient(data) {
+  const row = await prisma.client.create({
+    data: {
+      nome:               data.nome               ?? null,
+      razaoSocial:        data.razao_social        ?? null,
+      nomeFantasia:       data.nome_fantasia       ?? null,
+      cnpj:               data.cnpj                ?? null,
+      inscricaoEstadual:  data.inscricao_estadual  ?? null,
+      endereco:           data.endereco            ?? null,
+      cidade:             data.cidade              ?? null,
+      estado:             data.estado              ?? null,
+      cep:                data.cep                 ?? null,
+      email:              data.email               ?? null,
+      telefone:           data.telefone            ?? null,
+      contatoResponsavel: data.contato_responsavel ?? null,
+      observacoes:        data.observacoes         ?? null,
+      hasPartsContract:   !!data.has_parts_contract,
+    },
+  });
+  return row.id;
 }
 
-function updateClient(id, data) {
-  // updated_at é gerenciado pelo trigger clients_updated_at
-  db.prepare(`
-    UPDATE clients SET
-      nome                = @nome,
-      razao_social        = @razao_social,
-      nome_fantasia       = @nome_fantasia,
-      cnpj                = @cnpj,
-      inscricao_estadual  = @inscricao_estadual,
-      endereco            = @endereco,
-      cidade              = @cidade,
-      estado              = @estado,
-      cep                 = @cep,
-      email               = @email,
-      telefone            = @telefone,
-      contato_responsavel = @contato_responsavel,
-      observacoes         = @observacoes,
-      has_parts_contract  = @has_parts_contract
-    WHERE id = @id
-  `).run({
-    id,
-    nome:                data.nome                ?? null,
-    razao_social:        data.razao_social        ?? null,
-    nome_fantasia:       data.nome_fantasia       ?? null,
-    cnpj:                data.cnpj                ?? null,
-    inscricao_estadual:  data.inscricao_estadual  ?? null,
-    endereco:            data.endereco            ?? null,
-    cidade:              data.cidade              ?? null,
-    estado:              data.estado              ?? null,
-    cep:                 data.cep                 ?? null,
-    email:               data.email               ?? null,
-    telefone:            data.telefone            ?? null,
-    contato_responsavel: data.contato_responsavel ?? null,
-    observacoes:         data.observacoes         ?? null,
-    has_parts_contract:  data.has_parts_contract  ? 1 : 0,
+async function updateClient(id, data) {
+  await prisma.client.update({
+    where: { id },
+    data: {
+      nome:               data.nome               ?? null,
+      razaoSocial:        data.razao_social        ?? null,
+      nomeFantasia:       data.nome_fantasia       ?? null,
+      cnpj:               data.cnpj                ?? null,
+      inscricaoEstadual:  data.inscricao_estadual  ?? null,
+      endereco:           data.endereco            ?? null,
+      cidade:             data.cidade              ?? null,
+      estado:             data.estado              ?? null,
+      cep:                data.cep                 ?? null,
+      email:              data.email               ?? null,
+      telefone:           data.telefone            ?? null,
+      contatoResponsavel: data.contato_responsavel ?? null,
+      observacoes:        data.observacoes         ?? null,
+      hasPartsContract:   !!data.has_parts_contract,
+    },
   });
 }
 
-// Calcula lucro por cliente com base nas propostas ativas (não excluídas).
-// Itens sem preco_compra na peça são contabilizados separadamente para aviso.
+async function deleteClientById(clientId) {
+  await prisma.client.delete({ where: { id: clientId } });
+}
+
+// Bridge: queries proposals em SQLite até proposal migrar para Prisma.
+function countClientProposals(clientId) {
+  return db.prepare("SELECT COUNT(*) AS count FROM proposals WHERE cliente_id = ?").get(clientId).count;
+}
+
+// Bridge: JOIN entre proposals/clients/parts/price_history — todos ainda em SQLite.
+// Quebra em produção para clientes criados após a migração; migrar quando proposal for para Prisma.
 function getProfitAnalysis() {
   return db.prepare(`
     SELECT

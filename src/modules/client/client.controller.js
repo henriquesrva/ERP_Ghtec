@@ -1,25 +1,17 @@
-const {
-  getAllClients,
-  getClientById,
-  searchClientsByQuery,
-  createNewClient,
-  updateExistingClient,
-  deleteClient,
-  getClientProfitAnalysis,
-} = require("./client.service");
+const service = require("./client.service");
 
-function listClientsHandler(req, res) {
+async function listClientsHandler(req, res) {
   try {
-    return res.json(getAllClients());
+    return res.json(await service.getAllClients());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar clientes." });
   }
 }
 
-function getClientByIdHandler(req, res) {
+async function getClientByIdHandler(req, res) {
   try {
-    const client = getClientById(Number(req.params.id));
+    const client = await service.getClientById(Number(req.params.id));
     if (!client) {
       return res.status(404).json({ success: false, message: "Cliente não encontrado." });
     }
@@ -30,20 +22,20 @@ function getClientByIdHandler(req, res) {
   }
 }
 
-function searchClientsHandler(req, res) {
+async function searchClientsHandler(req, res) {
   try {
     const q = (req.query.q || "").trim();
     if (!q) return res.json([]);
-    return res.json(searchClientsByQuery(q));
+    return res.json(await service.searchClientsByQuery(q));
   } catch (err) {
     console.error(err);
     return res.status(500).json([]);
   }
 }
 
-function createClientHandler(req, res) {
+async function createClientHandler(req, res) {
   try {
-    const client = createNewClient(req.body);
+    const client = await service.createNewClient(req.body);
     return res.status(201).json({ success: true, client });
   } catch (err) {
     console.error(err);
@@ -61,9 +53,9 @@ function createClientHandler(req, res) {
   }
 }
 
-function updateClientHandler(req, res) {
+async function updateClientHandler(req, res) {
   try {
-    const client = updateExistingClient(Number(req.params.id), req.body);
+    const client = await service.updateExistingClient(Number(req.params.id), req.body);
     return res.json({ success: true, client });
   } catch (err) {
     console.error(err);
@@ -84,9 +76,9 @@ function updateClientHandler(req, res) {
   }
 }
 
-function deleteClientHandler(req, res) {
+async function deleteClientHandler(req, res) {
   try {
-    deleteClient(Number(req.params.id));
+    await service.deleteClient(Number(req.params.id));
     return res.json({ success: true, message: "Cliente excluído com sucesso." });
   } catch (err) {
     console.error(err);
@@ -104,9 +96,9 @@ function deleteClientHandler(req, res) {
   }
 }
 
-function getProfitAnalysisHandler(req, res) {
+async function getProfitAnalysisHandler(req, res) {
   try {
-    return res.json(getClientProfitAnalysis());
+    return res.json(await service.getClientProfitAnalysis());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao calcular análise de lucro." });
