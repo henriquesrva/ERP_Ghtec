@@ -1,46 +1,25 @@
-# current_task.md
+# Feedback — Passo 2.2: Extração de PDF para proposal-pdf.service.js
 
-## Função deste arquivo
+## O que foi feito
 
-Registra a tarefa atual sendo trabalhada no sistema.
+- Criado `src/modules/proposal/proposal-pdf.service.js` com toda a lógica de geração de PDF extraída de `proposal.service.js`.
+- `proposal-pdf.service.js` concentra: `ensureFileExists`, `getMimeType`, `assetDataUri`, `buildTemplateData`, `renderHtmlToPdfBytes`, `buildWatermarkP1Html`, `buildWatermarkPNHtml`, `mergePdfLayers` e `generateProposalPdf` (função principal).
+- `proposal.service.js` perdeu ~175 linhas e 3 imports pesados (`handlebars`, `puppeteer`, `pdf-lib`). Ficou apenas com `fs` e `path` do Node, e importa somente `generateProposalPdf` do novo service.
+- Interface do PDF service: `generateProposalPdf(proposalData, pdfFilePath)` — recebe `valor_total_raw` já calculado pelo service de negócio, sem dependência reversa.
+- `buildTemplateData` foi adaptada para usar `proposalData.valor_total_raw` em vez de recalcular o total internamente.
+- `formatCurrency` removida dos imports de `proposal.service.js` (só necessária no PDF service).
 
-Deve conter apenas **uma tarefa por vez** — a que está em andamento agora.
+## Contagem de linhas
 
-Ao concluir uma tarefa, a IA deve:
-1. Avaliar se a mudança altera algo estrutural do sistema
-2. Se sim, atualizar a seção relevante do `SYSTEM_CONTEXT.md`
-3. Limpar este arquivo e deixar o status como `Nenhuma tarefa em andamento`
+| Arquivo | Antes | Depois |
+|---|---|---|
+| `proposal.service.js` | 644 | ~470 |
+| `proposal-pdf.service.js` | — | ~170 |
 
----
+## Testes
 
-## Instruções para a IA
+94/94 passando. Nenhuma regressão.
 
-- Atualize este arquivo ao iniciar qualquer tarefa relevante
-- Seja objetivo: descreva o que está sendo feito, não como vai fazer
-- Ao terminar, escreva o resultado e avalie o impacto no `SYSTEM_CONTEXT.md`
-- Não acumule tarefas antigas aqui — este arquivo é sempre sobre o presente
+## Decisão de design
 
----
-
-## Status atual
-
-**Nenhuma tarefa em andamento.**
-
----
-
-## Última tarefa concluída
-
-**O que foi feito:**
-- Corrigido loading infinito na tela de nova proposta (`nova-proposta.html`) — `loadSignaturePreview()` agora tem `showState()` helper com 4 estados (loading, loaded, nosig, error), nunca fica preso em skeleton
-- Adicionados estados `#resp-nosig` e `#resp-error` no card de assinatura
-- Adicionada variável `currentUser` para guardar usuário logado
-- Adicionada validação de assinatura no handler de submit (bloqueia antes de fazer request)
-- Adicionada validação de `numero_proposta` vazio no submit handler
-- Corrigidos 4 itens obsoletos no `SYSTEM_CONTEXT.md` (extensao, session store, payload)
-- Adicionada regra permanente 20 no SYSTEM_CONTEXT.md: assinatura vem do usuário logado
-
-**Arquivos alterados:**
-- `public/nova-proposta.html`
-- `docs/SYSTEM_CONTEXT.md`
-
-**Impacto no SYSTEM_CONTEXT.md:** Sim — seção 14 item 20 adicionado (regra permanente de assinatura), + 4 itens obsoletos corrigidos
+`generateProposalPdf` recebe `valor_total_raw` como campo em `proposalData` em vez de recalcular internamente. Isso evita duplicar `calculateTotal` no PDF service e evita acoplamento cruzado. O `proposal.service.js` já calcula o total para gravar no banco — reutiliza o mesmo valor para o template.
