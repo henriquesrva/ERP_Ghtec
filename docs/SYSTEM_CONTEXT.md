@@ -141,14 +141,14 @@ prisma            — CLI do Prisma (migrações, introspect, studio)
 vitest            — runner de testes
 ```
 
-> **Prisma 7.x instalado mas NÃO em uso no runtime.** O runtime atual continua usando `better-sqlite3` via `src/db/connection.js`. PostgreSQL local disponível via `docker-compose.yml` na raiz (`docker compose up -d postgres`). **Primera migration aplicada: `20260525153903_init_schema`** — PostgreSQL agora tem todas as 19 tabelas, 6 enums, indexes e FKs da aplicação (`prisma migrate status` → `Database schema is up to date!`). Próximo passo: migrar repositories módulo por módulo (Passo 3.5). Ver `docs/PRISMA_SETUP.md` para detalhes.
+> **Prisma 7.x em uso no runtime para o módulo `category`.** Runtime híbrido: `category` → Prisma/PostgreSQL com `@prisma/adapter-pg`; todos os demais módulos → `better-sqlite3` via `src/db/connection.js`. PostgreSQL local via `docker-compose.yml`. Migration `20260525153903_init_schema` aplicada. Singleton em `src/db/prisma.js`. Validação: `node scripts/check-prisma-connection.js`. Ver `docs/PRISMA_SETUP.md` para detalhes.
 
 **Variáveis de ambiente (`.env`):**
 ```
 SESSION_SECRET    — segredo do cookie de sessão (obrigatório em produção)
 PORT              — porta do servidor (padrão: 3000)
 NODE_ENV          — development | production
-DATABASE_URL      — PostgreSQL (apenas Prisma/migrações — ainda não afeta runtime)
+DATABASE_URL      — PostgreSQL (usado por Prisma CLI + runtime do módulo category)
 ```
 
 **Como rodar:**
@@ -1167,4 +1167,4 @@ Expansão incremental: autosave de rascunho, relatórios de lucratividade, integ
 
 ---
 
-*Atualizado em 2026-05-25 — Passo 3.4: primeira migration Prisma criada e aplicada (`20260525153903_init_schema`); PostgreSQL tem schema completo; runtime continua em SQLite/better-sqlite3; 137 testes, 7 arquivos, todos passando sem warnings.*
+*Atualizado em 2026-05-25 — Passo 3.5.1.1: driver adapter `@prisma/adapter-pg` configurado; módulo `category` conecta ao PostgreSQL em runtime via Prisma; demais módulos continuam em SQLite/better-sqlite3; 157 testes, 8 arquivos, todos passando.*

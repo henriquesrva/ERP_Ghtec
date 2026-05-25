@@ -1,40 +1,54 @@
-const db = require("../../db/connection");
+const prisma = require("../../db/prisma");
 
-function listAllCategories() {
-  return db.prepare(`
-    SELECT id, name, code, created_at, updated_at
-    FROM part_categories
-    ORDER BY name ASC
-  `).all();
+// Mapeia o objeto Prisma (camelCase) para o formato snake_case esperado pelos consumers.
+function mapCategory(c) {
+  if (!c) return null;
+  return {
+    id:         c.id,
+    name:       c.name,
+    code:       c.code,
+    created_at: c.createdAt,
+    updated_at: c.updatedAt,
+  };
 }
 
-function findCategoryById(id) {
-  return db.prepare(`SELECT * FROM part_categories WHERE id = ?`).get(id);
+async function listAllCategories() {
+  const rows = await prisma.partCategory.findMany({ orderBy: { name: "asc" } });
+  return rows.map(mapCategory);
 }
 
-function findCategoryByCode(code) {
-  return db.prepare(`SELECT * FROM part_categories WHERE code = ? LIMIT 1`).get(code);
+async function findCategoryById(id) {
+  const row = await prisma.partCategory.findUnique({ where: { id } });
+  return mapCategory(row);
 }
 
-function createCategory(data) {
-  const result = db.prepare(`
-    INSERT INTO part_categories (name, code) VALUES (@name, @code)
-  `).run({ name: data.name, code: data.code });
-  return result.lastInsertRowid;
+async function findCategoryByCode(code) {
+  const row = await prisma.partCategory.findUnique({ where: { code } });
+  return mapCategory(row);
 }
 
-function updateCategory(id, data) {
-  db.prepare(`
-    UPDATE part_categories SET name = @name, code = @code WHERE id = @id
-  `).run({ id, name: data.name, code: data.code });
+async function createCategory(data) {
+  const row = await prisma.partCategory.create({
+    data: { name: data.name, code: data.code },
+  });
+  return row.id;
 }
 
-function deleteCategory(id) {
-  db.prepare(`DELETE FROM part_categories WHERE id = ?`).run(id);
+async function updateCategory(id, data) {
+  await prisma.partCategory.update({
+    where: { id },
+    data: { name: data.name, code: data.code },
+  });
 }
 
-function countPartsInCategory(categoryId) {
-  return db.prepare(`SELECT COUNT(*) AS n FROM parts WHERE category_id = ?`).get(categoryId).n;
+async function deleteCategory(id) {
+  await prisma.partCategory.delete({ where: { id } });
+}
+
+// Durante migração híbrida: queries PostgreSQL parts (vazia até parts ser migrado).
+// Retorna 0 enquanto parts ainda usa SQLite — proteção de deleção temporariamente ineficaz.
+async function countPartsInCategory(categoryId) {
+  return prisma.part.count({ where: { categoryId } });
 }
 
 module.exports = {

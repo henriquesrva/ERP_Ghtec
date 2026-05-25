@@ -1,11 +1,12 @@
 // Prisma schema — GHTec Propostas
-// Passo 3.3: schema completo definido. Ainda NÃO aplicado em migration.
+// Migration aplicada: 20260525153903_init_schema
 // Para gerar client: npm run prisma:generate
-// Para criar migration: npm run prisma:migrate  (apenas após revisão)
+// Para criar migration: npm run prisma:migrate  (PostgreSQL deve estar rodando)
 //
 // Notas sobre Prisma 7:
 //   - URL do datasource fica em prisma.config.ts, não aqui
-//   - provider = "prisma-client" (Prisma 7, não mais "prisma-client-js")
+//   - provider = "prisma-client-js" (gera JavaScript — necessário para CommonJS/Node.js)
+//   - Runtime usa @prisma/adapter-pg + pg (src/db/prisma.js)
 //
 // Índices parciais que requerem migration SQL manual após prisma migrate dev:
 //   1. parts.codigo_interno — UNIQUE WHERE codigo_interno IS NOT NULL
@@ -16,7 +17,7 @@
 //      Substituído por @@unique (PostgreSQL trata NULLs como distintos em constraints — comportamento equivalente)
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 

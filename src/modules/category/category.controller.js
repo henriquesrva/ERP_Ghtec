@@ -1,17 +1,17 @@
 const svc = require("./category.service");
 
-function listCategoriesHandler(req, res) {
+async function listCategoriesHandler(req, res) {
   try {
-    return res.json(svc.getAllCategories());
+    return res.json(await svc.getAllCategories());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar categorias." });
   }
 }
 
-function createCategoryHandler(req, res) {
+async function createCategoryHandler(req, res) {
   try {
-    const cat = svc.createNewCategory(req.body);
+    const cat = await svc.createNewCategory(req.body);
     return res.status(201).json({ success: true, category: cat });
   } catch (err) {
     console.error(err);
@@ -21,9 +21,9 @@ function createCategoryHandler(req, res) {
   }
 }
 
-function updateCategoryHandler(req, res) {
+async function updateCategoryHandler(req, res) {
   try {
-    const cat = svc.updateExistingCategory(Number(req.params.id), req.body);
+    const cat = await svc.updateExistingCategory(Number(req.params.id), req.body);
     return res.json({ success: true, category: cat });
   } catch (err) {
     console.error(err);
@@ -34,9 +34,9 @@ function updateCategoryHandler(req, res) {
   }
 }
 
-function deleteCategoryHandler(req, res) {
+async function deleteCategoryHandler(req, res) {
   try {
-    svc.deleteExistingCategory(Number(req.params.id));
+    await svc.deleteExistingCategory(Number(req.params.id));
     return res.json({ success: true });
   } catch (err) {
     console.error(err);

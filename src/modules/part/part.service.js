@@ -13,7 +13,12 @@ const {
   upsertClientPriceRef,
 } = require("./part.repository");
 
-const { findCategoryById } = require("../category/category.repository");
+// Hybrid migration: category.repository uses Prisma (async). Parts remain on SQLite.
+// Query part_categories directly via SQLite to keep buildInternalCode synchronous.
+const db = require("../../db/connection");
+function findCategoryByIdSync(id) {
+  return db.prepare("SELECT id, name, code FROM part_categories WHERE id = ?").get(id) || null;
+}
 
 function getAllParts() {
   return listAllParts();
@@ -36,7 +41,7 @@ function parsePrecoCompra(value) {
 
 function buildInternalCode(data) {
   if (!data.category_id || !data.identity_code) return data.codigo_interno ?? null;
-  const cat = findCategoryById(Number(data.category_id));
+  const cat = findCategoryByIdSync(Number(data.category_id));
   if (!cat) {
     const err = new Error("Categoria não encontrada.");
     err.code = "VALIDATION";
