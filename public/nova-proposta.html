@@ -947,18 +947,41 @@
       <div class="card np-card">
         <div class="np-card-title">Responsável pela proposta</div>
         <div id="resp-assinatura" class="np-resp-card">
+
+          <!-- Estado 1: carregando -->
           <div id="resp-loading">
             <div class="np-skel np-skel-name"></div>
             <div class="np-skel np-skel-sub"></div>
           </div>
+
+          <!-- Estado 2: assinatura completa -->
           <div id="resp-loaded" style="display:none">
             <div class="np-resp-name" id="sig-nome"></div>
             <div class="np-resp-detail" id="sig-preview"></div>
             <div class="np-resp-note">
-              A proposta será gerada em seu nome.
-              Para alterar cargo ou telefone, acesse <a href="/usuarios.html">Usuários</a>.
+              A proposta será gerada em seu nome. &nbsp;
+              <a href="/usuarios.html">Alterar assinatura</a>
             </div>
           </div>
+
+          <!-- Estado 3: sem assinatura cadastrada -->
+          <div id="resp-nosig" style="display:none">
+            <div class="np-resp-name" id="sig-nosig-nome" style="color:var(--color-text)"></div>
+            <div class="np-resp-detail" style="margin-top:4px;color:var(--color-danger)">
+              Assinatura não cadastrada — configure cargo e telefone antes de gerar propostas.
+            </div>
+            <div class="np-resp-note">
+              <a href="/usuarios.html">Criar assinatura</a>
+            </div>
+          </div>
+
+          <!-- Estado 4: erro ao carregar -->
+          <div id="resp-error" style="display:none">
+            <div class="np-resp-detail" style="color:var(--color-muted)">
+              Não foi possível carregar sua assinatura. Verifique se está logado e recarregue a página.
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -1022,6 +1045,24 @@
   </button>
 </div>
 
+<!-- ── Draft modal ───────────────────────────────────────────────────── -->
+<div id="draftModal" class="modal-overlay" style="display:none; z-index:400;">
+  <div class="modal-box" style="width:420px;">
+    <div class="modal-header">
+      <h3>Continuar de onde parou?</h3>
+    </div>
+    <div style="padding:20px 20px 20px;">
+      <p style="margin:0 0 20px; font-size:13px; color:#374151; line-height:1.65;">
+        Existe um rascunho salvo desta proposta.<br>Deseja continuar de onde parou ou começar do zero?
+      </p>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="button" id="draftBtnDiscard" class="btn-sug grey">Descartar rascunho</button>
+        <button type="button" id="draftBtnContinue" class="btn-sug green">Continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Scripts ────────────────────────────────────────────────────────── -->
 <script>
   // ─── Utilities ────────────────────────────────────────────────────────────
@@ -1055,6 +1096,7 @@
   let itemCount = 0;
   let currentClientId   = null;
   let currentClientData = null;
+  let currentUser       = null; // usuário logado — carregado em loadSignaturePreview
   let condMode = null;               // starts unselected — user must choose
   let currentConditionId   = null;
   let currentConditionData = null;
@@ -1615,6 +1657,12 @@
   document.getElementById('proposalForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    if (!getFieldValue('numero_proposta')) {
+      showResult('error', 'Informe o número da proposta antes de gerar.');
+      document.getElementById('numero_proposta').focus();
+      return;
+    }
+
     if (!currentClientId) {
       showResult('error', 'Selecione um Hospital/Cliente cadastrado antes de gerar a proposta.');
       document.getElementById('btnProcurarCliente').focus();
@@ -1647,6 +1695,13 @@
         showResult('error', 'Preencha todos os campos obrigatórios de Condições Comerciais (Forma de Pagamento, Prazo de Pagamento, Prazo de Entrega, Validade).');
         return;
       }
+    }
+
+    // Valida assinatura antes de submeter (bloqueada também no backend)
+    if (!currentUser || (!currentUser.signature_cargo && !currentUser.signature_telefone)) {
+      showResult('error', 'Configure sua assinatura (cargo e telefone) antes de gerar propostas. <a href="/usuarios.html">Acessar Usuários</a>');
+      document.getElementById('resp-assinatura').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
 
     const items = collectItems();
@@ -1868,14 +1923,24 @@
   // ─── Assinatura do usuário logado ─────────────────────────────────────────
 
   (async function loadSignaturePreview() {
+    const STATES = ['resp-loading', 'resp-loaded', 'resp-nosig', 'resp-error'];
+
+    function showState(activeId) {
+      STATES.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === activeId) ? '' : 'none';
+      });
+    }
+
     try {
-      const res  = await fetch('/auth/me');
-      if (!res.ok) return;
+      const res = await fetch('/auth/me');
+      if (!res.ok) { showState('resp-error'); return; }
+
       const data = await res.json();
       const user = data.user;
-      if (!user) return;
+      if (!user) { showState('resp-error'); return; }
 
-      document.getElementById('sig-nome').textContent = user.nome;
+      currentUser = user;
 
       // Atualiza sidebar
       const sbResp = document.getElementById('sb-resp');
@@ -1884,17 +1949,21 @@
         sbResp.classList.remove('empty');
       }
 
-      const rows = [];
-      if (user.signature_cargo)    rows.push(`${user.signature_cargo}`);
-      if (user.signature_telefone) rows.push(`${user.signature_telefone}`);
+      const hasSignature = user.signature_cargo || user.signature_telefone;
 
-      document.getElementById('sig-preview').innerHTML = rows.length
-        ? rows.join(' &middot; ')
-        : `<span style="color:var(--color-danger)">Assinatura incompleta — configure cargo e telefone em <a href="/usuarios.html" style="color:var(--color-danger)">Usuários</a> antes de gerar propostas.</span>`;
-
-      // Revela o card, esconde skeleton
-      document.getElementById('resp-loading').style.display = 'none';
-      document.getElementById('resp-loaded').style.display  = '';
+      if (hasSignature) {
+        document.getElementById('sig-nome').textContent = user.nome;
+        const parts = [];
+        if (user.signature_cargo)    parts.push(user.signature_cargo);
+        if (user.signature_telefone) parts.push(user.signature_telefone);
+        document.getElementById('sig-preview').innerHTML = parts.join(' &middot; ');
+        showState('resp-loaded');
+      } else {
+        // Mostra nome do usuário no estado "sem assinatura" para contexto
+        const nosigNome = document.getElementById('sig-nosig-nome');
+        if (nosigNome) nosigNome.textContent = user.nome;
+        showState('resp-nosig');
+      }
 
       draftKey = `draft_new_proposal_user_${user.id}`;
       const raw = localStorage.getItem(draftKey);
@@ -1905,7 +1974,9 @@
           else { clearDraft(); }
         } catch { clearDraft(); }
       }
-    } catch { /* silencioso */ }
+    } catch {
+      showState('resp-error');
+    }
   })();
 
   // ─── Auto-save listeners ──────────────────────────────────────────────────
@@ -1932,23 +2003,5 @@
   addItem();
 </script>
 <script src="/auth.js"></script>
-
-<!-- ── Draft modal ───────────────────────────────────────────────────── -->
-<div id="draftModal" class="modal-overlay" style="display:none; z-index:400;">
-  <div class="modal-box" style="width:420px;">
-    <div class="modal-header">
-      <h3>Continuar de onde parou?</h3>
-    </div>
-    <div style="padding:20px 20px 20px;">
-      <p style="margin:0 0 20px; font-size:13px; color:#374151; line-height:1.65;">
-        Existe um rascunho salvo desta proposta.<br>Deseja continuar de onde parou ou começar do zero?
-      </p>
-      <div style="display:flex; gap:10px; justify-content:flex-end;">
-        <button type="button" id="draftBtnDiscard" class="btn-sug grey">Descartar rascunho</button>
-        <button type="button" id="draftBtnContinue" class="btn-sug green">Continuar</button>
-      </div>
-    </div>
-  </div>
-</div>
 </body>
 </html>

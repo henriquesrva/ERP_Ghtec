@@ -1,5 +1,5 @@
 const repo = require("./kanban.repository");
-const { canMoveKanban, KANBAN_STATUSES } = require("../proposal/proposal.service");
+const { canMoveKanban, KANBAN_STATUSES } = require("../../shared/domain/kanban");
 const proposalRepo = require("../proposal/proposal.repository");
 
 function getAllCards() {

@@ -5,7 +5,9 @@
   "type": "commonjs",
   "scripts": {
     "dev": "node src/server.js",
-    "init-db": "node src/db/init.js"
+    "init-db": "node src/db/init.js",
+    "test": "NODE_ENV=test vitest run",
+    "test:watch": "NODE_ENV=test vitest"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -21,5 +23,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "vitest": "^4.1.7"
+  }
 }

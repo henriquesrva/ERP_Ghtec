@@ -755,7 +755,7 @@ O payload do `POST /proposals` contém:
 - `condicoes` (objeto com `forma_pagamento`, `prazo_pagamento`, `prazo_entrega`, `garantia`, `validade`)
 - `responsavel` (objeto com `nome`, `cargo`, `email`, `telefone`)
 - `items` (array com `descricao`, `quantidade`, `valor_unitario`, `ncm`, `part_id` opcional)
-- `valor_total_extenso` (gerado pelo frontend — ponto fraco)
+- ~~`valor_total_extenso` (gerado pelo frontend — ponto fraco)~~ — gerado pelo backend (ver seção 14 item 18)
 - `cidade_emissao`, `commercial_condition_id`, dados de assinatura do usuário logado
 
 ### Template Usado
@@ -805,7 +805,7 @@ O `calculateTotal()` soma `quantidade * valor_unitario` de todos os itens. O tot
 
 ### Valor por Extenso
 
-**Ponto fraco crítico:** `extensao.js` implementa o valor por extenso apenas para inteiros de 0 a 10. Para qualquer outro valor, retorna `"valor por extenso"` como string literal. Na prática, o `valor_total_extenso` é gerado pelo frontend e enviado no payload — se o frontend não enviar, o PDF terá `"valor por extenso"` impresso.
+~~**Ponto fraco crítico:** `extensao.js` implementa o valor por extenso apenas para inteiros de 0 a 10.~~ **Resolvido:** `extensao.js` reescrito com suporte completo a BRL. O backend gera o extenso — ver seção 14 item 18.
 
 ---
 
@@ -889,11 +889,10 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 **Impacto:** Baixo — dados inconsistentes no banco, pode afetar integração fiscal futura.
 **Caminho de correção:** Validação de formato no service.
 
-### 9. Sem Testes Automatizados
+### 9. ~~Sem Testes Automatizados~~ — **Resolvido**
 
-**Problema:** Nenhum teste unitário, de integração ou E2E.
-**Impacto:** Alto — qualquer alteração pode introduzir regressão silenciosa.
-**Caminho de correção:** Adicionar testes ao menos para os services críticos (proposal, part price logic, auth).
+~~**Problema:** Nenhum teste unitário, de integração ou E2E.~~
+**Status:** Primeira base de testes implementada com Vitest (74 testes, 4 arquivos). Ver seção 14 item 19 e diretório `tests/`.
 
 ---
 
@@ -908,7 +907,7 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 7. **Assets do PDF em base64 Data URI:** evita problemas de path durante renderização headless.
 8. **Migrações por código em `migrate.js`:** escolha pragmática para ambiente sem ORM. Usa `ALTER TABLE IF NOT EXISTS` para idempotência.
 9. **Separação controller → service → repository:** garante que SQL fique no repository e regras de negócio no service. Não misturar.
-10. **Sessão em memória:** escolha de simplicidade. Reconhecidamente um débito técnico para produção.
+10. ~~**Sessão em memória:**~~ **Session store persistente** implementada em `sessionStore.js` (ver item 17). Não há mais sessão em memória.
 11. **Backfill no `migrate.js`:** garante que dados antigos sejam migrados automaticamente sem intervenção manual.
 12. **CommonJS (não ESM):** padrão do projeto. Não migrar para ESM sem necessidade.
 13. **`better-sqlite3` síncrono:** nunca usar `async/await` em funções de repository.
@@ -917,6 +916,9 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 16. **Cookie de sessão hardened:** `httpOnly: true`, `sameSite: "lax"`, `secure: isProd`. Não regredir esses atributos.
 17. **Session store persistente (`sessionStore.js`):** store customizado usando `better-sqlite3` com arquivo `sessions.sqlite` separado do banco principal. Sem nova dependência. Sessões sobrevivem a restarts do servidor. Limpeza automática de sessões expiradas a cada 15 minutos.
 18. **`valor_total_extenso` gerado pelo backend:** `extensao.js` suporta qualquer valor monetário em BRL. O service ignora o campo do payload do frontend e gera o extenso a partir do `total` calculado. Valor aparece no PDF abaixo do total.
+19. **Infraestrutura de testes com Vitest:** `NODE_ENV=test` faz `connection.js` abrir banco `:memory:` (nunca toca `database.sqlite`). Cada arquivo de teste roda em worker isolado (registry próprio → DB próprio). Setup em `tests/setup/testDb.js` roda `init.js` + `migrate.js` para montar o schema completo. `clearAllTables()` chamado em `beforeEach` para isolamento entre casos. Rodar com `npm test`. `validateProposalItems` e `parsePrecoCompra` são exported dos respectivos services para permitir teste unitário direto.
+20. **Assinatura da proposta vem do usuário logado:** a entidade `responsaveis` é legada e não deve ser usada como fonte principal para novas propostas. O `proposal.controller.js` monta o bloco `responsavel` a partir de `user.nome`, `user.signature_cargo` e `user.signature_telefone` do usuário da sessão — ignorando qualquer campo `responsavel` enviado pelo frontend. O backend bloqueia criação de proposta se o usuário não tiver `signature_cargo` nem `signature_telefone` configurados (`SIGNATURE_REQUIRED`). O snapshot da assinatura é salvo em `responsavel_nome/cargo/email/telefone` nas colunas da proposta e não é recalculado retroativamente.
+21. **Regras de domínio do Kanban em `src/shared/domain/kanban.js`:** `KANBAN_STATUSES`, `KANBAN_LABELS`, `isValidKanbanStatus()`, `canMoveKanban()` e `assertCanMoveKanban()` estão centralizados neste módulo. Tanto `proposal.service.js` quanto `kanban.service.js` importam daqui — sem dependência cruzada entre os dois módulos.
 
 ---
 
@@ -942,7 +944,7 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 - ~~Implementar session store persistente~~ — **implementado** (`sessionStore.js`)
 - ~~Refatorar `extensao.js`~~ — **implementado** (suporte completo BRL, gerado no backend)
 - ~~Autosave de rascunho~~ — **implementado** (`localStorage` em `nova-proposta.html`)
-- Adicionar testes automatizados nos services críticos (proposta, preço, auth)
+- ~~Adicionar testes automatizados nos services críticos~~ — **implementado** (Vitest, 74 testes, banco em memória, `tests/`)
 - Implementar singleton do browser Puppeteer com fila para evitar múltiplas instâncias simultâneas
 - Adotar migrações sequenciais numeradas no lugar do `migrate.js` monolítico
 - Separar CSS específico de cada página do `styles.css` global de forma sistemática
@@ -967,7 +969,7 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 
 ### 16.4 Melhorias de Segurança
 
-- Session store persistente (evita sessões em memória)
+- ~~Session store persistente (evita sessões em memória)~~ — **implementado** (ver seção 14 item 17)
 - Força de senha configurável
 - Rate limiting no endpoint de login (proteção contra brute-force)
 - Forçar troca de senha padrão
@@ -1149,9 +1151,9 @@ Expansão incremental: autosave de rascunho, relatórios de lucratividade, integ
 
 1. ~~**Imediato:** Corrigir `extensao.js`~~ — **feito**
 2. ~~**Curto prazo:** Autosave e session store~~ — **feito**
-3. **Médio prazo:** Testes automatizados nos services críticos e concluir redesign de UI (Fases 3-5)
+3. ~~**Médio prazo:** Testes automatizados nos services críticos~~ — **feito** · Concluir redesign de UI (Fases 3-5)
 4. **Longo prazo:** Migrações versionadas, relatórios, integração fiscal, Puppeteer com fila
 
 ---
 
-*Atualizado em 2026-05-24 — session store persistente, extensao.js completo, autosave confirmado.*
+*Atualizado em 2026-05-25 — regras de domínio do Kanban extraídas para `src/shared/domain/kanban.js`; testes: 94 testes, 5 arquivos.*

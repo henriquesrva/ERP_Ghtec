@@ -23,8 +23,14 @@ const {
   clearProposalExecution,
   setProposalApproval,
   setProposalBilling,
-  KANBAN_STATUSES,
 } = require("./proposal.repository");
+
+const {
+  KANBAN_STATUSES,
+  canMoveKanban,
+  isValidKanbanStatus,
+  assertCanMoveKanban,
+} = require("../../shared/domain/kanban");
 
 const {
   findPartByComposition,
@@ -478,25 +484,6 @@ function getKanbanProposals() {
   return listProposalsForKanban();
 }
 
-// Centraliza as regras de permissão de movimentação do Kanban.
-// Retorna true se userRole pode mover de fromStatus para toStatus.
-function canMoveKanban(userRole, fromStatus, toStatus) {
-  if (userRole === "user")  return false;
-  if (userRole === "admin") return true;
-
-  const RANGE_COMERCIAL = new Set(["pendente_envio","enviado","aguardando_compra","comprado","pendente_execucao","faturar"]);
-  const RANGE_TECNICO   = new Set(["aguardando_compra","comprado","pendente_execucao","faturar"]);
-
-  if (userRole === "financeiro") {
-    return (fromStatus === "faturar"  && toStatus === "faturado") ||
-           (fromStatus === "faturado" && toStatus === "faturar");
-  }
-  if (userRole === "comercial") return RANGE_COMERCIAL.has(fromStatus) && toStatus !== "faturado";
-  if (userRole === "tecnico")   return RANGE_TECNICO.has(fromStatus)   && toStatus !== "faturado";
-
-  return false;
-}
-
 function updateKanbanStatus(proposalId, newStatus, userRole) {
   const data = findProposalById(proposalId);
   if (!data) {
@@ -645,6 +632,7 @@ module.exports = {
   getAllProposals,
   deleteProposalService,
   getKanbanProposals,
+  validateProposalItems,
   updateKanbanStatus,
   canMoveKanban,
   canMarkExecution,

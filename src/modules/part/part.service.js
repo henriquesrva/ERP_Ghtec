@@ -196,6 +196,7 @@ module.exports = {
   getAllParts,
   getPartById,
   searchPartsByQuery,
+  parsePrecoCompra,
   createNewPart,
   updateExistingPart,
   deletePartService,

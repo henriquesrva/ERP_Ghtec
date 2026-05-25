@@ -1,5 +1,6 @@
 const db = require("../../db/connection");
 const { normalizeText } = require("../../shared/utils/normalize");
+const { KANBAN_STATUSES } = require("../../shared/domain/kanban");
 
 // Funções de cliente delegadas ao módulo correto
 const {
@@ -209,16 +210,6 @@ function deleteProposalAndRelated(proposalId) {
     db.prepare(`DELETE FROM proposals WHERE id = ?`).run(proposalId);
   })();
 }
-
-const KANBAN_STATUSES = [
-  'pendente_envio',
-  'enviado',
-  'aguardando_compra',
-  'comprado',
-  'pendente_execucao',
-  'faturar',
-  'faturado',
-];
 
 function listProposalsForKanban() {
   return db.prepare(`
