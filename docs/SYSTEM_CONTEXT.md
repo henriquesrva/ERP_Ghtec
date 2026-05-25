@@ -141,7 +141,7 @@ prisma            — CLI do Prisma (migrações, introspect, studio)
 vitest            — runner de testes
 ```
 
-> **Prisma 7.x instalado mas NÃO em uso no runtime.** O runtime atual continua usando `better-sqlite3` via `src/db/connection.js`. O Prisma foi instalado como preparação para migração futura para PostgreSQL. PostgreSQL local disponível via `docker-compose.yml` na raiz (`docker compose up -d postgres`). `prisma generate` cria client em `src/generated/prisma/` (gitignored). Ver `docs/PRISMA_SETUP.md` para detalhes de uso.
+> **Prisma 7.x instalado mas NÃO em uso no runtime.** O runtime atual continua usando `better-sqlite3` via `src/db/connection.js`. PostgreSQL local disponível via `docker-compose.yml` na raiz (`docker compose up -d postgres`). **Primera migration aplicada: `20260525153903_init_schema`** — PostgreSQL agora tem todas as 19 tabelas, 6 enums, indexes e FKs da aplicação (`prisma migrate status` → `Database schema is up to date!`). Próximo passo: migrar repositories módulo por módulo (Passo 3.5). Ver `docs/PRISMA_SETUP.md` para detalhes.
 
 **Variáveis de ambiente (`.env`):**
 ```
@@ -1167,4 +1167,4 @@ Expansão incremental: autosave de rascunho, relatórios de lucratividade, integ
 
 ---
 
-*Atualizado em 2026-05-25 — Passo 3.2: docker-compose.yml criado com PostgreSQL 16-alpine; DATABASE_URL no .env atualizada para bater com docker-compose; docs/PRISMA_SETUP.md revisado com docker compose como caminho recomendado; runtime continua em SQLite/better-sqlite3; 137 testes, 7 arquivos, todos passando.*
+*Atualizado em 2026-05-25 — Passo 3.4: primeira migration Prisma criada e aplicada (`20260525153903_init_schema`); PostgreSQL tem schema completo; runtime continua em SQLite/better-sqlite3; 137 testes, 7 arquivos, todos passando sem warnings.*

@@ -3,7 +3,7 @@
 // o que permite que o spy intercepte a chamada sem precisar de hoisting de módulo.
 
 const { clearAllTables, db } = require("../../tests/setup/testDb");
-const { createTestClient } = require("../../tests/setup/fixtures");
+const { createTestClient, createTestUser } = require("../../tests/setup/fixtures");
 const {
   createProposalFlow,
   calculateTotal,
@@ -291,20 +291,22 @@ describe("createProposalFlow", () => {
 describe("markProposalExecuted", () => {
   let client;
   let proposalId;
+  let userId;
 
   beforeEach(() => {
     client = createTestClient();
     ({ id: proposalId } = insertProposal(client.id));
+    ({ id: userId } = createTestUser());
   });
 
   it("admin marca proposta como executada — execution_completed = 1", () => {
-    markProposalExecuted(proposalId, {}, "admin", null, "Admin");
+    markProposalExecuted(proposalId, {}, "admin", userId, "Admin");
     const row = db.prepare("SELECT execution_completed FROM proposals WHERE id = ?").get(proposalId);
     expect(row.execution_completed).toBe(1);
   });
 
   it("tecnico marca proposta como executada", () => {
-    markProposalExecuted(proposalId, {}, "tecnico", null, "Tec");
+    markProposalExecuted(proposalId, {}, "tecnico", userId, "Tec");
     const row = db.prepare("SELECT execution_completed FROM proposals WHERE id = ?").get(proposalId);
     expect(row.execution_completed).toBe(1);
   });
@@ -328,7 +330,7 @@ describe("markProposalExecuted", () => {
     markProposalExecuted(
       proposalId,
       { execution_date: "2026-05-20", executed_by: "João", execution_os: "OS-999" },
-      "admin", null, "Admin"
+      "admin", userId, "Admin"
     );
     const row = db
       .prepare("SELECT execution_date, executed_by, execution_os FROM proposals WHERE id = ?")
@@ -344,11 +346,13 @@ describe("markProposalExecuted", () => {
 describe("removeProposalExecution", () => {
   let client;
   let proposalId;
+  let userId;
 
   beforeEach(() => {
     client = createTestClient();
     ({ id: proposalId } = insertProposal(client.id));
     db.prepare("UPDATE proposals SET execution_completed = 1 WHERE id = ?").run(proposalId);
+    ({ id: userId } = createTestUser());
   });
 
   it("user não pode remover execução — FORBIDDEN", () => {
@@ -359,7 +363,7 @@ describe("removeProposalExecution", () => {
   it("ao remover execução de proposta em 'faturar', status volta para pendente_execucao", () => {
     db.prepare("UPDATE proposals SET kanban_status = 'faturar' WHERE id = ?").run(proposalId);
 
-    const result = removeProposalExecution(proposalId, "admin", null, "Admin");
+    const result = removeProposalExecution(proposalId, "admin", userId, "Admin");
 
     expect(result.autoMoved).toBe(true);
     expect(result.newStatus).toBe("pendente_execucao");
@@ -372,7 +376,7 @@ describe("removeProposalExecution", () => {
   it("ao remover execução de proposta em 'faturado', status volta para pendente_execucao", () => {
     db.prepare("UPDATE proposals SET kanban_status = 'faturado' WHERE id = ?").run(proposalId);
 
-    const result = removeProposalExecution(proposalId, "admin", null, "Admin");
+    const result = removeProposalExecution(proposalId, "admin", userId, "Admin");
 
     expect(result.autoMoved).toBe(true);
     expect(result.newStatus).toBe("pendente_execucao");
@@ -381,7 +385,7 @@ describe("removeProposalExecution", () => {
   it("ao remover execução de proposta em 'pendente_execucao', status não muda (autoMoved = false)", () => {
     db.prepare("UPDATE proposals SET kanban_status = 'pendente_execucao' WHERE id = ?").run(proposalId);
 
-    const result = removeProposalExecution(proposalId, "admin", null, "Admin");
+    const result = removeProposalExecution(proposalId, "admin", userId, "Admin");
 
     expect(result.autoMoved).toBe(false);
     expect(result.newStatus).toBe("pendente_execucao");
@@ -393,7 +397,7 @@ describe("removeProposalExecution", () => {
   it("limpa todos os campos de execução ao remover", () => {
     db.prepare("UPDATE proposals SET execution_date = '2026-05-01', executed_by = 'João', execution_os = 'OS-1' WHERE id = ?").run(proposalId);
 
-    removeProposalExecution(proposalId, "admin", null, "Admin");
+    removeProposalExecution(proposalId, "admin", userId, "Admin");
 
     const row = db
       .prepare("SELECT execution_completed, execution_date, executed_by, execution_os FROM proposals WHERE id = ?")
@@ -410,10 +414,12 @@ describe("removeProposalExecution", () => {
 describe("registerBilling", () => {
   let client;
   let proposalId;
+  let userId;
 
   beforeEach(() => {
     client = createTestClient();
     ({ id: proposalId } = insertProposal(client.id));
+    ({ id: userId } = createTestUser());
   });
 
   it("rejeita invoice_number vazio — VALIDATION", () => {
@@ -430,7 +436,7 @@ describe("registerBilling", () => {
     registerBilling(
       proposalId,
       { invoice_number: "NF-9999", billing_date: "2026-05-20", billing_notes: "Pago via PIX" },
-      null, "Admin"
+      userId, "Admin"
     );
     const row = db
       .prepare("SELECT invoice_number, billing_date, billing_notes FROM proposals WHERE id = ?")

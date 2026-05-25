@@ -1,89 +1,93 @@
-# Feedback — Passo 3.3.1: Revisão técnica do schema
+# Feedback — Passo 3.4.1: Finalizar migration e corrigir auto-comment
 
-## 1. Revisão dos 5 pontos pendentes
+## 1. Migration revisada
 
-### Ponto 1 — `@@unique([nome, marca, modelo])` em Part
+**Arquivo:** `prisma/migrations/20260525153903_init_schema/migration.sql`
 
-**Decisão: manter como está.**
+✅ Revisada e aprovada. Resumo do que foi criado:
 
-Verificado: `marca` e `modelo` são `String?` (nullable). O `createPart` e `updatePart` do `part.repository.js` não incluem `marca` e `modelo` no INSERT/UPDATE — esses campos nunca são escritos pela aplicação atual. O `findPartByComposition` coerce explicitamente para `null` com `marca || null, modelo || null`.
+| Categoria | Detalhe |
+|---|---|
+| Enums | 6: `Role`, `KanbanStatus`, `MovementType`, `ContaStatus`, `NotaStatus`, `TipoNota` |
+| Tabelas | 19: todas as entidades da aplicação |
+| Decimal | Correto: `DECIMAL(15,2)` para monetários, `DECIMAL(15,4)` / `DECIMAL(6,4)` para fiscais |
+| ON DELETE CASCADE | `proposal_items.proposal_id`, `price_history.proposal_id`, `itens_nota_recebida.nota_recebida_id` |
+| Unique críticos | `proposals.numero_proposta`, `parts.codigo_interno`, `parts(nome,marca,modelo)`, `part_client_price_references(part_id,client_id)`, `notas_recebidas(fornecedor_id,numero_nota,serie)` |
+| Indexes | Todos presentes: clienteId, kanbanStatus, dataProposta em proposals; clientId+partId, clientId+descricaoNormalizada em price_history; etc. |
+| KanbanComment | Sem FK em `card_id` — apenas `@@index([card_type, card_id])` (relação polimórfica, correto) |
+| Responsavel | Tabela `responsaveis` criada (legado mantido, sem FKs externas) |
 
-PostgreSQL e SQLite se comportam identicamente: em constraints UNIQUE multi-coluna, NULLs são tratados como distintos, então múltiplas linhas `(nome='X', marca=NULL, modelo=NULL)` são permitidas em ambos. `@@unique([nome, marca, modelo])` é semanticamente correto e produz comportamento equivalente.
+Nenhuma divergência encontrada. Migration não alterada.
 
-Não há risco na migration. Campos deixados como `String?`.
+## 2. Causa dos warnings de auto-comment
 
----
+**Warnings observados durante testes:**
+```
+[markProposalExecuted] auto-comment falhou: NOT NULL constraint failed: kanban_comments.user_id
+[removeProposalExecution] auto-comment falhou: NOT NULL constraint failed: kanban_comments.user_id
+[registerBilling] auto-comment falhou: NOT NULL constraint failed: kanban_comments.user_id
+```
 
-### Ponto 2 — `NotaRecebida.dataEntrada DateTime` obrigatório
+**Causa:** Bug de teste — não de produção.
 
-**Decisão: manter como `DateTime` obrigatório.**
+- Os testes chamavam `markProposalExecuted(proposalId, {}, "admin", null, "Admin")` com `userId = null`
+- As funções concluem a operação principal com sucesso, depois tentam gravar um comentário automático em `kanban_comments`
+- `kanban_comments.user_id` é `NOT NULL` no schema
+- O INSERT falha; o `try/catch` do service captura e loga o aviso em vez de re-throw
+- Os testes passavam porque as asserções verificavam outros campos, não os comentários
 
-Verificado no `nota_recebida.service.js`: `if (!data.data_entrada) { throw error }` — campo sempre validado antes de chegar ao repository. Valores vêm do frontend como strings ISO 8601 (`"2026-05-25"` ou `"2026-05-25T..."`). Prisma aceita ambos os formatos.
+**Em produção:** `userId` sempre vem de `req.user.id` (sessão autenticada) — nunca é `null`. O bug nunca ocorre em produção.
 
-Dado que os dados atuais serão sacrificados e a aplicação já garante o campo, `DateTime NOT NULL` é correto. Sem mudança.
+## 3. Correção aplicada
 
----
+**Arquivo:** `tests/integration/proposal-flow.test.js`
 
-### Ponto 3 — Campos monetários Decimal
+1. Adicionado `createTestUser` no import de fixtures
+2. Adicionado `let userId;` nos describe blocks de `markProposalExecuted`, `removeProposalExecution` e `registerBilling`
+3. Adicionado `({ id: userId } = createTestUser());` em cada `beforeEach` dos blocos afetados
+4. Substituído `null` por `userId` em todas as chamadas que alcançam `addKanbanComment`:
+   - `markProposalExecuted(proposalId, {}, "admin", userId, "Admin")`
+   - `markProposalExecuted(proposalId, {}, "tecnico", userId, "Tec")`
+   - Chamada multi-linha com dados de execução
+   - Todas as `removeProposalExecution(proposalId, "admin", userId, "Admin")` (4 ocorrências)
+   - `registerBilling(proposalId, { invoice_number: "NF-9999", ... }, userId, "Admin")`
 
-**Decisão: schema correto, com uma nota de atenção futura.**
+**Casos que NÃO foram alterados** (não alcançam addKanbanComment, pois lançam exceção antes):
+- Casos FORBIDDEN: `"user"`, `"comercial"`, `"financeiro"` em `markProposalExecuted`
+- Caso FORBIDDEN: `"user"` em `removeProposalExecution`
+- Casos VALIDATION/NOT_FOUND em `registerBilling`
 
-Verificado: todos os campos de dinheiro estão como `Decimal @db.Decimal(15, 2)`. Alíquotas e quantidades fiscais usam `@db.Decimal(6, 4)` ou `@db.Decimal(15, 4)` — adequado.
+**Por que é seguro:** `createTestUser()` cria um usuário com `username = "usuario_teste"` no banco em memória. O `clearAllTables()` do `beforeEach` externo garante que a tabela `users` está limpa antes de cada teste — sem conflito de unique constraint.
 
-**Atenção futura (não é bloqueio):** `formatCurrency()` usa `Intl.NumberFormat.format(value)` que espera `number`, não `Decimal`. Quando os repositories forem migrados para Prisma, os campos Decimal precisarão ser convertidos (`Number(decimal)` ou `decimal.toNumber()`) antes de chamar `formatCurrency()`. Isso é concern da Fase 4, não do schema.
+## 4. Validações pós-correção
 
-Sem mudança no schema.
+- `npm run prisma:status` — ✅ `Database schema is up to date!` (1 migration, `20260525153903_init_schema`)
+- `npm run prisma:generate` — ✅ `Generated Prisma Client (7.8.0) to ./src/generated/prisma in 212ms`
+- `npm test` — ✅ **137/137 passando, 0 warnings de auto-comment**
 
----
+## 5. Documentação atualizada
 
-### Ponto 4 — `KanbanComment.userId` sem FK
+- `docs/PRISMA_SETUP.md` — atualizado para refletir: Passo 3.4 concluído, migration aplicada, estrutura de migrations/, estado atual do banco (tabela resumo do que foi criado), próximos passos com ordem recomendada para Passo 3.5
+- `docs/SYSTEM_CONTEXT.md` — nota Prisma atualizada: migration aplicada, PostgreSQL com schema completo, próximo passo 3.5
 
-**Decisão: manter sem FK.**
+## 6. Estado do runtime (confirmado)
 
-Verificado: `user_id` nos comentários automáticos do `proposal.service.js` usa `user_id: userId` — sempre o ID do usuário logado, nunca 0. `user_nome: "Sistema"` é apenas um override de exibição.
+- ✅ Aplicação continua 100% SQLite/better-sqlite3
+- ✅ Nenhum repository, service ou controller foi alterado
+- ✅ `database.sqlite` intacto
 
-Tecnicamente uma FK seria possível. Mas mantemos sem FK por consistência com o design polimórfico do model (o `card_id` também não tem FK). Adicionar FK ao `userId` criaria assimetria e adicionaria `KanbanComment[]` ao User model sem utilidade prática (não há query que liste todos os comentários de um usuário). Sem mudança.
+## 7. Próximo passo
 
----
+**Passo 3.5** — Migrar repositories módulo por módulo de `better-sqlite3` para Prisma Client.
 
-### Ponto 5 — `Part.precoCompra Decimal NOT NULL`
-
-**Decisão: manter NOT NULL.**
-
-Verificado: o `part.service.js` valida `preco === null || preco < 0` → erro de VALIDATION antes de qualquer INSERT. O repository passa `preco_compra: data.preco_compra ?? null` mas isso é dead path — o service já garante que preco é válido.
-
-O SQLite adicionou a coluna via ALTER TABLE sem DEFAULT e sem NOT NULL — então dados legados podem ter NULL. Como os dados serão sacrificados e a migration parte do zero, `NOT NULL` é a decisão correta. Sem mudança.
-
----
-
-## 2. Bug corrigido no schema
-
-**`Proposal.client` apontava para `CommercialCondition` com nome errado.**
-
-Renomeado para `Proposal.commercialCondition CommercialCondition?` — nome semanticamente correto. O campo anterior `client` era confuso por parecer que apontava para `Client`.
-
-## 3. Arquivos alterados
-
-- `prisma/schema.prisma` — bug corrigido: `client CommercialCondition?` → `commercialCondition CommercialCondition?`
-- `docs/PRISMA_SETUP.md` — corrigidas duas inconsistências textuais:
-  - Seção "Estado atual do banco" ainda dizia "Neste momento (Passo 3.2)" — corrigido para refletir estado atual (schema completo, migration pendente)
-  - Linha "migrations/ criado quando models forem adicionados" — atualizada para "ainda não executado"
-
-## 4. Validações
-
-- `npm run prisma:generate` — ✅ sucesso após correção do bug de naming
-- `npm run prisma:status` — não executado (Docker não disponível)
-- `npm test` — ✅ 137/137 passando em 594ms
-
-## 5. Estado do runtime
-
-- Aplicação continua 100% SQLite/better-sqlite3
-- Nenhum repository, service ou controller foi alterado
-
-## 6. Próximo passo
-
-**Schema aprovado para migration.** Nenhum bloqueio técnico identificado.
-
-Próximo passo: **Passo 3.4 — criar a primeira migration** (`docker compose up -d postgres` + `npm run prisma:migrate` com nome `init_schema`).
-
-Antes de rodar: confirmar com o usuário que os dados do `database.sqlite` atual podem ser sacrificados, conforme previsto no plano.
+Ordem recomendada (mais simples → mais complexo):
+1. `category` (PartCategory) — CRUD simples, sem dependências complexas
+2. `responsavel` / `objeto` / `condition` — CRUD simples
+3. `client` — deduplicação fica no service, repository é simples
+4. `part` — com PartClientPriceRef
+5. `auth` / `user` — cuidado com bcrypt e sessão
+6. `fornecedor` / `categoria_despesa` — financeiro simples
+7. `stock` — movimentações
+8. `kanban` — polimórfico
+9. `nota_recebida` / `conta_pagar` — financeiro complexo
+10. `proposal` — por último (transação atômica, PDF, price_history, tudo junto)

@@ -1,8 +1,11 @@
 # Prisma — Setup e Guia de Uso
 
-## Estado atual (Passo 3.3)
+## Estado atual (Passo 3.4 — concluído)
 
-Prisma 7.x instalado, PostgreSQL local via Docker Compose, e **schema Prisma completo definido** (19 models, 6 enums, todos os índices críticos). Schema validado com `prisma generate` — não foi aplicado em migration ainda.
+Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo (19 models, 6 enums) definido **e migrado**. Primeira migration criada e aplicada: `20260525153903_init_schema`. PostgreSQL agora tem todas as tabelas da aplicação.
+
+`npm run prisma:status` → `Database schema is up to date!`
+
 **O runtime da aplicação ainda usa `better-sqlite3` via `src/db/connection.js`** — nenhum repository ou service foi alterado.
 
 ---
@@ -11,11 +14,13 @@ Prisma 7.x instalado, PostgreSQL local via Docker Compose, e **schema Prisma com
 
 ```
 prisma/
-  schema.prisma        # datasource PostgreSQL + generator + 19 models completos (não migrado ainda)
-  migrations/          # criado por `prisma migrate dev` (ainda não executado)
-prisma.config.ts       # config Prisma 7 — datasource URL via DATABASE_URL
-docker-compose.yml     # PostgreSQL 16-alpine local para desenvolvimento
-src/generated/prisma/  # client gerado por `prisma generate` (gitignored)
+  schema.prisma                          # datasource PostgreSQL + generator + 19 models completos
+  migrations/
+    20260525153903_init_schema/
+      migration.sql                      # DDL completo: enums, tabelas, constraints, indexes, FKs
+prisma.config.ts                         # config Prisma 7 — datasource URL via DATABASE_URL
+docker-compose.yml                       # PostgreSQL 16-alpine local para desenvolvimento
+src/generated/prisma/                    # client gerado por `prisma generate` (gitignored)
 ```
 
 ---
@@ -84,13 +89,24 @@ O recomendado é usar `docker compose` porque o arquivo fica versionado no proje
 
 ## Estado atual do banco
 
-O schema Prisma completo (19 models, 6 enums) está definido mas **ainda não foi aplicado** — nenhuma migration foi executada. O banco PostgreSQL via Docker Compose existe, mas está vazio (sem tabelas da aplicação). As tabelas serão criadas quando `prisma migrate dev` for executado (Passo 3.4).
+Migration `20260525153903_init_schema` aplicada. O PostgreSQL (via Docker Compose) tem todas as 19 tabelas, 6 enums, indexes e foreign keys da aplicação.
 
 Verificar status (após `docker compose up -d postgres`):
 ```bash
 npm run prisma:status
-# Esperado: "No migrations found" — normal até executar prisma migrate dev
+# Resultado: "Database schema is up to date!"
 ```
+
+### O que a migration criou
+
+| Categoria | Conteúdo |
+|-----------|----------|
+| Enums | `Role`, `KanbanStatus`, `MovementType`, `ContaStatus`, `NotaStatus`, `TipoNota` |
+| Tabelas | 19 — todas as entidades do sistema |
+| Cascades | `proposal_items`, `price_history` e `itens_nota_recebida` com `ON DELETE CASCADE` |
+| Uniques críticos | `proposals.numero_proposta`, `parts.codigo_interno`, `parts(nome,marca,modelo)`, `part_client_price_references(part_id,client_id)`, `notas_recebidas(fornecedor_id,numero_nota,serie)` |
+| FKs | `proposals` → `clients` com `ON DELETE RESTRICT` (não apaga cliente com propostas) |
+| Sem FK | `kanban_comments.card_id` (relação polimórfica — validação no service) |
 
 ---
 
@@ -113,7 +129,9 @@ npm run prisma:status
 ## Próximos passos
 
 - ~~**Passo 3.3:** Definir schema completo~~ — **concluído**
-- **Passo 3.4:** Criar primeira migration a partir do schema (`prisma migrate dev --name init_schema`)
-- **Passo 3.5:** Migrar repositories de better-sqlite3 para Prisma Client (módulo por módulo)
-- **Passo 3.6:** Migrar services para async/await e atualizar errorHandler para erros Prisma
+- ~~**Passo 3.4:** Criar primeira migration (`20260525153903_init_schema`)~~ — **concluído**
+- **Passo 3.5:** Migrar repositories de better-sqlite3 para Prisma Client (módulo por módulo — mais simples primeiro)
+  - Ordem recomendada: `category` → `responsavel`/`objeto`/`condition` → `client` → `part` → `auth` → `fornecedor`/`categoria_despesa` → `stock` → `kanban` → `nota_recebida`/`conta_pagar` → `proposal` (por último)
+  - Cada módulo: repository async + service com `await` + atualizar testes
+- **Passo 3.6:** Atualizar `errorHandler.js` para tratar códigos de erro Prisma (`P2002`, `P2003`, `P2025`)
 - **Passo 3.7:** Deploy com PostgreSQL em produção
