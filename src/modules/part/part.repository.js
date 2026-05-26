@@ -122,11 +122,8 @@ async function updatePart(id, data) {
 }
 
 async function deletePart(id) {
-  // stock_movements ainda em SQLite — verificação de dependência best-effort
-  const hasMovements = db.prepare(
-    "SELECT 1 FROM stock_movements WHERE part_id = ? LIMIT 1"
-  ).get(id);
-  if (hasMovements) {
+  const movCount = await prisma.stockMovement.count({ where: { partId: id } });
+  if (movCount > 0) {
     const err = new Error(
       "Não é possível excluir esta peça pois ela possui movimentações de estoque vinculadas."
     );

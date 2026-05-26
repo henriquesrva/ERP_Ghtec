@@ -1,14 +1,4 @@
-const {
-  listStockParts,
-  getStockPartById,
-  listMovements,
-  createMovement,
-  getPartCurrentStock,
-  getPartQtyInProposal,
-  getContractClientSpend,
-  getMovementsByDate,
-  createInventoryCount,
-} = require("./stock.repository");
+const repo = require("./stock.repository");
 
 const VALID_ENTRY_TYPES = [
   "compra_nova",
@@ -17,15 +7,15 @@ const VALID_ENTRY_TYPES = [
   "guardar_alguem",
 ];
 
-function getAllStockParts() {
-  return listStockParts();
+async function getAllStockParts() {
+  return repo.listStockParts();
 }
 
-function getMovements(opts) {
-  return listMovements(opts);
+async function getMovements(opts) {
+  return repo.listMovements(opts);
 }
 
-function registerMovement(data, userId) {
+async function registerMovement(data, userId) {
   const { movement_type, part_id, quantity } = data;
 
   if (!part_id) throw Object.assign(new Error("Peça é obrigatória."), { code: "VALIDATION" });
@@ -38,7 +28,7 @@ function registerMovement(data, userId) {
     throw Object.assign(new Error("Quantidade deve ser um número inteiro maior que zero."), { code: "VALIDATION" });
   }
 
-  const part = getStockPartById(Number(part_id));
+  const part = await repo.getStockPartById(Number(part_id));
   if (!part) throw Object.assign(new Error("Peça não encontrada."), { code: "NOT_FOUND" });
 
   if (movement_type === "entrada") {
@@ -51,7 +41,7 @@ function registerMovement(data, userId) {
     if (data.returns_to_stock === undefined || data.returns_to_stock === null || data.returns_to_stock === "") {
       throw Object.assign(new Error("Informe se a peça volta para o estoque."), { code: "VALIDATION" });
     }
-    const currentStock = getPartCurrentStock(Number(part_id));
+    const currentStock = await repo.getPartCurrentStock(Number(part_id));
     if (qty > currentStock) {
       throw Object.assign(
         new Error(`Estoque insuficiente. Disponível: ${currentStock}, solicitado: ${qty}.`),
@@ -59,7 +49,7 @@ function registerMovement(data, userId) {
       );
     }
     if (data.proposal_id) {
-      const qtyInProposal = getPartQtyInProposal(Number(part_id), Number(data.proposal_id));
+      const qtyInProposal = await repo.getPartQtyInProposal(Number(part_id), Number(data.proposal_id));
       if (qtyInProposal <= 0) {
         throw Object.assign(
           new Error("A proposta informada não contém esta peça."),
@@ -75,7 +65,7 @@ function registerMovement(data, userId) {
     }
   }
 
-  const id = createMovement({
+  const id = await repo.createMovement({
     part_id:            Number(part_id),
     movement_type,
     quantity:           qty,
@@ -92,15 +82,15 @@ function registerMovement(data, userId) {
   return id;
 }
 
-function getContractSpend() {
-  return getContractClientSpend();
+async function getContractSpend() {
+  return repo.getContractClientSpend();
 }
 
-function getMovementsByDateData({ days } = {}) {
-  return getMovementsByDate({ days });
+async function getMovementsByDateData({ days } = {}) {
+  return repo.getMovementsByDate({ days });
 }
 
-function registerInventoryCount(adjustments, userId) {
+async function registerInventoryCount(adjustments, userId) {
   if (!Array.isArray(adjustments) || adjustments.length === 0) {
     throw Object.assign(new Error("Nenhum ajuste informado."), { code: "VALIDATION" });
   }
@@ -112,7 +102,7 @@ function registerInventoryCount(adjustments, userId) {
     }
     adj.new_quantity = qty;
   }
-  return createInventoryCount(adjustments, userId);
+  return repo.createInventoryCount(adjustments, userId);
 }
 
 module.exports = {

@@ -1,33 +1,33 @@
-const { getAllStockParts, getMovements, registerMovement, getContractSpend, getMovementsByDateData, registerInventoryCount } = require("./stock.service");
+const stockService = require("./stock.service");
 
-function listStockPartsHandler(req, res) {
+async function listStockPartsHandler(req, res) {
   try {
-    return res.json(getAllStockParts());
+    return res.json(await stockService.getAllStockParts());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar estoque." });
   }
 }
 
-function listMovementsHandler(req, res) {
+async function listMovementsHandler(req, res) {
   try {
     const opts = {};
     if (req.query.part_id) opts.part_id = Number(req.query.part_id);
     if (req.query.limit)   opts.limit   = Math.min(Number(req.query.limit) || 100, 500);
     if (req.query.offset)  opts.offset  = Number(req.query.offset) || 0;
-    return res.json(getMovements(opts));
+    return res.json(await stockService.getMovements(opts));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar movimentações." });
   }
 }
 
-function createMovementHandler(req, res) {
+async function createMovementHandler(req, res) {
   try {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ success: false, message: "Não autenticado." });
 
-    const id = registerMovement(req.body, userId);
+    const id = await stockService.registerMovement(req.body, userId);
     return res.status(201).json({ success: true, id });
   } catch (err) {
     console.error(err);
@@ -47,31 +47,31 @@ function createMovementHandler(req, res) {
   }
 }
 
-function getContractSpendHandler(req, res) {
+async function getContractSpendHandler(req, res) {
   try {
-    return res.json(getContractSpend());
+    return res.json(await stockService.getContractSpend());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao calcular gastos por contrato." });
   }
 }
 
-function getMovementsByDateHandler(req, res) {
+async function getMovementsByDateHandler(req, res) {
   try {
     const days = req.query.days ? Math.min(Number(req.query.days) || 60, 365) : 60;
-    return res.json(getMovementsByDateData({ days }));
+    return res.json(await stockService.getMovementsByDateData({ days }));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao carregar dados por data." });
   }
 }
 
-function inventoryCountHandler(req, res) {
+async function inventoryCountHandler(req, res) {
   try {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ success: false, message: "Não autenticado." });
     const { adjustments } = req.body;
-    const ids = registerInventoryCount(adjustments, userId);
+    const ids = await stockService.registerInventoryCount(adjustments, userId);
     return res.json({ success: true, count: ids.length });
   } catch (err) {
     console.error(err);

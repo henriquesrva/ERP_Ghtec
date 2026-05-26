@@ -1,21 +1,21 @@
 # Prisma — Setup e Guia de Uso
 
-## Estado atual (Passo 3.5.7 — concluído)
+## Estado atual (Passo 3.5.8 — concluído)
 
-Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Todos os módulos do core migrados para Prisma**: `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part` e agora **`proposal` (proposals, proposal_items, price_history)**. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
+Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Todos os módulos do core + stock migrados para Prisma**: `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part`, `proposal` e agora **`stock` (stock_movements)**. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
 
 `npm run prisma:status` → `Database schema is up to date!`
-`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD completo + fluxo real de proposta (proposal + proposal_items + price_history + cascade delete)
+`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD completo + fluxo real de proposta + fluxo real de stock (entrada, saída, contagem)
 `node scripts/seed-postgres.js` → cria usuário admin inicial no PostgreSQL (idempotente)
 
-**Runtime PostgreSQL/Prisma** (fonte única de verdade): `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part`, **`proposal`, `proposal_items`, `price_history`**
+**Runtime PostgreSQL/Prisma** (fonte única de verdade): `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part`, `proposal`, `proposal_items`, `price_history`, **`stock_movements`**
 
-**Runtime SQLite/better-sqlite3** (ainda não migrado): `stock_movements`, `kanban_tasks`, `kanban_comments`, `fornecedores`, `notas_recebidas`, `itens_nota_recebida`, `contas_pagar`, `categorias_despesa`, `session`
+**Runtime SQLite/better-sqlite3** (ainda não migrado): `kanban_tasks`, `kanban_comments`, `fornecedores`, `notas_recebidas`, `itens_nota_recebida`, `contas_pagar`, `categorias_despesa`, `session`
 
-**Bridges restantes** (aguardando migração de stock/kanban/financeiro):
-- `part.repository.deletePart` → `stock_movements` check + `itens_nota_recebida` nulificação via SQLite (tabelas ainda não migradas)
+**Bridges restantes** (aguardando migração de financeiro):
+- `part.repository.deletePart` → `itens_nota_recebida` nulificação via SQLite (nota_recebida ainda não migrada)
 
-**Não há mais bridges de proposals**: `createProposalAtomic` usa `prisma.$transaction`, `deleteProposalAndRelated` usa cascade PostgreSQL, `deleteCondition` usa `prisma.$transaction` com `updateMany + delete`.
+**Nota sobre movement_type 'contagem'**: O enum Prisma `MovementType` tem apenas `entrada` e `saida`. Movimentos de contagem de estoque são armazenados com `movementType: entrada|saida` + `entryType: 'contagem'`. O mapper `mapStockMovement()` converte de volta para `movement_type: 'contagem'` na resposta da API, preservando o contrato com o frontend.
 
 ---
 
@@ -59,10 +59,14 @@ src/modules/part/
   part.repository.js                         # migrado para Prisma (async) + SQLite bridges price_history + bridge findPartByComposition
   part.service.js                            # async/await — usa const repo = require(...)
   part.controller.js                         # async/await
+src/modules/stock/
+  stock.repository.js                        # migrado para Prisma (async) + mapStockMovement()
+  stock.service.js                           # async/await — const repo = require(...)
+  stock.controller.js                        # async/await
 src/modules/proposal/
-  proposal.repository.js                     # SQLite bridges: 6 funções de cliente + createPart (auto-registro)
-  proposal.controller.js                     # fix: await findAuthUserById (uma linha)
-  proposal.service.js                        # import createPart de proposal.repository (bridge sync)
+  proposal.repository.js                     # migrado para Prisma (async) — sem bridges
+  proposal.controller.js                     # async/await — import fix findClientsByName
+  proposal.service.js                        # async/await — module-ref para vi.spyOn
 tests/services/category.service.test.js      # 18 testes — mock via vi.spyOn
 tests/services/responsavel.service.test.js   # 11 testes — mock via vi.spyOn
 tests/services/objeto.service.test.js        # 16 testes — mock via vi.spyOn
@@ -70,7 +74,8 @@ tests/services/condition.service.test.js     # 20 testes — mock via vi.spyOn
 tests/services/client.service.test.js        # 23 testes — mock via vi.spyOn
 tests/services/auth.service.test.js          # 33 testes — mock via vi.spyOn (reescrito para Prisma)
 tests/services/part.service.test.js          # 52 testes — mock via vi.spyOn (reescrito para Prisma)
-scripts/check-prisma-connection.js           # validação de conexão real (seções 1-8)
+tests/services/stock.service.test.js         # 24 testes — mock via vi.spyOn (criado para Prisma)
+scripts/check-prisma-connection.js           # validação de conexão real (seções 1-10)
 scripts/seed-postgres.js                     # cria usuário admin inicial no PostgreSQL (idempotente)
 ```
 
@@ -188,7 +193,8 @@ npm run prisma:status
 - ~~**Passo 3.5.5:** Migrar `auth/user`~~ — **concluído**
 - ~~**Passo 3.5.6:** Migrar `part` + `part_client_price_references`~~ — **concluído**
 - **Passo 3.5.x:** Migrar demais repositories de better-sqlite3 para Prisma Client
-  - Ordem recomendada: `proposal` (maior passo — remove todas as bridges) → `fornecedor`/`categoria_despesa` → `stock` → `kanban` → `nota_recebida`/`conta_pagar`
+  - ~~`proposal`~~ ✅ — ~~`stock`~~ ✅
+  - Ordem recomendada: `kanban` → `fornecedor`/`categoria_despesa` → `nota_recebida`/`conta_pagar`
   - Ao migrar `part.repository`, remover `findCategoryByIdSync` de `part.service.js` e usar o category repository async
   - Ao migrar `proposal`, substituir as 6 bridges locais de client em `proposal.repository.js` por chamadas async ao `client.repository`, e migrar `countClientProposals`/`getProfitAnalysis` de `client.repository.js` para Prisma
   - Padrão obrigatório: services usam `const repo = require(...)` (não destructuring) para que `vi.spyOn` funcione nos testes

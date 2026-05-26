@@ -1,86 +1,98 @@
-const db = require("../../db/connection");
+const prisma = require("../../db/prisma");
 
-function listStockParts() {
-  return db.prepare(`
-    SELECT
-      p.id,
-      p.nome,
-      p.codigo_interno,
-      p.categoria,
-      p.ncm,
-      p.preco_compra,
-      p.category_id,
-      COALESCE(p.stock_quantity, 0) AS stock_quantity,
-      pc.name AS category_name,
-      pc.code AS category_code
-    FROM parts p
-    LEFT JOIN part_categories pc ON pc.id = p.category_id
-    WHERE p.codigo_interno IS NOT NULL
-      AND TRIM(p.codigo_interno) != ''
-    ORDER BY p.nome ASC
-  `).all();
+// Inventory count movements are stored as 'entrada'/'saida' with entry_type='contagem'
+// (PostgreSQL MovementType enum only has entrada/saida).
+// The mapper restores movement_type='contagem' in the response to preserve the API contract.
+function mapStockMovement(sm) {
+  if (!sm) return null;
+  const movement_type = sm.entryType === "contagem" ? "contagem" : sm.movementType;
+  return {
+    id:                  sm.id,
+    part_id:             sm.partId,
+    part_nome:           sm.part?.nome         ?? null,
+    codigo_interno:      sm.part?.codigoInterno ?? null,
+    movement_type,
+    quantity:            sm.quantity,
+    previous_quantity:   sm.previousQuantity,
+    new_quantity:        sm.newQuantity,
+    entry_type:          sm.entryType,
+    proposal_id:         sm.proposalId,
+    numero_proposta:     sm.proposal?.numeroProposta ?? null,
+    client_id:           sm.clientId,
+    client_nome:         sm.client?.nome  ?? null,
+    returns_to_stock:    sm.returnsToStock,
+    notes:               sm.notes,
+    created_by_user_id:  sm.createdByUserId,
+    created_by_nome:     sm.createdBy?.nome ?? null,
+    created_at:          sm.createdAt,
+  };
 }
 
-function getStockPartById(id) {
-  return db.prepare(`
-    SELECT
-      p.id,
-      p.nome,
-      p.codigo_interno,
-      p.categoria,
-      p.marca,
-      p.modelo,
-      COALESCE(p.stock_quantity, 0) AS stock_quantity
-    FROM parts p
-    WHERE p.id = ?
-  `).get(id);
+async function listStockParts() {
+  const rows = await prisma.part.findMany({
+    where:   { codigoInterno: { not: null } },
+    include: { category: { select: { name: true, code: true } } },
+    orderBy: { nome: "asc" },
+  });
+  return rows
+    .filter(p => p.codigoInterno && p.codigoInterno.trim() !== "")
+    .map(p => ({
+      id:             p.id,
+      nome:           p.nome,
+      codigo_interno: p.codigoInterno,
+      categoria:      null,
+      ncm:            p.ncm,
+      preco_compra:   p.precoCompra !== null && p.precoCompra !== undefined
+                        ? Number(p.precoCompra) : null,
+      category_id:    p.categoryId,
+      stock_quantity: p.stockQuantity ?? 0,
+      category_name:  p.category?.name ?? null,
+      category_code:  p.category?.code ?? null,
+    }));
 }
 
-function listMovements({ limit = 100, offset = 0, part_id } = {}) {
-  const base = `
-    SELECT
-      sm.id,
-      sm.part_id,
-      p.nome          AS part_nome,
-      p.codigo_interno,
-      sm.movement_type,
-      sm.quantity,
-      sm.previous_quantity,
-      sm.new_quantity,
-      sm.entry_type,
-      sm.proposal_id,
-      pr.numero_proposta,
-      sm.client_id,
-      c.nome          AS client_nome,
-      sm.returns_to_stock,
-      sm.notes,
-      sm.created_by_user_id,
-      u.nome          AS created_by_nome,
-      sm.created_at
-    FROM stock_movements sm
-    JOIN parts   p  ON p.id  = sm.part_id
-    JOIN users   u  ON u.id  = sm.created_by_user_id
-    LEFT JOIN proposals pr ON pr.id = sm.proposal_id
-    LEFT JOIN clients   c  ON c.id  = sm.client_id
-  `;
-  if (part_id) {
-    return db.prepare(`${base} WHERE sm.part_id = ? ORDER BY sm.id DESC LIMIT ? OFFSET ?`)
-      .all(Number(part_id), limit, offset);
-  }
-  return db.prepare(`${base} ORDER BY sm.id DESC LIMIT ? OFFSET ?`).all(limit, offset);
+async function getStockPartById(id) {
+  const p = await prisma.part.findUnique({
+    where:  { id },
+    select: { id: true, nome: true, codigoInterno: true, marca: true, modelo: true, stockQuantity: true },
+  });
+  if (!p) return null;
+  return {
+    id:             p.id,
+    nome:           p.nome,
+    codigo_interno: p.codigoInterno,
+    marca:          p.marca,
+    modelo:         p.modelo,
+    stock_quantity: p.stockQuantity ?? 0,
+  };
 }
 
-function getPartQtyInProposal(partId, proposalId) {
-  const row = db.prepare(`
-    SELECT COALESCE(SUM(ph.quantidade), 0) AS total
-    FROM price_history ph
-    WHERE ph.proposal_id = ? AND ph.part_id = ?
-  `).get(proposalId, partId);
-  return row ? row.total : 0;
+async function listMovements({ limit = 100, offset = 0, part_id } = {}) {
+  const rows = await prisma.stockMovement.findMany({
+    where:   part_id ? { partId: Number(part_id) } : undefined,
+    include: {
+      part:      { select: { nome: true, codigoInterno: true } },
+      proposal:  { select: { numeroProposta: true } },
+      client:    { select: { nome: true } },
+      createdBy: { select: { nome: true } },
+    },
+    orderBy: { id: "desc" },
+    take:    limit,
+    skip:    offset,
+  });
+  return rows.map(mapStockMovement);
 }
 
-function getContractClientSpend() {
-  return db.prepare(`
+async function getPartQtyInProposal(partId, proposalId) {
+  const result = await prisma.priceHistory.aggregate({
+    where: { proposalId: Number(proposalId), partId: Number(partId) },
+    _sum:  { quantidade: true },
+  });
+  return result._sum.quantidade ?? 0;
+}
+
+async function getContractClientSpend() {
+  const rows = await prisma.$queryRaw`
     SELECT
       c.id   AS client_id,
       c.nome AS client_nome,
@@ -94,121 +106,123 @@ function getContractClientSpend() {
     FROM clients c
     LEFT JOIN stock_movements sm ON sm.client_id = c.id AND sm.movement_type = 'saida'
     LEFT JOIN parts p ON p.id = sm.part_id
-    WHERE c.has_parts_contract = 1
+    WHERE c.has_parts_contract = true
     GROUP BY c.id, c.nome
     ORDER BY total_spend DESC
-  `).all();
+  `;
+  return rows.map(row => ({
+    client_id:           row.client_id,
+    client_nome:         row.client_nome,
+    total_spend:         Number(row.total_spend),
+    items_without_price: Number(row.items_without_price),
+    total_movements:     Number(row.total_movements),
+  }));
 }
 
-function createMovement(data) {
-  const insert = db.prepare(`
-    INSERT INTO stock_movements (
-      part_id, movement_type, quantity, entry_type,
-      proposal_id, client_id, returns_to_stock, notes, created_by_user_id,
-      previous_quantity, new_quantity
-    ) VALUES (
-      @part_id, @movement_type, @quantity, @entry_type,
-      @proposal_id, @client_id, @returns_to_stock, @notes, @created_by_user_id,
-      @previous_quantity, @new_quantity
-    )
-  `);
+async function createMovement(data) {
+  return prisma.$transaction(async (tx) => {
+    const part = await tx.part.findUnique({
+      where:  { id: data.part_id },
+      select: { stockQuantity: true },
+    });
+    const previous_quantity = part ? (part.stockQuantity ?? 0) : 0;
+    const delta             = data.movement_type === "entrada" ? data.quantity : -data.quantity;
+    const new_quantity      = previous_quantity + delta;
 
-  const getQty = db.prepare(`SELECT COALESCE(stock_quantity, 0) AS qty FROM parts WHERE id = ?`);
-
-  const updateQty = db.prepare(`
-    UPDATE parts
-    SET stock_quantity = COALESCE(stock_quantity, 0) + @delta
-    WHERE id = @id
-  `);
-
-  const txn = db.transaction((d) => {
-    const prevRow = getQty.get(d.part_id);
-    const previous_quantity = prevRow ? prevRow.qty : 0;
-    const delta = d.movement_type === 'entrada' ? d.quantity : -d.quantity;
-    const new_quantity = previous_quantity + delta;
-
-    const result = insert.run({
-      part_id:            d.part_id,
-      movement_type:      d.movement_type,
-      quantity:           d.quantity,
-      entry_type:         d.entry_type         ?? null,
-      proposal_id:        d.proposal_id        ?? null,
-      client_id:          d.client_id          ?? null,
-      returns_to_stock:   d.returns_to_stock   ?? null,
-      notes:              d.notes              ?? null,
-      created_by_user_id: d.created_by_user_id,
-      previous_quantity,
-      new_quantity,
+    const movement = await tx.stockMovement.create({
+      data: {
+        partId:           data.part_id,
+        movementType:     data.movement_type,
+        quantity:         data.quantity,
+        entryType:        data.entry_type         ?? null,
+        proposalId:       data.proposal_id        ?? null,
+        clientId:         data.client_id          ?? null,
+        returnsToStock:   data.returns_to_stock != null ? Boolean(data.returns_to_stock) : null,
+        notes:            data.notes              ?? null,
+        createdByUserId:  data.created_by_user_id,
+        previousQuantity: previous_quantity,
+        newQuantity:      new_quantity,
+      },
     });
 
-    updateQty.run({ delta, id: d.part_id });
+    await tx.part.update({
+      where: { id: data.part_id },
+      data:  { stockQuantity: { increment: delta } },
+    });
 
-    return result.lastInsertRowid;
+    return movement.id;
   });
-
-  return txn(data);
 }
 
-function getPartCurrentStock(partId) {
-  const row = db.prepare(`
-    SELECT COALESCE(stock_quantity, 0) AS stock_quantity
-    FROM parts WHERE id = ?
-  `).get(partId);
-  return row ? row.stock_quantity : 0;
+async function getPartCurrentStock(partId) {
+  const p = await prisma.part.findUnique({
+    where:  { id: partId },
+    select: { stockQuantity: true },
+  });
+  return p ? (p.stockQuantity ?? 0) : 0;
 }
 
-function getMovementsByDate({ days = 60 } = {}) {
+async function getMovementsByDate({ days = 60 } = {}) {
   const n = Math.max(1, Math.min(365, Number(days) || 60));
-  return db.prepare(`
+  const since = new Date();
+  since.setDate(since.getDate() - n);
+
+  const rows = await prisma.$queryRaw`
     SELECT
-      DATE(created_at)   AS date,
-      movement_type,
+      DATE(created_at)::text       AS date,
+      movement_type::text          AS movement_type,
       CAST(SUM(quantity) AS INTEGER) AS total_qty
     FROM stock_movements
     WHERE movement_type IN ('entrada', 'saida')
-      AND created_at >= DATE('now', '-${n} days')
+      AND (entry_type IS NULL OR entry_type != 'contagem')
+      AND created_at >= ${since}
     GROUP BY DATE(created_at), movement_type
     ORDER BY DATE(created_at) ASC
-  `).all();
+  `;
+  return rows.map(row => ({
+    date:          row.date,
+    movement_type: row.movement_type,
+    total_qty:     Number(row.total_qty),
+  }));
 }
 
-function createInventoryCount(adjustments, userId) {
-  const getQty     = db.prepare(`SELECT COALESCE(stock_quantity, 0) AS qty FROM parts WHERE id = ?`);
-  const insertMov  = db.prepare(`
-    INSERT INTO stock_movements (
-      part_id, movement_type, quantity,
-      previous_quantity, new_quantity,
-      notes, created_by_user_id
-    ) VALUES (
-      @part_id, 'contagem', @quantity,
-      @previous_quantity, @new_quantity,
-      @notes, @created_by_user_id
-    )
-  `);
-  const updateQty  = db.prepare(`UPDATE parts SET stock_quantity = ? WHERE id = ?`);
-
-  const txn = db.transaction((items) => {
+async function createInventoryCount(adjustments, userId) {
+  return prisma.$transaction(async (tx) => {
     const ids = [];
-    for (const item of items) {
-      const prevRow = getQty.get(item.part_id);
-      const previous_quantity = prevRow ? prevRow.qty : 0;
-      const new_quantity = item.new_quantity;
+    for (const item of adjustments) {
+      const part = await tx.part.findUnique({
+        where:  { id: item.part_id },
+        select: { stockQuantity: true },
+      });
+      const previous_quantity = part ? (part.stockQuantity ?? 0) : 0;
+      const new_quantity      = item.new_quantity;
       if (new_quantity === previous_quantity) continue;
-      const id = insertMov.run({
-        part_id:            item.part_id,
-        quantity:           Math.abs(new_quantity - previous_quantity),
-        previous_quantity,
-        new_quantity,
-        notes:              item.notes || null,
-        created_by_user_id: userId,
-      }).lastInsertRowid;
-      updateQty.run(new_quantity, item.part_id);
-      ids.push(id);
+
+      const delta        = new_quantity - previous_quantity;
+      const movementType = delta > 0 ? "entrada" : "saida";
+
+      const created = await tx.stockMovement.create({
+        data: {
+          partId:           item.part_id,
+          movementType,
+          quantity:         Math.abs(delta),
+          entryType:        "contagem",
+          previousQuantity: previous_quantity,
+          newQuantity:      new_quantity,
+          notes:            item.notes ?? null,
+          createdByUserId:  userId,
+        },
+      });
+
+      await tx.part.update({
+        where: { id: item.part_id },
+        data:  { stockQuantity: new_quantity },
+      });
+
+      ids.push(created.id);
     }
     return ids;
   });
-
-  return txn(adjustments);
 }
 
 module.exports = {

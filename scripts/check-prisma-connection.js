@@ -334,6 +334,101 @@ async function main() {
   await prisma.partCategory.delete({ where: { id: pCat.id } });
   console.log(`   ✅  dados de suporte removidos`);
 
+  // 10. stock_movements — fluxo real (entrada, saída, contagem de estoque)
+  console.log("\n10. stock_movements — fluxo real...");
+
+  // Dados de suporte
+  const sCat  = await prisma.partCategory.create({ data: { name: "Cat Stock Check", code: "CST_CHK" } });
+  const sPart = await prisma.part.create({
+    data: { nome: "Peça Stock Check", precoCompra: 25, stockQuantity: 0, categoryId: sCat.id },
+  });
+  const sUser = await prisma.user.findFirst({ where: { role: "admin" } });
+  if (!sUser) throw new Error("Nenhum usuário admin encontrado. Execute scripts/seed-postgres.js primeiro.");
+  console.log(`   ✅  dados de suporte criados (part=${sPart.id}, user=${sUser.id})`);
+
+  // Entrada: +5 unidades
+  const entrada = await prisma.$transaction(async (tx) => {
+    const prev    = (await tx.part.findUnique({ where: { id: sPart.id }, select: { stockQuantity: true } })).stockQuantity;
+    const delta   = 5;
+    const newQty  = prev + delta;
+    const mov = await tx.stockMovement.create({
+      data: {
+        partId: sPart.id, movementType: "entrada", quantity: delta,
+        entryType: "compra_nova", previousQuantity: prev, newQuantity: newQty,
+        createdByUserId: sUser.id,
+      },
+    });
+    await tx.part.update({ where: { id: sPart.id }, data: { stockQuantity: newQty } });
+    return mov;
+  });
+  const afterEntrada = await prisma.part.findUnique({ where: { id: sPart.id }, select: { stockQuantity: true } });
+  if (afterEntrada.stockQuantity !== 5) throw new Error(`Esperava stock_quantity=5, foi ${afterEntrada.stockQuantity}`);
+  console.log(`   ✅  entrada registrada: id=${entrada.id}, stock_quantity=${afterEntrada.stockQuantity}`);
+
+  // Saída: -2 unidades
+  const saida = await prisma.$transaction(async (tx) => {
+    const prev   = (await tx.part.findUnique({ where: { id: sPart.id }, select: { stockQuantity: true } })).stockQuantity;
+    const delta  = 2;
+    const newQty = prev - delta;
+    const mov = await tx.stockMovement.create({
+      data: {
+        partId: sPart.id, movementType: "saida", quantity: delta,
+        returnsToStock: false, previousQuantity: prev, newQuantity: newQty,
+        createdByUserId: sUser.id,
+      },
+    });
+    await tx.part.update({ where: { id: sPart.id }, data: { stockQuantity: newQty } });
+    return mov;
+  });
+  const afterSaida = await prisma.part.findUnique({ where: { id: sPart.id }, select: { stockQuantity: true } });
+  if (afterSaida.stockQuantity !== 3) throw new Error(`Esperava stock_quantity=3, foi ${afterSaida.stockQuantity}`);
+  console.log(`   ✅  saída registrada: id=${saida.id}, stock_quantity=${afterSaida.stockQuantity}`);
+
+  // Contagem de estoque: ajuste para 10 (entry_type='contagem')
+  const contagemMov = await prisma.$transaction(async (tx) => {
+    const prev   = (await tx.part.findUnique({ where: { id: sPart.id }, select: { stockQuantity: true } })).stockQuantity;
+    const newQty = 10;
+    const delta  = newQty - prev;
+    const mov = await tx.stockMovement.create({
+      data: {
+        partId: sPart.id, movementType: delta > 0 ? "entrada" : "saida",
+        quantity: Math.abs(delta), entryType: "contagem",
+        previousQuantity: prev, newQuantity: newQty,
+        createdByUserId: sUser.id,
+      },
+    });
+    await tx.part.update({ where: { id: sPart.id }, data: { stockQuantity: newQty } });
+    return mov;
+  });
+  const afterContagem = await prisma.part.findUnique({ where: { id: sPart.id }, select: { stockQuantity: true } });
+  if (afterContagem.stockQuantity !== 10) throw new Error(`Esperava stock_quantity=10, foi ${afterContagem.stockQuantity}`);
+  console.log(`   ✅  contagem registrada: id=${contagemMov.id}, entry_type=contagem, stock_quantity=${afterContagem.stockQuantity}`);
+
+  // Verificar listagem de movimentações
+  const movements = await prisma.stockMovement.findMany({
+    where: { partId: sPart.id },
+    orderBy: { id: "asc" },
+  });
+  if (movements.length !== 3) throw new Error(`Esperava 3 movimentos, encontrou ${movements.length}`);
+  console.log(`   ✅  ${movements.length} movimentos listados para a peça`);
+
+  // Verificar que contagem NÃO aparece no gráfico (entry_type filter)
+  const chartMovements = await prisma.stockMovement.findMany({
+    where: {
+      partId: sPart.id,
+      movementType: { in: ["entrada", "saida"] },
+      OR: [{ entryType: null }, { entryType: { not: "contagem" } }],
+    },
+  });
+  if (chartMovements.length !== 2) throw new Error(`Esperava 2 movimentos no gráfico (sem contagem), encontrou ${chartMovements.length}`);
+  console.log(`   ✅  filtro chart OK: ${chartMovements.length} movimentos (contagem excluída)`);
+
+  // Limpeza
+  await prisma.stockMovement.deleteMany({ where: { partId: sPart.id } });
+  await prisma.part.delete({ where: { id: sPart.id } });
+  await prisma.partCategory.delete({ where: { id: sCat.id } });
+  console.log(`   ✅  dados de teste removidos`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 

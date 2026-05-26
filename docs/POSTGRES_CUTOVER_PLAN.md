@@ -22,12 +22,14 @@ Isso muda fundamentalmente a estratégia.
 | `auth/user` ✅ | `users` |
 | `part` ✅ | `parts`, `part_client_price_references` |
 | `proposal` ✅ | `proposals`, `proposal_items`, `price_history` |
+| `stock` ✅    | `stock_movements` |
 
 ### Módulos em SQLite/better-sqlite3
 
 | Módulo | Tabela(s) | Linhas no repository |
 |--------|-----------|---------------------|
 | ~~`proposal`~~ | ~~`proposals`, `proposal_items`, `price_history`~~ | ~~429~~ → migrado Fase 3 |
+| ~~`stock`~~ | ~~`stock_movements`~~ | ~~224~~ → migrado Fase 4 |
 | `stock` | `stock_movements` | 224 |
 | `kanban` | `kanban_tasks`, `kanban_comments` | 142 |
 | `fornecedor` | `fornecedores` | 154 |
@@ -329,13 +331,28 @@ Grupo 8: conta_pagar
 
 ---
 
-### Fase 4 — Migrar `stock`
+### Fase 4 — Migrar `stock` ✅ CONCLUÍDA
 
 **Escopo:** `src/modules/stock/stock.repository.js`, `stock.service.js`, `stock.controller.js`
 
 **Dependências Prisma já migradas:** `parts` (Fase 2), `proposals` (Fase 3), `clients` (Passo 3.5.3), `users` (Fase 1)
 
-**Bridges a criar:** nenhuma
+**Arquivos alterados:**
+- `src/modules/stock/stock.repository.js` — reescrito Prisma async; `mapStockMovement()`; `createMovement` e `createInventoryCount` via `prisma.$transaction`
+- `src/modules/stock/stock.service.js` — totalmente async; `const repo = require(...)`
+- `src/modules/stock/stock.controller.js` — todos os handlers async
+- `src/modules/part/part.repository.js` — bridge `stock_movements` em `deletePart` removida → `prisma.stockMovement.count`
+- `tests/services/stock.service.test.js` — 24 testes vi.spyOn (criado)
+- `scripts/check-prisma-connection.js` — seção 10 adicionada (entrada, saída, contagem, filtro chart)
+
+**Decisão técnica — movement_type 'contagem'**: O enum Prisma `MovementType` tem só `entrada`/`saida`. Movimentos de contagem são armazenados com `movementType: entrada|saida` + `entryType: 'contagem'`. O mapper `mapStockMovement()` restaura `movement_type: 'contagem'` na resposta, preservando o contrato com o frontend. `getMovementsByDate` filtra `entry_type != 'contagem'` para manter dados do gráfico corretos.
+
+**Bridges removidas:** bridge `stock_movements` em `part.repository.deletePart`
+
+**Bridges restantes após esta fase:**
+- `part.repository.deletePart` → `itens_nota_recebida` nulificação via SQLite (aguarda Fase 7 — nota_recebida)
+
+**Resultado:** `npm test` → **306 testes passando**. `node scripts/check-prisma-connection.js` → ✅ 10 seções.
 
 ---
 
@@ -394,32 +411,8 @@ Após todas as fases:
 
 ## 8. Próxima Ação Recomendada
 
-**Executar a Fase 4: migrar `stock` para Prisma.**
+**Executar a Fase 5: migrar `kanban` para Prisma.**
 
-Com `parts` (Fase 2) e `proposals` (Fase 3) já em Prisma, `stock_movements` pode ser migrado sem bridges. Isso também remove a bridge restante em `part.repository.deletePart` (check de stock_movements via SQLite).
+Com `users` (Fase 1) já em Prisma, `kanban_tasks` e `kanban_comments` podem ser migrados. Atenção à relação polimórfica de `kanban_comments` (sem FK real). Após esta fase, `proposal.service.js` precisará de pequeno ajuste para `await addKanbanComment(...)`.
 
-Prompt sugerido para a próxima sessão:
-
-```
-Passo 3.5.x — Migrar módulo stock para Prisma
-
-Escopo:
-- src/modules/stock/stock.repository.js — Prisma async
-- src/modules/stock/stock.service.js — async/await, const repo = require(...)
-- src/modules/stock/stock.controller.js — async/await
-
-Também:
-- src/modules/part/part.repository.js — remover bridge SQLite em deletePart
-  (stock_movements check → prisma.stockMovement.count; itens_nota_recebida ainda SQLite)
-
-Criar ou atualizar:
-- tests/services/stock.service.test.js — vi.spyOn (sem banco real)
-- scripts/check-prisma-connection.js — adicionar seção de stock CRUD
-
-Padrões obrigatórios:
-- const repo = require("./stock.repository") nos services (não destructuring)
-- camelCase → snake_case via mapStockMovement()
-- npm test ao final — todos os 282 testes devem continuar passando
-
-NÃO migrar kanban, fornecedor, nota_recebida, conta_pagar.
-```
+Módulos restantes após kanban: `fornecedor`/`categoria_despesa` → `nota_recebida` → `conta_pagar`.
