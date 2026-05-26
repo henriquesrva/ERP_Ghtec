@@ -530,5 +530,5 @@ Grupo 8: conta_pagar
 
 Próximos passos recomendados:
 1. **Testes manuais de fluxo crítico** — geração de proposta + PDF, kanban, financeiro
-2. **Deploy PostgreSQL em produção** — provisionar banco, rodar `prisma migrate deploy`, ajustar `DATABASE_URL`
+2. **Deploy PostgreSQL em produção** — ver `docs/DEPLOY_POSTGRES.md` para o checklist completo
 3. Remover `database.sqlite` físico após confirmar produção estável

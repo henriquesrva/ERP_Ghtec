@@ -155,15 +155,17 @@ NODE_ENV          — development | production
 DATABASE_URL      — PostgreSQL (usado por Prisma CLI e runtime)
 ```
 
-**Como rodar:**
+**Como rodar (desenvolvimento):**
 ```bash
 npm install
 docker compose up -d postgres    # sobe PostgreSQL local
 npm run prisma:generate           # gera client Prisma
 npm run prisma:migrate            # aplica migrations (apenas na primeira vez)
-node scripts/seed-postgres.js     # cria usuário admin (run once)
+node scripts/seed-postgres.js     # cria usuário admin (run once, idempotente)
 npm run dev                       # sobe o servidor
 ```
+
+**Como fazer deploy em produção:** ver `docs/DEPLOY_POSTGRES.md`.
 
 **Acesso:** `http://localhost:3000`
 

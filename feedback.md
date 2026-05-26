@@ -1,50 +1,55 @@
-# Feedback — Passo 3.6 (Fase Final de Limpeza)
+# Feedback — Passo 3.7 (Checklist Pré-Deploy PostgreSQL)
 
 ## O que foi feito
 
-Remoção completa do legado SQLite do banco principal. `src/db/` agora contém apenas `prisma.js`.
+Revisão e preparação do projeto para deploy em produção com PostgreSQL.
 
-## Auditoria SQLite antes das mudanças
+## Auditoria — estado encontrado
 
-| Arquivo | Uso |
-|---------|-----|
-| `src/db/connection.js` | `src/app.js` (health check) + `tests/setup/testDb.js` + `tests/setup/fixtures.js` |
-| `src/db/init.js` | script `init-db` no package.json + `tests/setup/testDb.js` |
-| `src/db/migrate.js` | `src/server.js` no startup + `tests/setup/testDb.js` |
-| `src/middleware/sessionStore.js` | própria conexão `better-sqlite3` com `sessions.sqlite` (mantida) |
-| `tests/setup/testDb.js` | **órfão** — nenhum teste importava (todos usam vi.spyOn) |
-| `tests/setup/fixtures.js` | **órfão** — nenhum teste importava |
+| Item | Estado |
+|------|--------|
+| `server.js` | ✅ Limpo — sem migrate, sem init, sem SQLite |
+| `scripts/seed-postgres.js` | ✅ Idempotente, avisa sobre senha admin123 |
+| `src/middleware/sessionStore.js` | ✅ Conexão própria com `sessions.sqlite` |
+| `/health` | ✅ Usa `prisma.$queryRaw`, retorna `{ db: "postgres", prisma: true, sessionStore: "sqlite" }` |
+| `errorHandler.js` | ✅ P2002/P2003/P2025 mapeados |
+| `.env.example` | ⚠️ Comentário desatualizado sobre SQLite → corrigido |
+| `package.json` | ⚠️ Sem `start` e sem `prisma:deploy` → adicionados |
+| `docs/DEPLOY_POSTGRES.md` | ❌ Não existia → criado |
 
-## Arquivos removidos
+## Arquivos alterados
 
-- `src/db/init.js`
-- `src/db/migrate.js`
-- `src/db/connection.js`
-- `tests/setup/testDb.js`
-- `tests/setup/fixtures.js`
+- `.env.example` — comentário desatualizado sobre SQLite removido; comentário sobre DATABASE_URL atualizado
+- `package.json` — adicionados scripts `start` e `prisma:deploy`
+- `docs/DEPLOY_POSTGRES.md` — criado (checklist completo de deploy)
+- `docs/SYSTEM_CONTEXT.md` — referência ao DEPLOY_POSTGRES.md adicionada no how-to
+- `docs/POSTGRES_CUTOVER_PLAN.md` — próximos passos apontam para DEPLOY_POSTGRES.md
 
-## Arquivos modificados
+## Scripts de produção confirmados
 
-- `src/server.js` — removido `require("./db/migrate")` do startup
-- `src/app.js` — import `db` substituído por `prisma`; `/health` usa `await prisma.$queryRaw\`SELECT 1\``; resposta agora `{ ok, db: "postgres", prisma: true, sessionStore: "sqlite" }`
-- `src/middleware/errorHandler.js` — adicionados P2002 → 409, P2003 → 409, P2025 → 404
-- `package.json` — removido script `init-db`
-- `docs/PRISMA_SETUP.md` — estado atualizado para Passo 3.6
-- `docs/POSTGRES_CUTOVER_PLAN.md` — Fase Final marcada CONCLUÍDA com detalhes técnicos; próxima ação = deploy PostgreSQL
-- `docs/SYSTEM_CONTEXT.md` — stack atualizada (PostgreSQL como banco principal); fluxo de dados atualizado; decisões técnicas 8/13/14/19 reescritas; how-to atualizado com docker compose + prisma
+| Script | Comando | Uso |
+|--------|---------|-----|
+| `npm start` | `node src/server.js` | Iniciar servidor em produção |
+| `npm run prisma:deploy` | `prisma migrate deploy` | Aplicar migrations em produção (sem interatividade) |
+| `npm run prisma:generate` | `prisma generate` | Gerar client antes de subir |
+| `npm test` | `vitest run` | Testes (não precisam de banco) |
 
-## Estado final
+## Pontos documentados no DEPLOY_POSTGRES.md
 
-- `src/db/` → apenas `prisma.js`
-- `better-sqlite3` → apenas `sessionStore.js` (`sessions.sqlite`)
-- `database.sqlite` → arquivo físico permanece no disco (remover no deploy de produção)
+- SessionStore em `sessions.sqlite` local — aviso sobre armazenamento efêmero em nuvem
+- Seed idempotente + aviso de troca de senha
+- `prisma:deploy` vs `prisma migrate dev` (nunca usar dev em produção)
+- `check-prisma-connection.js` cria e remove dados de teste (aviso explícito)
+- Infraestrutura recomendada (PM2, nginx, volume persistente)
+- Troubleshooting dos erros mais comuns
 
-## Resultados
+## Validações
 
-- `npm test` → **408 testes passando** (18 arquivos)
 - `npm run prisma:status` → `Database schema is up to date!`
+- `npm run prisma:generate` → OK
+- `npm test` → **408 testes passando** (18 arquivos)
 - `node scripts/check-prisma-connection.js` → **15 seções OK**
 
 ## Próximo passo
 
-Deploy PostgreSQL em produção: provisionar banco, ajustar `DATABASE_URL`, rodar `prisma migrate deploy`, rodar `seed-postgres.js`.
+Executar o deploy em produção seguindo `docs/DEPLOY_POSTGRES.md`.
