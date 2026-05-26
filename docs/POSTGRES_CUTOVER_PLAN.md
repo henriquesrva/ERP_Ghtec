@@ -21,12 +21,13 @@ Isso muda fundamentalmente a estratégia.
 | `client` | `clients` |
 | `auth/user` ✅ | `users` |
 | `part` ✅ | `parts`, `part_client_price_references` |
+| `proposal` ✅ | `proposals`, `proposal_items`, `price_history` |
 
 ### Módulos em SQLite/better-sqlite3
 
 | Módulo | Tabela(s) | Linhas no repository |
 |--------|-----------|---------------------|
-| `proposal` | `proposals`, `proposal_items`, `price_history` | 429 |
+| ~~`proposal`~~ | ~~`proposals`, `proposal_items`, `price_history`~~ | ~~429~~ → migrado Fase 3 |
 | `stock` | `stock_movements` | 224 |
 | `kanban` | `kanban_tasks`, `kanban_comments` | 142 |
 | `fornecedor` | `fornecedores` | 154 |
@@ -298,31 +299,33 @@ Grupo 8: conta_pagar
 
 ---
 
-### Fase 3 — Migrar `proposal` + `proposal_items` + `price_history` ← MAIOR PASSO
+### Fase 3 — Migrar `proposal` + `proposal_items` + `price_history` ✅ CONCLUÍDA
 
 **Escopo:**
-- `src/modules/proposal/proposal.repository.js` — reescrita completa
-- `src/modules/proposal/proposal.service.js` — converter para async
-- `src/modules/proposal/proposal.controller.js` — verificar handlers async
-- `src/modules/client/client.repository.js` — remover bridges 2, 3 (`countClientProposals`, `getProfitAnalysis`)
-- `src/modules/condition/condition.repository.js` — remover bridge 1 (nullify proposals antes de delete)
+- `src/modules/proposal/proposal.repository.js` — reescrita completa para Prisma async
+- `src/modules/proposal/proposal.service.js` — totalmente async; módulo-ref para vi.spyOn
+- `src/modules/proposal/proposal.controller.js` — todos os handlers async; import fix findClientsByName
+- `src/modules/client/client.repository.js` — bridges 2, 3 removidas (`countClientProposals`, `getProfitAnalysis` → Prisma)
+- `src/modules/condition/condition.repository.js` — bridge 1 removida (`deleteCondition` → `prisma.$transaction`)
+- `src/modules/part/part.repository.js` — bridges price_history, findPartByComposition → Prisma async
 
 **Dependências Prisma já migradas:** `clients`, `commercial_conditions`, `users` (Fase 1), `parts` (Fase 2)
 
-**Bridges removidas nesta fase:** todas as 4 bridges existentes
+**Bridges removidas nesta fase:** todas as 4 bridges existentes (+ bridges price_history de part)
 
-**Pontos de atenção:**
-- `createProposalAtomic` passa a ser `await prisma.$transaction([...])` — transação PostgreSQL real, ACID completa.
-- `findOrCreateClient` em `proposal.service.js` se torna completamente async com Prisma.
-- `getLastItemPriceForClient` em `proposal.repository.js` passa a consultar Prisma (price_history no PostgreSQL).
-- `searchItemDescriptions` passa a consultar Prisma (proposal_items no PostgreSQL).
-- `getProfitAnalysis` reescrito em Prisma — funciona corretamente para todos os clientes.
-- `countClientProposals` reescrito em Prisma — `client.deleteClient` usa `await repo.countClientProposals(id)`.
+**Resultado:**
+- `createProposalAtomic` usa `prisma.$transaction` — transação PostgreSQL real, ACID completa.
+- `findOrCreateClient` completamente async via Prisma.
+- `getProfitAnalysis` via `prisma.$queryRaw` — funciona para todos os clientes.
+- `countClientProposals` via `prisma.proposal.count`.
+- `findPartByComposition` async Prisma; `createPart` async Prisma via `partRepo`.
+- `tests/integration/proposal-flow.test.js` reescrito com vi.spyOn (sem PostgreSQL real em testes).
+- `tests/services/proposal.service.test.js` reescrito com vi.spyOn (24 testes, sem SQLite).
+- `scripts/check-prisma-connection.js` — seção 9 adicionada (fluxo completo de proposta).
+- `npm test` → **282 passando**. `node scripts/check-prisma-connection.js` → ✅ 9 seções.
 
-**Adaptação de testes:**
-- `tests/integration/proposal-flow.test.js` usa `createTestClient()` (SQLite in-memory). Após esta fase, `findClientById` no fluxo de proposta consulta PostgreSQL — não encontra o cliente SQLite in-memory. Opções:
-  - **Opção recomendada:** Converter `createTestClient` para usar Prisma Client mockado ou substituir os testes de integração por testes unitários com vi.spyOn no service (já que o service terá lógica testável sem banco).
-  - **Alternativa:** Criar um banco PostgreSQL de teste e rodar esses testes separados com `NODE_ENV=integration` (sem `vitest run` normal, só sob demanda).
+**Bridges restantes após esta fase:**
+- `part.repository.deletePart` → `stock_movements` check + `itens_nota_recebida` nulificação via SQLite (tabelas ainda não migradas — aguarda Fases 4 e 7)
 
 ---
 
@@ -391,32 +394,32 @@ Após todas as fases:
 
 ## 8. Próxima Ação Recomendada
 
-**Executar a Fase 2: migrar `part` + `part_client_price_references` para Prisma.**
+**Executar a Fase 4: migrar `stock` para Prisma.**
 
-É o menor e mais seguro passo do Caminho B. Sem dependências SQLite cruzadas, sem bridges a criar, sem risco de regressão nas outras funcionalidades. Desbloqueia todas as fases seguintes.
+Com `parts` (Fase 2) e `proposals` (Fase 3) já em Prisma, `stock_movements` pode ser migrado sem bridges. Isso também remove a bridge restante em `part.repository.deletePart` (check de stock_movements via SQLite).
 
 Prompt sugerido para a próxima sessão:
 
 ```
-Passo 3.5.5 — Migrar módulo auth/user para Prisma
+Passo 3.5.x — Migrar módulo stock para Prisma
 
 Escopo:
-- src/modules/auth/auth.repository.js — Prisma async
-- src/modules/auth/auth.service.js — async/await, const repo = require(...)
-- src/modules/auth/auth.controller.js — async/await
+- src/modules/stock/stock.repository.js — Prisma async
+- src/modules/stock/stock.service.js — async/await, const repo = require(...)
+- src/modules/stock/stock.controller.js — async/await
 
-NÃO migrar:
-- src/middleware/sessionStore.js — permanece em SQLite (sessions.sqlite separado)
+Também:
+- src/modules/part/part.repository.js — remover bridge SQLite em deletePart
+  (stock_movements check → prisma.stockMovement.count; itens_nota_recebida ainda SQLite)
 
 Criar ou atualizar:
-- tests/services/auth.service.test.js — verificar se existente cobre os cenários
-- scripts/check-prisma-connection.js — adicionar seção de users CRUD
+- tests/services/stock.service.test.js — vi.spyOn (sem banco real)
+- scripts/check-prisma-connection.js — adicionar seção de stock CRUD
 
 Padrões obrigatórios:
-- const repo = require("./auth.repository") nos services (não destructuring)
-- camelCase → snake_case via mapUser()
-- passwordHash mapeado para password_hash
-- npm test ao final — todos os testes devem passar
+- const repo = require("./stock.repository") nos services (não destructuring)
+- camelCase → snake_case via mapStockMovement()
+- npm test ao final — todos os 282 testes devem continuar passando
 
-Não migrar proposal, part, stock ou qualquer outro módulo.
+NÃO migrar kanban, fornecedor, nota_recebida, conta_pagar.
 ```

@@ -231,6 +231,109 @@ async function main() {
   await prisma.partCategory.delete({ where: { id: testCatForPart.id } });
   console.log(`   ✅  dados de teste removidos`);
 
+  // 9. Fluxo real de proposta — proposal + proposal_items + price_history
+  console.log("\n9. proposal + proposal_items + price_history — fluxo real...");
+
+  const PROP_NUM = "CHECK-PRISMA-FLOW-001";
+  // Limpeza prévia (idempotente)
+  const oldProp = await prisma.proposal.findUnique({ where: { numeroProposta: PROP_NUM } });
+  if (oldProp) await prisma.proposal.delete({ where: { id: oldProp.id } });
+
+  // Dados de suporte
+  const pCat  = await prisma.partCategory.create({ data: { name: "Cat Check Prop", code: "CCP_CHK" } });
+  const pPart = await prisma.part.create({ data: { nome: "Peça Check Proposta", precoCompra: 50, categoryId: pCat.id } });
+  const pCond = await prisma.commercialCondition.create({
+    data: { name: "Cond Check", formaPagamento: "Boleto", prazoPagamento: "30 dias", prazoEntrega: "7 dias", validade: "30 dias" },
+  });
+  const pUser = await prisma.user.findFirst({ where: { role: "admin" } });
+  const pClient = await prisma.client.create({ data: { nome: "Cliente Check Proposta" } });
+  console.log(`   ✅  dados de suporte criados (client=${pClient.id}, part=${pPart.id})`);
+
+  // Cria proposta com 2 itens via prisma.$transaction
+  const ITEM_UNIT = 100.00;
+  const QTY = 2;
+  const TOTAL = QTY * ITEM_UNIT + 1 * 30; // 2 itens
+
+  const proposal = await prisma.$transaction(async (tx) => {
+    const p = await tx.proposal.create({
+      data: {
+        numeroProposta:      PROP_NUM,
+        clienteId:           pClient.id,
+        cidadeEmissao:       "Belo Horizonte",
+        dataEmissao:         new Date(),
+        objetoProposta:      "Teste Prisma connection check",
+        formaPagamento:      "Boleto",
+        prazoPagamento:      "30 dias",
+        prazoEntrega:        "7 dias",
+        garantia:            "90 dias",
+        validade:            "30 dias",
+        valorTotal:          QTY * ITEM_UNIT + 30,
+        valorTotalExtenso:   "duzentos e trinta reais",
+        responsavelNome:     "Check Script",
+        responsavelCargo:    "QA",
+        responsavelEmail:    "",
+        responsavelTelefone: "31999999999",
+        commercialConditionId: pCond.id,
+      },
+    });
+    await tx.proposalItem.createMany({
+      data: [
+        { proposalId: p.id, itemOrdem: 1, quantidade: QTY, descricao: "Peça Check Proposta", valorUnitario: ITEM_UNIT, ncm: null },
+        { proposalId: p.id, itemOrdem: 2, quantidade: 1,   descricao: "Item Avulso Check",   valorUnitario: 30,         ncm: null },
+      ],
+    });
+    await tx.priceHistory.createMany({
+      data: [
+        {
+          clientId: pClient.id, partId: pPart.id, proposalId: p.id,
+          descricaoOriginal: "Peça Check Proposta", descricaoNormalizada: "peca check proposta",
+          quantidade: QTY, valorUnitario: ITEM_UNIT, dataProposta: new Date(), numeroProposta: PROP_NUM,
+        },
+        {
+          clientId: pClient.id, partId: null, proposalId: p.id,
+          descricaoOriginal: "Item Avulso Check", descricaoNormalizada: "item avulso check",
+          quantidade: 1, valorUnitario: 30, dataProposta: new Date(), numeroProposta: PROP_NUM,
+        },
+      ],
+    });
+    return p;
+  });
+  console.log(`   ✅  proposta criada via $transaction: id=${proposal.id}, num="${PROP_NUM}"`);
+
+  // Verifica proposal_items
+  const dbItems = await prisma.proposalItem.findMany({ where: { proposalId: proposal.id }, orderBy: { itemOrdem: "asc" } });
+  if (dbItems.length !== 2) throw new Error(`Esperava 2 itens, encontrou ${dbItems.length}`);
+  console.log(`   ✅  ${dbItems.length} proposal_items encontrados`);
+  console.log(`       item 1: ${dbItems[0].descricao} × ${dbItems[0].quantidade} = ${Number(dbItems[0].valorUnitario)}`);
+
+  // Verifica price_history
+  const dbPh = await prisma.priceHistory.findMany({ where: { proposalId: proposal.id } });
+  if (dbPh.length !== 2) throw new Error(`Esperava 2 price_history, encontrou ${dbPh.length}`);
+  console.log(`   ✅  ${dbPh.length} price_history encontrados`);
+
+  // Verifica getLastItemPriceForClient (prioridade 2: price_history)
+  const { normalizeText } = require("../src/shared/utils/normalize");
+  const lastPrice = await prisma.priceHistory.findFirst({
+    where: { clientId: pClient.id, descricaoNormalizada: normalizeText("Peça Check Proposta") },
+    orderBy: { id: "desc" },
+  });
+  if (!lastPrice) throw new Error("price_history não encontrado para cliente+descricão");
+  console.log(`   ✅  getLastItemPriceForClient: valor_unitario=${Number(lastPrice.valorUnitario)}, part_id=${lastPrice.partId}`);
+
+  // Verifica deleteProposalAndRelated (cascade)
+  await prisma.proposal.delete({ where: { id: proposal.id } });
+  const afterItems = await prisma.proposalItem.count({ where: { proposalId: proposal.id } });
+  const afterPh    = await prisma.priceHistory.count({ where: { proposalId: proposal.id } });
+  if (afterItems !== 0 || afterPh !== 0) throw new Error("Cascade delete falhou");
+  console.log(`   ✅  cascade delete OK: proposal_items=${afterItems}, price_history=${afterPh}`);
+
+  // Limpeza de suporte
+  await prisma.client.delete({ where: { id: pClient.id } });
+  await prisma.commercialCondition.delete({ where: { id: pCond.id } });
+  await prisma.part.delete({ where: { id: pPart.id } });
+  await prisma.partCategory.delete({ where: { id: pCat.id } });
+  console.log(`   ✅  dados de suporte removidos`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 

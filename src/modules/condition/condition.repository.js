@@ -1,5 +1,4 @@
 const prisma = require("../../db/prisma");
-const db = require("../../db/connection");
 
 function mapCondition(c) {
   if (!c) return null;
@@ -69,9 +68,13 @@ async function updateCondition(id, data) {
 }
 
 async function deleteCondition(id) {
-  // Proposals still in SQLite — nullify FK before deleting from PostgreSQL.
-  db.prepare("UPDATE proposals SET commercial_condition_id = NULL WHERE commercial_condition_id = ?").run(id);
-  await prisma.commercialCondition.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.proposal.updateMany({
+      where: { commercialConditionId: id },
+      data:  { commercialConditionId: null },
+    }),
+    prisma.commercialCondition.delete({ where: { id } }),
+  ]);
 }
 
 module.exports = {

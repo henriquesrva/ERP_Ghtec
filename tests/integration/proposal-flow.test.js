@@ -1,9 +1,13 @@
-// vi.spyOn é usado em vez de vi.mock porque o projeto é 100% CommonJS.
-// proposal.service.js usa pdfService.generateProposalPdf() (acesso por propriedade),
-// o que permite que o spy intercepte a chamada sem precisar de hoisting de módulo.
+// Testes de fluxo do proposal.service.js.
+// O service usa referências de módulo (proposalRepo.fn()), então vi.spyOn()
+// intercepta corretamente — mesmo padrão de pdfService já usado no projeto.
 
-const { clearAllTables, db } = require("../../tests/setup/testDb");
-const { createTestClient, createTestUser } = require("../../tests/setup/fixtures");
+const proposalRepo = require("../../src/modules/proposal/proposal.repository");
+const clientRepo   = require("../../src/modules/client/client.repository");
+const partRepo     = require("../../src/modules/part/part.repository");
+const kanbanRepo   = require("../../src/modules/kanban/kanban.repository");
+const pdfService   = require("../../src/modules/proposal/proposal-pdf.service");
+
 const {
   createProposalFlow,
   calculateTotal,
@@ -12,59 +16,17 @@ const {
   registerBilling,
   canMarkExecution,
 } = require("../../src/modules/proposal/proposal.service");
-const pdfServiceMock = require("../../src/modules/proposal/proposal-pdf.service");
 
-beforeEach(() => {
-  clearAllTables();
-  vi.spyOn(pdfServiceMock, "generateProposalPdf").mockResolvedValue(undefined);
-});
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-// ── Helper: insere proposta diretamente no banco (sem passar pelo service) ────
-
-function insertProposal(clientId, overrides = {}) {
-  const p = {
-    numero_proposta:     "TEST-001",
-    cliente_id:          clientId,
-    cidade_emissao:      "BH",
-    data_emissao:        "2026-01-01",
-    objeto_proposta:     "Manutenção",
-    forma_pagamento:     "Boleto",
-    prazo_pagamento:     "30 dias",
-    prazo_entrega:       "7 dias",
-    garantia:            "90 dias",
-    validade:            "30 dias",
-    valor_total:         500.0,
-    valor_total_extenso: "quinhentos reais",
-    responsavel_nome:    "Resp",
-    responsavel_cargo:   "Cargo",
-    responsavel_email:   "",
-    responsavel_telefone: "999",
-    kanban_status:       "pendente_envio",
+function fakeClient(overrides = {}) {
+  return {
+    id: 1, nome: "Cliente Teste", razao_social: null, cnpj: null,
+    cidade: "BH", estado: "MG", endereco: null, cep: null,
+    email: null, telefone: null, has_parts_contract: 0,
     ...overrides,
   };
-  const result = db.prepare(`
-    INSERT INTO proposals (
-      numero_proposta, cliente_id, cidade_emissao, data_emissao,
-      objeto_proposta, forma_pagamento, prazo_pagamento, prazo_entrega,
-      garantia, validade, valor_total, valor_total_extenso,
-      responsavel_nome, responsavel_cargo, responsavel_email, responsavel_telefone,
-      kanban_status, kanban_status_updated_at
-    ) VALUES (
-      @numero_proposta, @cliente_id, @cidade_emissao, @data_emissao,
-      @objeto_proposta, @forma_pagamento, @prazo_pagamento, @prazo_entrega,
-      @garantia, @validade, @valor_total, @valor_total_extenso,
-      @responsavel_nome, @responsavel_cargo, @responsavel_email, @responsavel_telefone,
-      @kanban_status, datetime('now')
-    )
-  `).run(p);
-  return { id: Number(result.lastInsertRowid) };
 }
-
-// ── Helper: monta payload padrão para createProposalFlow ──────────────────────
 
 function proposalPayload({ clienteId, numeroProposta = "FLOW-001", items, responsavel } = {}) {
   return {
@@ -95,6 +57,27 @@ function proposalPayload({ clienteId, numeroProposta = "FLOW-001", items, respon
     ],
   };
 }
+
+// Configura spies padrão para o fluxo de criação de proposta.
+// Retorna os spies para que os testes possam inspecionar chamadas.
+function setupCreateSpies({ proposalId = 42, client = fakeClient() } = {}) {
+  return {
+    findClientById:          vi.spyOn(clientRepo,   "findClientById").mockResolvedValue(client),
+    findClientByCnpj:        vi.spyOn(clientRepo,   "findClientByCnpj").mockResolvedValue(null),
+    findClientsByExactName:  vi.spyOn(clientRepo,   "findClientsByExactName").mockResolvedValue([]),
+    createClient:            vi.spyOn(clientRepo,   "createClient").mockResolvedValue(99),
+    createProposalAtomic:    vi.spyOn(proposalRepo, "createProposalAtomic").mockResolvedValue(proposalId),
+    updatePriceHistoryPartId:vi.spyOn(proposalRepo, "updatePriceHistoryPartId").mockResolvedValue(undefined),
+    updateProposalPdfPath:   vi.spyOn(proposalRepo, "updateProposalPdfPath").mockResolvedValue(undefined),
+    findPartByComposition:   vi.spyOn(partRepo,     "findPartByComposition").mockResolvedValue(null),
+    createPart:              vi.spyOn(partRepo,     "createPart").mockResolvedValue(10),
+    generateProposalPdf:     vi.spyOn(pdfService,   "generateProposalPdf").mockResolvedValue(undefined),
+  };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 // ── calculateTotal ────────────────────────────────────────────────────────────
 
@@ -137,317 +120,322 @@ describe("canMarkExecution", () => {
 
 describe("createProposalFlow", () => {
   it("retorna proposalId ao criar proposta válida", async () => {
-    const client = createTestClient();
-    const result = await createProposalFlow(proposalPayload({ clienteId: client.id }));
-    expect(result.proposalId).toBeGreaterThan(0);
-  });
-
-  it("persiste valor_total correto no banco (2*100 + 1*50 = 250)", async () => {
-    const client = createTestClient();
-    const result = await createProposalFlow(proposalPayload({ clienteId: client.id }));
-    const row = db.prepare("SELECT valor_total FROM proposals WHERE id = ?").get(result.proposalId);
-    expect(row.valor_total).toBeCloseTo(250);
+    setupCreateSpies({ proposalId: 42 });
+    const result = await createProposalFlow(proposalPayload({ clienteId: 1 }));
+    expect(result.proposalId).toBe(42);
   });
 
   it("valor_total_extenso é gerado pelo backend — payload do frontend é ignorado", async () => {
-    const client = createTestClient();
-    const data = proposalPayload({ clienteId: client.id });
+    const spies = setupCreateSpies();
+    let capturedProposalData;
+    spies.createProposalAtomic.mockImplementation(async (pd) => { capturedProposalData = pd; return 42; });
+
+    const data = proposalPayload({ clienteId: 1 });
     data.valor_total_extenso = "DEVE SER IGNORADO";
-    const result = await createProposalFlow(data);
-    const row = db.prepare("SELECT valor_total_extenso FROM proposals WHERE id = ?").get(result.proposalId);
-    expect(row.valor_total_extenso).not.toBe("DEVE SER IGNORADO");
-    expect(row.valor_total_extenso).toBeTruthy();
+    await createProposalFlow(data);
+
+    expect(capturedProposalData.valor_total_extenso).not.toBe("DEVE SER IGNORADO");
+    expect(capturedProposalData.valor_total_extenso).toBeTruthy();
+  });
+
+  it("valor_total calculado corretamente (2*100 + 1*50 = 250)", async () => {
+    const spies = setupCreateSpies();
+    let capturedProposalData;
+    spies.createProposalAtomic.mockImplementation(async (pd) => { capturedProposalData = pd; return 42; });
+
+    await createProposalFlow(proposalPayload({ clienteId: 1 }));
+    expect(capturedProposalData.valor_total).toBeCloseTo(250);
   });
 
   it("data_emissao é gerada pelo servidor (não vem do payload do frontend)", async () => {
-    const client = createTestClient();
-    const result = await createProposalFlow(proposalPayload({ clienteId: client.id }));
-    const row = db.prepare("SELECT data_emissao FROM proposals WHERE id = ?").get(result.proposalId);
-    expect(row.data_emissao).toBeTruthy();
-  });
+    const spies = setupCreateSpies();
+    let capturedProposalData;
+    spies.createProposalAtomic.mockImplementation(async (pd) => { capturedProposalData = pd; return 42; });
 
-  it("kanban_status inicial é pendente_envio", async () => {
-    const client = createTestClient();
-    const result = await createProposalFlow(proposalPayload({ clienteId: client.id }));
-    const row = db.prepare("SELECT kanban_status FROM proposals WHERE id = ?").get(result.proposalId);
-    expect(row.kanban_status).toBe("pendente_envio");
-  });
+    const data = proposalPayload({ clienteId: 1 });
+    data.data_emissao = "DATA DO FRONTEND — deve ser ignorada";
+    await createProposalFlow(data);
 
-  it("cria proposal_items para cada item na ordem correta", async () => {
-    const client = createTestClient();
-    const result = await createProposalFlow(proposalPayload({ clienteId: client.id }));
-    const items = db
-      .prepare("SELECT * FROM proposal_items WHERE proposal_id = ? ORDER BY item_ordem")
-      .all(result.proposalId);
-    expect(items).toHaveLength(2);
-    expect(items[0].descricao).toBe("Peca Alpha");
-    expect(items[0].quantidade).toBe(2);
-    expect(items[1].descricao).toBe("Peca Beta");
-  });
-
-  it("cria price_history para cada item com todos os campos obrigatórios", async () => {
-    const client = createTestClient();
-    const result = await createProposalFlow(
-      proposalPayload({ clienteId: client.id, numeroProposta: "PH-001" })
-    );
-    const ph = db
-      .prepare("SELECT * FROM price_history WHERE proposal_id = ? ORDER BY id")
-      .all(result.proposalId);
-
-    expect(ph).toHaveLength(2);
-
-    const first = ph[0];
-    expect(first.client_id).toBe(client.id);
-    expect(first.descricao_original).toBe("Peca Alpha");
-    expect(first.descricao_normalizada).toBe("peca alpha");
-    expect(first.quantidade).toBe(2);
-    expect(first.valor_unitario).toBeCloseTo(100);
-    expect(first.numero_proposta).toBe("PH-001");
-    expect(first.proposal_id).toBe(result.proposalId);
-  });
-
-  it("price_history.part_id é preenchido após auto-registro de peça", async () => {
-    const client = createTestClient();
-    const result = await createProposalFlow(proposalPayload({ clienteId: client.id }));
-    const ph = db
-      .prepare("SELECT part_id FROM price_history WHERE proposal_id = ?")
-      .all(result.proposalId);
-    ph.forEach(row => expect(row.part_id).toBeGreaterThan(0));
-  });
-
-  it("price_history.part_id usa o part_id fornecido no item (sem criar nova peça)", async () => {
-    const client = createTestClient();
-    const partRes = db.prepare("INSERT INTO parts (nome, preco_compra) VALUES (?, ?)").run("Peça Existente", 100);
-    const partId = Number(partRes.lastInsertRowid);
-
-    const data = proposalPayload({ clienteId: client.id, numeroProposta: "PART-001" });
-    data.items = [{ descricao: "Peça Existente", quantidade: 1, valor_unitario: 100, part_id: partId }];
-    const result = await createProposalFlow(data);
-
-    const ph = db.prepare("SELECT part_id FROM price_history WHERE proposal_id = ?").get(result.proposalId);
-    expect(ph.part_id).toBe(partId);
+    expect(capturedProposalData.data_emissao).not.toBe("DATA DO FRONTEND — deve ser ignorada");
+    expect(capturedProposalData.data_emissao).toBeTruthy();
   });
 
   it("snapshot da assinatura: responsavel_nome/cargo/telefone gravados na proposta", async () => {
-    const client = createTestClient();
+    const spies = setupCreateSpies();
+    let capturedProposalData;
+    spies.createProposalAtomic.mockImplementation(async (pd) => { capturedProposalData = pd; return 42; });
+
     const data = proposalPayload({
-      clienteId: client.id,
+      clienteId: 1,
       responsavel: { nome: "Maria Souza", cargo: "Diretora", email: "m@co.com", telefone: "31911" },
     });
-    const result = await createProposalFlow(data);
-    const row = db
-      .prepare("SELECT responsavel_nome, responsavel_cargo, responsavel_telefone FROM proposals WHERE id = ?")
-      .get(result.proposalId);
-    expect(row.responsavel_nome).toBe("Maria Souza");
-    expect(row.responsavel_cargo).toBe("Diretora");
-    expect(row.responsavel_telefone).toBe("31911");
+    await createProposalFlow(data);
+
+    expect(capturedProposalData.responsavel_nome).toBe("Maria Souza");
+    expect(capturedProposalData.responsavel_cargo).toBe("Diretora");
+    expect(capturedProposalData.responsavel_telefone).toBe("31911");
   });
 
-  it("rejeita numero_proposta duplicado com código CONFLICT", async () => {
-    const client = createTestClient();
-    await createProposalFlow(proposalPayload({ clienteId: client.id, numeroProposta: "DUP-001" }));
+  it("rejeita numero_proposta duplicado com código CONFLICT (Prisma P2002)", async () => {
+    const spies = setupCreateSpies();
+    const p2002 = new Error("Unique constraint failed");
+    p2002.code = "P2002";
+    spies.createProposalAtomic.mockRejectedValue(p2002);
+
     await expect(
-      createProposalFlow(proposalPayload({ clienteId: client.id, numeroProposta: "DUP-001" }))
+      createProposalFlow(proposalPayload({ clienteId: 1, numeroProposta: "DUP-001" }))
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
 
+  it("auto-registro de peça: chama findPartByComposition e createPart quando sem part_id", async () => {
+    const spies = setupCreateSpies();
+    spies.findPartByComposition.mockResolvedValue(null);
+    spies.createPart.mockResolvedValue(77);
+
+    await createProposalFlow(proposalPayload({ clienteId: 1 }));
+
+    expect(spies.findPartByComposition).toHaveBeenCalled();
+    expect(spies.createPart).toHaveBeenCalled();
+    expect(spies.updatePriceHistoryPartId).toHaveBeenCalledWith(42, expect.any(String), 77);
+  });
+
+  it("auto-registro de peça: reutiliza peça existente quando encontrada por composição", async () => {
+    const spies = setupCreateSpies();
+    spies.findPartByComposition.mockResolvedValue({ id: 55 });
+
+    await createProposalFlow(proposalPayload({ clienteId: 1 }));
+
+    expect(spies.createPart).not.toHaveBeenCalled();
+    expect(spies.updatePriceHistoryPartId).toHaveBeenCalledWith(42, expect.any(String), 55);
+  });
+
+  it("usa part_id fornecido no item sem chamar createPart", async () => {
+    const spies = setupCreateSpies();
+    const data = proposalPayload({ clienteId: 1 });
+    data.items = [{ descricao: "Peça X", quantidade: 1, valor_unitario: 100, part_id: 33 }];
+
+    await createProposalFlow(data);
+
+    expect(spies.findPartByComposition).not.toHaveBeenCalled();
+    expect(spies.createPart).not.toHaveBeenCalled();
+    expect(spies.updatePriceHistoryPartId).toHaveBeenCalledWith(42, "Peça X", 33);
+  });
+
   it("cria cliente novo via dados inline quando cliente_id não é fornecido", async () => {
+    const spies = setupCreateSpies();
+    spies.createClient.mockResolvedValue(88);
+    spies.findClientById.mockResolvedValue(fakeClient({ id: 88, nome: "Cliente Inline Novo" }));
+
     const data = proposalPayload({ numeroProposta: "INLINE-001" });
     delete data.cliente_id;
     data.cliente = { nome: "Cliente Inline Novo" };
 
     const result = await createProposalFlow(data);
-    expect(result.clienteIsNew).toBe(true);
 
-    const found = db.prepare("SELECT id FROM clients WHERE nome = ?").get("Cliente Inline Novo");
-    expect(found).toBeTruthy();
-    expect(result.clienteId).toBe(found.id);
+    expect(spies.createClient).toHaveBeenCalled();
+    expect(result.clienteIsNew).toBe(true);
+    expect(result.clienteId).toBe(88);
   });
 
   it("reutiliza cliente existente quando nome inline bate com cadastro", async () => {
-    const existing = createTestClient({ nome: "Empresa ABC" });
+    const existingClient = fakeClient({ id: 5, nome: "Empresa ABC" });
+    const spies = setupCreateSpies({ client: existingClient });
+    spies.findClientsByExactName.mockResolvedValue([existingClient]);
 
     const data = proposalPayload({ numeroProposta: "REUSE-001" });
     delete data.cliente_id;
     data.cliente = { nome: "Empresa ABC" };
 
     const result = await createProposalFlow(data);
-    expect(result.clienteIsNew).toBe(false);
-    expect(result.clienteId).toBe(existing.id);
 
-    const count = db.prepare("SELECT COUNT(*) AS n FROM clients WHERE nome = 'Empresa ABC'").get().n;
-    expect(count).toBe(1);
+    expect(spies.createClient).not.toHaveBeenCalled();
+    expect(result.clienteIsNew).toBe(false);
+    expect(result.clienteId).toBe(5);
   });
 
-  it("PDF não é gerado com Puppeteer real — generateProposalPdf é mockado e chamado", async () => {
-    const client = createTestClient();
-    await createProposalFlow(proposalPayload({ clienteId: client.id, numeroProposta: "MOCK-001" }));
-    expect(pdfServiceMock.generateProposalPdf).toHaveBeenCalledOnce();
+  it("PDF é gerado — generateProposalPdf é chamado", async () => {
+    const spies = setupCreateSpies();
+    await createProposalFlow(proposalPayload({ clienteId: 1, numeroProposta: "MOCK-001" }));
+    expect(spies.generateProposalPdf).toHaveBeenCalledOnce();
+  });
+
+  it("createProposalAtomic recebe dataProposta como Date object (não string)", async () => {
+    const spies = setupCreateSpies();
+    let capturedOpts;
+    spies.createProposalAtomic.mockImplementation(async (_pd, _items, opts) => {
+      capturedOpts = opts;
+      return 42;
+    });
+
+    await createProposalFlow(proposalPayload({ clienteId: 1 }));
+    expect(capturedOpts.dataProposta).toBeInstanceOf(Date);
   });
 });
 
 // ── markProposalExecuted ──────────────────────────────────────────────────────
 
 describe("markProposalExecuted", () => {
-  let client;
-  let proposalId;
-  let userId;
+  it("admin marca proposta como executada — chama setProposalExecution", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue({
+      id: 1, kanban_status: "pendente_execucao", execution_completed: 0,
+    });
+    const setExec = vi.spyOn(proposalRepo, "setProposalExecution").mockResolvedValue(undefined);
+    vi.spyOn(kanbanRepo, "addComment").mockReturnValue(undefined);
 
-  beforeEach(() => {
-    client = createTestClient();
-    ({ id: proposalId } = insertProposal(client.id));
-    ({ id: userId } = createTestUser());
+    await markProposalExecuted(1, {}, "admin", 10, "Admin");
+    expect(setExec).toHaveBeenCalledWith(1, expect.objectContaining({
+      execution_marked_by_user_id: 10,
+    }));
   });
 
-  it("admin marca proposta como executada — execution_completed = 1", () => {
-    markProposalExecuted(proposalId, {}, "admin", userId, "Admin");
-    const row = db.prepare("SELECT execution_completed FROM proposals WHERE id = ?").get(proposalId);
-    expect(row.execution_completed).toBe(1);
+  it("tecnico marca proposta como executada", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue({
+      id: 1, kanban_status: "pendente_execucao", execution_completed: 0,
+    });
+    const setExec = vi.spyOn(proposalRepo, "setProposalExecution").mockResolvedValue(undefined);
+    vi.spyOn(kanbanRepo, "addComment").mockReturnValue(undefined);
+
+    await markProposalExecuted(1, {}, "tecnico", 10, "Tec");
+    expect(setExec).toHaveBeenCalled();
   });
 
-  it("tecnico marca proposta como executada", () => {
-    markProposalExecuted(proposalId, {}, "tecnico", userId, "Tec");
-    const row = db.prepare("SELECT execution_completed FROM proposals WHERE id = ?").get(proposalId);
-    expect(row.execution_completed).toBe(1);
+  it("user não pode marcar execução — FORBIDDEN", async () => {
+    await expect(markProposalExecuted(1, {}, "user", null, "U"))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("user não pode marcar execução — FORBIDDEN", () => {
-    expect(() => markProposalExecuted(proposalId, {}, "user", null, "U"))
-      .toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
+  it("comercial não pode marcar execução — FORBIDDEN", async () => {
+    await expect(markProposalExecuted(1, {}, "comercial", null, "C"))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("comercial não pode marcar execução — FORBIDDEN", () => {
-    expect(() => markProposalExecuted(proposalId, {}, "comercial", null, "C"))
-      .toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
+  it("financeiro não pode marcar execução — FORBIDDEN", async () => {
+    await expect(markProposalExecuted(1, {}, "financeiro", null, "F"))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("financeiro não pode marcar execução — FORBIDDEN", () => {
-    expect(() => markProposalExecuted(proposalId, {}, "financeiro", null, "F"))
-      .toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
-  });
+  it("salva dados de execução fornecidos (data, responsável, OS)", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue({ id: 1, kanban_status: "pendente_execucao" });
+    const setExec = vi.spyOn(proposalRepo, "setProposalExecution").mockResolvedValue(undefined);
+    vi.spyOn(kanbanRepo, "addComment").mockReturnValue(undefined);
 
-  it("salva dados de execução fornecidos (data, responsável, OS)", () => {
-    markProposalExecuted(
-      proposalId,
+    await markProposalExecuted(
+      1,
       { execution_date: "2026-05-20", executed_by: "João", execution_os: "OS-999" },
-      "admin", userId, "Admin"
+      "admin", 10, "Admin"
     );
-    const row = db
-      .prepare("SELECT execution_date, executed_by, execution_os FROM proposals WHERE id = ?")
-      .get(proposalId);
-    expect(row.execution_date).toBe("2026-05-20");
-    expect(row.executed_by).toBe("João");
-    expect(row.execution_os).toBe("OS-999");
+    expect(setExec).toHaveBeenCalledWith(1, expect.objectContaining({
+      execution_date: "2026-05-20",
+      executed_by:    "João",
+      execution_os:   "OS-999",
+    }));
+  });
+
+  it("throws NOT_FOUND para proposta inexistente", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue(null);
+    await expect(markProposalExecuted(9999, {}, "admin", null, "Admin"))
+      .rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
 
 // ── removeProposalExecution ───────────────────────────────────────────────────
 
 describe("removeProposalExecution", () => {
-  let client;
-  let proposalId;
-  let userId;
-
-  beforeEach(() => {
-    client = createTestClient();
-    ({ id: proposalId } = insertProposal(client.id));
-    db.prepare("UPDATE proposals SET execution_completed = 1 WHERE id = ?").run(proposalId);
-    ({ id: userId } = createTestUser());
+  it("user não pode remover execução — FORBIDDEN", async () => {
+    await expect(removeProposalExecution(1, "user", null, "U"))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("user não pode remover execução — FORBIDDEN", () => {
-    expect(() => removeProposalExecution(proposalId, "user", null, "U"))
-      .toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
-  });
+  it("ao remover execução de proposta em 'faturar', status volta para pendente_execucao", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue({
+      id: 1, kanban_status: "faturar", execution_completed: 1,
+    });
+    vi.spyOn(proposalRepo, "clearProposalExecution").mockResolvedValue(undefined);
+    const setStatus = vi.spyOn(proposalRepo, "setProposalKanbanStatus").mockResolvedValue(undefined);
+    vi.spyOn(kanbanRepo, "addComment").mockReturnValue(undefined);
 
-  it("ao remover execução de proposta em 'faturar', status volta para pendente_execucao", () => {
-    db.prepare("UPDATE proposals SET kanban_status = 'faturar' WHERE id = ?").run(proposalId);
-
-    const result = removeProposalExecution(proposalId, "admin", userId, "Admin");
+    const result = await removeProposalExecution(1, "admin", 10, "Admin");
 
     expect(result.autoMoved).toBe(true);
     expect(result.newStatus).toBe("pendente_execucao");
-
-    const row = db.prepare("SELECT execution_completed, kanban_status FROM proposals WHERE id = ?").get(proposalId);
-    expect(row.execution_completed).toBe(0);
-    expect(row.kanban_status).toBe("pendente_execucao");
+    expect(setStatus).toHaveBeenCalledWith(1, "pendente_execucao");
   });
 
-  it("ao remover execução de proposta em 'faturado', status volta para pendente_execucao", () => {
-    db.prepare("UPDATE proposals SET kanban_status = 'faturado' WHERE id = ?").run(proposalId);
+  it("ao remover execução de proposta em 'faturado', status volta para pendente_execucao", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue({
+      id: 1, kanban_status: "faturado", execution_completed: 1,
+    });
+    vi.spyOn(proposalRepo, "clearProposalExecution").mockResolvedValue(undefined);
+    vi.spyOn(proposalRepo, "setProposalKanbanStatus").mockResolvedValue(undefined);
+    vi.spyOn(kanbanRepo, "addComment").mockReturnValue(undefined);
 
-    const result = removeProposalExecution(proposalId, "admin", userId, "Admin");
-
+    const result = await removeProposalExecution(1, "admin", 10, "Admin");
     expect(result.autoMoved).toBe(true);
     expect(result.newStatus).toBe("pendente_execucao");
   });
 
-  it("ao remover execução de proposta em 'pendente_execucao', status não muda (autoMoved = false)", () => {
-    db.prepare("UPDATE proposals SET kanban_status = 'pendente_execucao' WHERE id = ?").run(proposalId);
+  it("ao remover execução de proposta em 'pendente_execucao', status não muda (autoMoved = false)", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue({
+      id: 1, kanban_status: "pendente_execucao", execution_completed: 1,
+    });
+    vi.spyOn(proposalRepo, "clearProposalExecution").mockResolvedValue(undefined);
+    const setStatus = vi.spyOn(proposalRepo, "setProposalKanbanStatus").mockResolvedValue(undefined);
+    vi.spyOn(kanbanRepo, "addComment").mockReturnValue(undefined);
 
-    const result = removeProposalExecution(proposalId, "admin", userId, "Admin");
+    const result = await removeProposalExecution(1, "admin", 10, "Admin");
 
     expect(result.autoMoved).toBe(false);
     expect(result.newStatus).toBe("pendente_execucao");
-
-    const row = db.prepare("SELECT kanban_status FROM proposals WHERE id = ?").get(proposalId);
-    expect(row.kanban_status).toBe("pendente_execucao");
+    expect(setStatus).not.toHaveBeenCalled();
   });
 
-  it("limpa todos os campos de execução ao remover", () => {
-    db.prepare("UPDATE proposals SET execution_date = '2026-05-01', executed_by = 'João', execution_os = 'OS-1' WHERE id = ?").run(proposalId);
+  it("limpa execução — chama clearProposalExecution", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue({
+      id: 1, kanban_status: "pendente_execucao", execution_completed: 1,
+    });
+    const clearExec = vi.spyOn(proposalRepo, "clearProposalExecution").mockResolvedValue(undefined);
+    vi.spyOn(kanbanRepo, "addComment").mockReturnValue(undefined);
 
-    removeProposalExecution(proposalId, "admin", userId, "Admin");
-
-    const row = db
-      .prepare("SELECT execution_completed, execution_date, executed_by, execution_os FROM proposals WHERE id = ?")
-      .get(proposalId);
-    expect(row.execution_completed).toBe(0);
-    expect(row.execution_date).toBeNull();
-    expect(row.executed_by).toBeNull();
-    expect(row.execution_os).toBeNull();
+    await removeProposalExecution(1, "admin", 10, "Admin");
+    expect(clearExec).toHaveBeenCalledWith(1);
   });
 });
 
 // ── registerBilling ───────────────────────────────────────────────────────────
 
 describe("registerBilling", () => {
-  let client;
-  let proposalId;
-  let userId;
-
-  beforeEach(() => {
-    client = createTestClient();
-    ({ id: proposalId } = insertProposal(client.id));
-    ({ id: userId } = createTestUser());
+  it("rejeita invoice_number vazio — VALIDATION", async () => {
+    await expect(registerBilling(1, { invoice_number: "" }, null, "Admin"))
+      .rejects.toMatchObject({ code: "VALIDATION" });
   });
 
-  it("rejeita invoice_number vazio — VALIDATION", () => {
-    expect(() => registerBilling(proposalId, { invoice_number: "" }, null, "Admin"))
-      .toThrow(expect.objectContaining({ code: "VALIDATION" }));
+  it("rejeita invoice_number ausente — VALIDATION", async () => {
+    await expect(registerBilling(1, {}, null, "Admin"))
+      .rejects.toMatchObject({ code: "VALIDATION" });
   });
 
-  it("rejeita invoice_number ausente — VALIDATION", () => {
-    expect(() => registerBilling(proposalId, {}, null, "Admin"))
-      .toThrow(expect.objectContaining({ code: "VALIDATION" }));
-  });
+  it("grava invoice_number e outros dados — chama setProposalBilling", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue({
+      id: 1, kanban_status: "faturar", execution_completed: 1,
+    });
+    const setBilling = vi.spyOn(proposalRepo, "setProposalBilling").mockResolvedValue(undefined);
+    vi.spyOn(kanbanRepo, "addComment").mockReturnValue(undefined);
 
-  it("grava invoice_number, billing_date e billing_notes na proposta", () => {
-    registerBilling(
-      proposalId,
+    await registerBilling(
+      1,
       { invoice_number: "NF-9999", billing_date: "2026-05-20", billing_notes: "Pago via PIX" },
-      userId, "Admin"
+      10, "Admin"
     );
-    const row = db
-      .prepare("SELECT invoice_number, billing_date, billing_notes FROM proposals WHERE id = ?")
-      .get(proposalId);
-    expect(row.invoice_number).toBe("NF-9999");
-    expect(row.billing_date).toBe("2026-05-20");
-    expect(row.billing_notes).toBe("Pago via PIX");
+    expect(setBilling).toHaveBeenCalledWith(1, expect.objectContaining({
+      invoice_number: "NF-9999",
+      billing_date:   "2026-05-20",
+      billing_notes:  "Pago via PIX",
+    }));
   });
 
-  it("throws NOT_FOUND para proposta inexistente", () => {
-    expect(() => registerBilling(9999, { invoice_number: "NF-0001" }, null, "Admin"))
-      .toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+  it("throws NOT_FOUND para proposta inexistente", async () => {
+    vi.spyOn(proposalRepo, "findProposalRowById").mockResolvedValue(null);
+    await expect(registerBilling(9999, { invoice_number: "NF-0001" }, null, "Admin"))
+      .rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

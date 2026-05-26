@@ -1,42 +1,16 @@
 const fs = require("fs");
 const path = require("path");
 
-const pdfService = require("./proposal-pdf.service");
-
-const {
-  findClientByCnpj,
-  findClientsByName,
-  findClientsByExactName,
-  findClientById,
-  createClient,
-  createPart,           // bridge síncrona SQLite para auto-registro de peças
-  createProposalAtomic,
-  updatePriceHistoryPartId,
-  updateProposalPdfPath,
-  findProposalById,
-  findProposalRowById,
-  listProposals,
-  deleteProposalAndRelated,
-  listProposalsForKanban,
-  setProposalKanbanStatus,
-  setProposalExecution,
-  clearProposalExecution,
-  setProposalApproval,
-  setProposalBilling,
-} = require("./proposal.repository");
+const pdfService    = require("./proposal-pdf.service");
+const proposalRepo  = require("./proposal.repository");
+const clientRepo    = require("../client/client.repository");
+const partRepo      = require("../part/part.repository");
+const kanbanRepo    = require("../kanban/kanban.repository");
 
 const {
   KANBAN_STATUSES,
   canMoveKanban,
-  isValidKanbanStatus,
-  assertCanMoveKanban,
 } = require("../../shared/domain/kanban");
-
-const {
-  findPartByComposition,
-} = require("../part/part.repository");
-
-const { addComment: addKanbanComment } = require("../kanban/kanban.repository");
 
 const { normalizeText } = require("../../shared/utils/normalize");
 const { valorPorExtenso } = require("../../shared/utils/extensao");
@@ -59,12 +33,9 @@ function ensureOutputDir() {
   return outputDir;
 }
 
-// Verifica se os dados fornecidos são consistentes com um cliente já cadastrado.
-// Apenas campos presentes em AMBOS (novo dado e cadastro) são comparados.
 function checkClientConsistency(provided, existing) {
   const norm = (s) => normalizeText(s || "");
   const stripCnpj = (s) => (s || "").replace(/\D/g, "");
-
   const conflicts = [];
 
   if (provided.nome && existing.nome) {
@@ -72,44 +43,37 @@ function checkClientConsistency(provided, existing) {
       conflicts.push(`nome: informado "${provided.nome}", cadastrado "${existing.nome}"`);
     }
   }
-
   if (provided.cnpj && provided.cnpj.trim() && existing.cnpj && existing.cnpj.trim()) {
     if (stripCnpj(provided.cnpj) !== stripCnpj(existing.cnpj)) {
       conflicts.push(`CNPJ: informado "${provided.cnpj}", cadastrado "${existing.cnpj}"`);
     }
   }
-
   if (provided.razao_social && provided.razao_social.trim() && existing.razao_social && existing.razao_social.trim()) {
     if (norm(provided.razao_social) !== norm(existing.razao_social)) {
       conflicts.push(`razão social: informada "${provided.razao_social}", cadastrada "${existing.razao_social}"`);
     }
   }
-
   return conflicts;
 }
 
-function findOrCreateClient(clientData) {
+async function findOrCreateClient(clientData) {
   const matchedIds = new Set();
 
-  // Busca por CNPJ (campo único e confiável)
   if (clientData.cnpj && clientData.cnpj.trim()) {
-    const byCnpj = findClientByCnpj(clientData.cnpj);
+    const byCnpj = await clientRepo.findClientByCnpj(clientData.cnpj);
     if (byCnpj) matchedIds.add(byCnpj.id);
   }
 
-  // Busca por nome exato (normalizado)
   if (clientData.nome && clientData.nome.trim()) {
-    const byName = findClientsByExactName(clientData.nome);
+    const byName = await clientRepo.findClientsByExactName(clientData.nome);
     byName.forEach((c) => matchedIds.add(c.id));
   }
 
-  // Nenhum dado bate com nenhum cliente → cria novo
   if (matchedIds.size === 0) {
-    const clientId = createClient(clientData);
+    const clientId = await clientRepo.createClient(clientData);
     return { clientId, isNew: true, possibleDuplicates: [] };
   }
 
-  // Dados batem com mais de um cliente distinto → bloqueia (ambíguo)
   if (matchedIds.size > 1) {
     const err = new Error(
       "Os dados informados correspondem a múltiplos clientes distintos cadastrados. " +
@@ -120,8 +84,7 @@ function findOrCreateClient(clientData) {
     throw err;
   }
 
-  // Exatamente um cliente encontrado → verifica consistência
-  const existingClient = findClientById([...matchedIds][0]);
+  const existingClient = await clientRepo.findClientById([...matchedIds][0]);
   const conflicts = checkClientConsistency(clientData, existingClient);
 
   if (conflicts.length > 0) {
@@ -137,7 +100,6 @@ function findOrCreateClient(clientData) {
     throw err;
   }
 
-  // Dados consistentes → reusa cliente existente
   return { clientId: existingClient.id, isNew: false, possibleDuplicates: [] };
 }
 
@@ -173,7 +135,7 @@ async function createProposalFlow(data) {
   let resolvedClient, clientId, clienteIsNew, possibleDuplicates;
 
   if (data.cliente_id) {
-    resolvedClient = findClientById(Number(data.cliente_id));
+    resolvedClient = await clientRepo.findClientById(Number(data.cliente_id));
     if (!resolvedClient) {
       throw new Error("Cliente selecionado não encontrado no cadastro. Por favor, selecione novamente.");
     }
@@ -181,7 +143,7 @@ async function createProposalFlow(data) {
     clienteIsNew = false;
     possibleDuplicates = [];
   } else if (data.cliente && data.cliente.nome) {
-    const result = findOrCreateClient({
+    const result = await findOrCreateClient({
       nome:                data.cliente.nome,
       razao_social:        data.cliente.razao_social        ?? null,
       nome_fantasia:       data.cliente.nome_fantasia       ?? null,
@@ -199,7 +161,7 @@ async function createProposalFlow(data) {
     clientId = result.clientId;
     clienteIsNew = result.isNew;
     possibleDuplicates = result.possibleDuplicates;
-    resolvedClient = findClientById(clientId);
+    resolvedClient = await clientRepo.findClientById(clientId);
   } else {
     throw new Error("Cliente é obrigatório.");
   }
@@ -218,8 +180,7 @@ async function createProposalFlow(data) {
 
   let proposalId;
   try {
-    // Proposta + itens + histórico de preços em transação única — ou tudo ou nada.
-    proposalId = createProposalAtomic(
+    proposalId = await proposalRepo.createProposalAtomic(
       {
         numero_proposta:         data.numero_proposta,
         cliente_id:              clientId,
@@ -245,10 +206,10 @@ async function createProposalFlow(data) {
         pdf_path:                null,
       },
       normalizedItems,
-      { clientId, numeroProposta: data.numero_proposta, dataProposta: data.data_emissao }
+      { clientId, numeroProposta: data.numero_proposta, dataProposta: new Date() }
     );
   } catch (error) {
-    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (error.code === "P2002") {
       throw Object.assign(
         new Error(`Já existe uma proposta com o número ${data.numero_proposta}.`),
         { code: "CONFLICT" }
@@ -258,17 +219,15 @@ async function createProposalFlow(data) {
   }
 
   // Auto-registro de peças: garante que price_history aponta para a peça correta.
-  // Usa o part_id enviado pelo frontend quando disponível (peça selecionada do catálogo).
-  // Só busca/cria por composição de nome como fallback (compatibilidade com itens sem part_id).
   for (const item of normalizedItems) {
     let partId = item.part_id;
     if (!partId) {
-      const existing = findPartByComposition(item.descricao, null, null);
+      const existing = await partRepo.findPartByComposition(item.descricao, null, null);
       partId = existing
         ? existing.id
-        : createPart({ nome: item.descricao, ncm: item.ncm || null });
+        : await partRepo.createPart({ nome: item.descricao, ncm: item.ncm || null });
     }
-    updatePriceHistoryPartId(proposalId, item.descricao, partId);
+    await proposalRepo.updatePriceHistoryPartId(proposalId, item.descricao, partId);
   }
 
   const pdfFileName = `proposta-${data.numero_proposta}.pdf`;
@@ -280,7 +239,7 @@ async function createProposalFlow(data) {
     valor_total_extenso: totalExtenso,
     valor_total_raw: total,
   }, pdfPath);
-  updateProposalPdfPath(proposalId, pdfPath);
+  await proposalRepo.updateProposalPdfPath(proposalId, pdfPath);
 
   return {
     proposalId,
@@ -291,30 +250,30 @@ async function createProposalFlow(data) {
   };
 }
 
-function getProposalById(proposalId) {
-  return findProposalById(proposalId);
+async function getProposalById(proposalId) {
+  return proposalRepo.findProposalById(proposalId);
 }
 
-function getAllProposals() {
-  return listProposals();
+async function getAllProposals() {
+  return proposalRepo.listProposals();
 }
 
-function deleteProposalService(proposalId) {
-  const proposal = findProposalById(proposalId);
+async function deleteProposalService(proposalId) {
+  const proposal = await proposalRepo.findProposalById(proposalId);
   if (!proposal) {
     const err = new Error("Proposta não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  deleteProposalAndRelated(proposalId);
+  await proposalRepo.deleteProposalAndRelated(proposalId);
 }
 
-function getKanbanProposals() {
-  return listProposalsForKanban();
+async function getKanbanProposals() {
+  return proposalRepo.listProposalsForKanban();
 }
 
-function updateKanbanStatus(proposalId, newStatus, userRole) {
-  const data = findProposalById(proposalId);
+async function updateKanbanStatus(proposalId, newStatus, userRole) {
+  const data = await proposalRepo.findProposalById(proposalId);
   if (!data) {
     const err = new Error("Proposta não encontrada.");
     err.code = "NOT_FOUND";
@@ -330,13 +289,12 @@ function updateKanbanStatus(proposalId, newStatus, userRole) {
     err.code = "FORBIDDEN";
     throw err;
   }
-  // Proposta precisa estar marcada como executada para ir para "Faturar"
   if (newStatus === "faturar" && !data.proposal.execution_completed) {
     const err = new Error("Esta proposta precisa ser marcada como executada antes de ir para Faturar.");
     err.code = "EXECUTION_REQUIRED";
     throw err;
   }
-  setProposalKanbanStatus(proposalId, newStatus);
+  await proposalRepo.setProposalKanbanStatus(proposalId, newStatus);
 }
 
 // ── Execução de proposta ──────────────────────────────────────────────────────
@@ -345,19 +303,19 @@ function canMarkExecution(userRole) {
   return userRole === "admin" || userRole === "tecnico";
 }
 
-function markProposalExecuted(proposalId, data, userRole, userId, userName) {
+async function markProposalExecuted(proposalId, data, userRole, userId, userName) {
   if (!canMarkExecution(userRole)) {
     const err = new Error("Você não tem permissão para marcar propostas como executadas.");
     err.code = "FORBIDDEN";
     throw err;
   }
-  const proposal = findProposalRowById(proposalId);
+  const proposal = await proposalRepo.findProposalRowById(proposalId);
   if (!proposal) {
     const err = new Error("Proposta não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  setProposalExecution(proposalId, {
+  await proposalRepo.setProposalExecution(proposalId, {
     execution_date:              data.execution_date              || null,
     executed_by:                 data.executed_by                 || null,
     execution_os:                data.execution_os                || null,
@@ -370,49 +328,48 @@ function markProposalExecuted(proposalId, data, userRole, userId, userName) {
     if (data.execution_date) parts.push(`em ${data.execution_date}`);
     if (data.execution_os)   parts.push(`OS: ${data.execution_os}`);
     parts.push(`(marcado por ${userName})`);
-    addKanbanComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
+    kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
   } catch (e) {
     console.error("[markProposalExecuted] auto-comment falhou:", e.message);
   }
 }
 
-function removeProposalExecution(proposalId, userRole, userId, userName) {
+async function removeProposalExecution(proposalId, userRole, userId, userName) {
   if (!canMarkExecution(userRole)) {
     const err = new Error("Você não tem permissão para remover o selo de execução.");
     err.code = "FORBIDDEN";
     throw err;
   }
-  const proposal = findProposalRowById(proposalId);
+  const proposal = await proposalRepo.findProposalRowById(proposalId);
   if (!proposal) {
     const err = new Error("Proposta não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  clearProposalExecution(proposalId);
-  // Se estiver em "Faturar" ou "Faturado", volta automaticamente para "Pendente Execução"
+  await proposalRepo.clearProposalExecution(proposalId);
   const autoMovedStatuses = ["faturar", "faturado"];
   const autoMoved = autoMovedStatuses.includes(proposal.kanban_status);
   if (autoMoved) {
-    setProposalKanbanStatus(proposalId, "pendente_execucao");
+    await proposalRepo.setProposalKanbanStatus(proposalId, "pendente_execucao");
   }
   try {
     let comment = `Sistema: Selo de execução removido por ${userName}.`;
     if (autoMoved) comment += " Proposta retornou automaticamente para Pendente Execução.";
-    addKanbanComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
+    kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
   } catch (e) {
     console.error("[removeProposalExecution] auto-comment falhou:", e.message);
   }
   return { autoMoved, newStatus: autoMoved ? "pendente_execucao" : proposal.kanban_status };
 }
 
-function registerApproval(proposalId, data, userId, userName) {
-  const proposal = findProposalRowById(proposalId);
+async function registerApproval(proposalId, data, userId, userName) {
+  const proposal = await proposalRepo.findProposalRowById(proposalId);
   if (!proposal) {
     const err = new Error("Proposta não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  setProposalApproval(proposalId, {
+  await proposalRepo.setProposalApproval(proposalId, {
     approval_date:                  data.approval_date                  || null,
     approval_notes:                 data.approval_notes                 || null,
     approval_attachment_path:       data.approval_attachment_path       || null,
@@ -422,25 +379,25 @@ function registerApproval(proposalId, data, userId, userName) {
     let comment = `Sistema: Aprovação registrada por ${userName}`;
     if (data.approval_date) comment += ` em ${data.approval_date}`;
     comment += ".";
-    addKanbanComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
+    kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
   } catch (e) {
     console.error("[registerApproval] auto-comment falhou:", e.message);
   }
 }
 
-function registerBilling(proposalId, data, userId, userName) {
+async function registerBilling(proposalId, data, userId, userName) {
   if (!data.invoice_number || !data.invoice_number.trim()) {
     const err = new Error("O número da NF é obrigatório para faturar a proposta.");
     err.code = "VALIDATION";
     throw err;
   }
-  const proposal = findProposalRowById(proposalId);
+  const proposal = await proposalRepo.findProposalRowById(proposalId);
   if (!proposal) {
     const err = new Error("Proposta não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  setProposalBilling(proposalId, {
+  await proposalRepo.setProposalBilling(proposalId, {
     billing_date:     data.billing_date     || null,
     invoice_number:   data.invoice_number.trim(),
     billing_notes:    data.billing_notes    || null,
@@ -449,7 +406,7 @@ function registerBilling(proposalId, data, userId, userName) {
   try {
     const parts = [`Sistema: Faturamento registrado por ${userName}. NF: ${data.invoice_number.trim()}`];
     if (data.billing_date) parts.push(`Data: ${data.billing_date}`);
-    addKanbanComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
+    kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
   } catch (e) {
     console.error("[registerBilling] auto-comment falhou:", e.message);
   }

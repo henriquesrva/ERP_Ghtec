@@ -1,5 +1,4 @@
 const prisma = require("../../db/prisma");
-const db = require("../../db/connection");
 const { normalizeText } = require("../../shared/utils/normalize");
 
 function mapClient(c) {
@@ -37,7 +36,6 @@ async function findClientById(id) {
 async function findClientByCnpj(cnpj) {
   const digits = cnpj ? cnpj.replace(/\D/g, "") : null;
   if (!digits) return null;
-  // Client-side filter: normaliza e compara dígitos (GHTec tem poucos clientes)
   const candidates = await prisma.client.findMany({ where: { cnpj: { not: null } } });
   const match = candidates.find(c => c.cnpj && c.cnpj.replace(/\D/g, "") === digits);
   return mapClient(match || null);
@@ -145,29 +143,31 @@ async function deleteClientById(clientId) {
   await prisma.client.delete({ where: { id: clientId } });
 }
 
-// Bridge: queries proposals em SQLite até proposal migrar para Prisma.
-function countClientProposals(clientId) {
-  return db.prepare("SELECT COUNT(*) AS count FROM proposals WHERE cliente_id = ?").get(clientId).count;
+async function countClientProposals(clientId) {
+  return prisma.proposal.count({ where: { clienteId: clientId } });
 }
 
-// Bridge: JOIN entre proposals/clients/parts/price_history — todos ainda em SQLite.
-// Quebra em produção para clientes criados após a migração; migrar quando proposal for para Prisma.
-function getProfitAnalysis() {
-  return db.prepare(`
+async function getProfitAnalysis() {
+  const rows = await prisma.$queryRaw`
     SELECT
-      c.id AS client_id,
-      c.nome AS cliente_nome,
-      COUNT(DISTINCT p.id) AS num_propostas,
-      SUM(pi.quantidade * pi.valor_unitario) AS valor_total_venda,
-      SUM(CASE WHEN pt.preco_compra IS NOT NULL THEN pi.quantidade * pt.preco_compra END) AS custo_total,
-      SUM(CASE WHEN pt.preco_compra IS NOT NULL THEN pi.quantidade * (pi.valor_unitario - pt.preco_compra) END) AS lucro_calculavel,
-      SUM(CASE WHEN pt.preco_compra IS NOT NULL THEN pi.quantidade * pi.valor_unitario END) AS valor_venda_calculavel,
-      SUM(CASE WHEN pt.preco_compra IS NULL OR pt.id IS NULL THEN 1 ELSE 0 END) AS itens_sem_custo,
-      COUNT(pi.id) AS total_itens
+      c.id                                                         AS client_id,
+      c.nome                                                       AS cliente_nome,
+      COUNT(DISTINCT p.id)::int                                    AS num_propostas,
+      SUM(pi.quantidade * pi.valor_unitario)                       AS valor_total_venda,
+      SUM(CASE WHEN pt.preco_compra IS NOT NULL
+               THEN pi.quantidade * pt.preco_compra END)           AS custo_total,
+      SUM(CASE WHEN pt.preco_compra IS NOT NULL
+               THEN pi.quantidade * (pi.valor_unitario - pt.preco_compra) END) AS lucro_calculavel,
+      SUM(CASE WHEN pt.preco_compra IS NOT NULL
+               THEN pi.quantidade * pi.valor_unitario END)         AS valor_venda_calculavel,
+      SUM(CASE WHEN pt.preco_compra IS NULL OR pt.id IS NULL
+               THEN 1 ELSE 0 END)::int                             AS itens_sem_custo,
+      COUNT(pi.id)::int                                            AS total_itens
     FROM proposals p
     JOIN clients c ON c.id = p.cliente_id
     JOIN proposal_items pi ON pi.proposal_id = p.id
-    LEFT JOIN price_history ph ON ph.proposal_id = p.id
+    LEFT JOIN price_history ph
+      ON  ph.proposal_id       = p.id
       AND ph.descricao_original = pi.descricao
       AND ph.id = (
         SELECT MIN(id) FROM price_history
@@ -176,8 +176,19 @@ function getProfitAnalysis() {
     LEFT JOIN parts pt ON pt.id = ph.part_id
     WHERE p.kanban_status = 'faturado'
     GROUP BY c.id, c.nome
-    ORDER BY lucro_calculavel DESC
-  `).all();
+    ORDER BY lucro_calculavel DESC NULLS LAST
+  `;
+  return rows.map(row => ({
+    client_id:              Number(row.client_id),
+    cliente_nome:           row.cliente_nome,
+    num_propostas:          Number(row.num_propostas),
+    valor_total_venda:      row.valor_total_venda !== null ? Number(row.valor_total_venda) : null,
+    custo_total:            row.custo_total !== null ? Number(row.custo_total) : null,
+    lucro_calculavel:       row.lucro_calculavel !== null ? Number(row.lucro_calculavel) : null,
+    valor_venda_calculavel: row.valor_venda_calculavel !== null ? Number(row.valor_venda_calculavel) : null,
+    itens_sem_custo:        Number(row.itens_sem_custo),
+    total_itens:            Number(row.total_itens),
+  }));
 }
 
 module.exports = {

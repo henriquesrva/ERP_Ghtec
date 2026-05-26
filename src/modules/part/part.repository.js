@@ -123,7 +123,6 @@ async function updatePart(id, data) {
 
 async function deletePart(id) {
   // stock_movements ainda em SQLite — verificação de dependência best-effort
-  // Nota: IDs de parts em SQLite e PostgreSQL podem divergir durante fase híbrida
   const hasMovements = db.prepare(
     "SELECT 1 FROM stock_movements WHERE part_id = ? LIMIT 1"
   ).get(id);
@@ -135,16 +134,16 @@ async function deletePart(id) {
     throw err;
   }
 
-  // Nulifica referências em tabelas SQLite ainda não migradas
-  db.prepare("UPDATE price_history SET part_id = NULL WHERE part_id = ?").run(id);
+  // itens_nota_recebida ainda em SQLite (financeiro não migrado)
   db.prepare("UPDATE itens_nota_recebida SET produto_id = NULL WHERE produto_id = ?").run(id);
 
-  // Remove referências de preço e a peça do PostgreSQL
+  // price_history em PostgreSQL — nulificar FK antes de deletar a peça
+  await prisma.priceHistory.updateMany({ where: { partId: id }, data: { partId: null } });
+
   await prisma.partClientPriceRef.deleteMany({ where: { partId: id } });
   await prisma.part.delete({ where: { id } });
 }
 
-// Usado por part.service.js para resolver category.code ao gerar codigo_interno
 async function findCategoryById(id) {
   const cat = await prisma.partCategory.findUnique({
     where: { id },
@@ -153,72 +152,85 @@ async function findCategoryById(id) {
   return cat || null;
 }
 
-// ── Bridges SQLite — price_history ainda não migrado ─────────────────────────
-// Remover quando proposal + price_history migrarem para Prisma.
+// ── Histórico de preços — Prisma/PostgreSQL ───────────────────────────────────
 
-function getPartPriceHistory(partId) {
-  return db.prepare(`
-    SELECT c.nome AS cliente_nome, ph.valor_unitario, ph.numero_proposta,
-           ph.data_proposta, ph.quantidade
-    FROM price_history ph
-    JOIN clients c ON c.id = ph.client_id
-    WHERE ph.part_id = ?
-    ORDER BY ph.id DESC
-  `).all(partId);
+async function getPartPriceHistory(partId) {
+  const rows = await prisma.priceHistory.findMany({
+    where:   { partId },
+    include: { client: { select: { nome: true } } },
+    orderBy: { id: "desc" },
+  });
+  return rows.map(r => ({
+    cliente_nome:    r.client.nome,
+    valor_unitario:  Number(r.valorUnitario),
+    numero_proposta: r.numeroProposta,
+    data_proposta:   r.dataProposta,
+    quantidade:      r.quantidade,
+  }));
 }
 
-function getPartPriceHistoryByClient(partId, clientId) {
-  return db.prepare(`
-    SELECT c.nome AS cliente_nome, ph.valor_unitario, ph.numero_proposta,
-           ph.data_proposta, ph.quantidade
-    FROM price_history ph
-    JOIN clients c ON c.id = ph.client_id
-    WHERE ph.part_id = ? AND ph.client_id = ?
-    ORDER BY ph.id DESC
-  `).all(partId, clientId);
+async function getPartPriceHistoryByClient(partId, clientId) {
+  const rows = await prisma.priceHistory.findMany({
+    where:   { partId, clientId },
+    include: { client: { select: { nome: true } } },
+    orderBy: { id: "desc" },
+  });
+  return rows.map(r => ({
+    cliente_nome:    r.client.nome,
+    valor_unitario:  Number(r.valorUnitario),
+    numero_proposta: r.numeroProposta,
+    data_proposta:   r.dataProposta,
+    quantidade:      r.quantidade,
+  }));
 }
 
-function getPartLastPricePerClient(partId) {
-  return db.prepare(`
-    SELECT c.id AS client_id, c.nome AS cliente_nome,
-           ph.valor_unitario, ph.data_proposta, ph.numero_proposta
-    FROM price_history ph
-    JOIN clients c ON c.id = ph.client_id
-    WHERE ph.part_id = ?
-      AND ph.id = (
-        SELECT MAX(id) FROM price_history
-        WHERE part_id = ? AND client_id = ph.client_id
-      )
-    ORDER BY c.nome ASC
-  `).all(partId, partId);
-}
-
-// ── part_client_price_references — Prisma/PostgreSQL + bridge price_history ──
-// Manual refs vêm do PostgreSQL (autoritativo após migração).
-// Histórico de propostas vem do SQLite (bridge — price_history não migrado).
-// Clientes sem ref manual mas com histórico SQLite aparecem via bridge.
-// Remover bridge de price_history quando proposal migrar para Prisma.
-
-async function getClientPriceRefs(partId) {
-  // Refs manuais do PostgreSQL
-  const refs = await prisma.partClientPriceRef.findMany({
-    where: { partId },
-    include: { client: { select: { id: true, nome: true, cnpj: true } } },
-    orderBy: { client: { nome: "asc" } },
+async function getPartLastPricePerClient(partId) {
+  const rows = await prisma.priceHistory.findMany({
+    where:   { partId },
+    include: { client: { select: { id: true, nome: true } } },
+    orderBy: { id: "desc" },
   });
 
-  // Último preço por cliente do SQLite (price_history bridge)
-  const histRows = db.prepare(`
-    SELECT ph.client_id, ph.valor_unitario, ph.data_proposta, ph.numero_proposta
-    FROM price_history ph
-    WHERE ph.part_id = ?
-      AND ph.id = (
-        SELECT MAX(id) FROM price_history WHERE part_id = ? AND client_id = ph.client_id
-      )
-  `).all(partId, partId);
+  // Manter apenas o registro mais recente por cliente
+  const seen = new Set();
+  const result = [];
+  for (const r of rows) {
+    if (seen.has(r.clientId)) continue;
+    seen.add(r.clientId);
+    result.push({
+      client_id:       r.clientId,
+      cliente_nome:    r.client.nome,
+      valor_unitario:  Number(r.valorUnitario),
+      data_proposta:   r.dataProposta,
+      numero_proposta: r.numeroProposta,
+    });
+  }
 
+  result.sort((a, b) => (a.cliente_nome || "").localeCompare(b.cliente_nome || "", "pt-BR"));
+  return result;
+}
+
+// ── part_client_price_references — Prisma/PostgreSQL ─────────────────────────
+
+async function getClientPriceRefs(partId) {
+  const [refs, histRows] = await Promise.all([
+    prisma.partClientPriceRef.findMany({
+      where:   { partId },
+      include: { client: { select: { id: true, nome: true, cnpj: true } } },
+      orderBy: { client: { nome: "asc" } },
+    }),
+    prisma.priceHistory.findMany({
+      where:   { partId },
+      include: { client: { select: { id: true, nome: true, cnpj: true } } },
+      orderBy: { id: "desc" },
+    }),
+  ]);
+
+  // Último preço por cliente do histórico
   const histByClientId = {};
-  for (const h of histRows) histByClientId[h.client_id] = h;
+  for (const h of histRows) {
+    if (!histByClientId[h.clientId]) histByClientId[h.clientId] = h;
+  }
 
   const refClientIds = new Set(refs.map(r => r.clientId));
 
@@ -230,25 +242,23 @@ async function getClientPriceRefs(partId) {
     source:          "manual",
     updated_at:      r.updatedAt,
     notes:           r.notes,
-    numero_proposta: histByClientId[r.clientId]?.numero_proposta ?? null,
+    numero_proposta: histByClientId[r.clientId]?.numeroProposta ?? null,
     ref_id:          r.id,
   }));
 
-  // Clientes apenas no histórico SQLite (sem ref manual no PostgreSQL)
+  // Clientes apenas no histórico (sem ref manual)
   for (const [clientId, hist] of Object.entries(histByClientId)) {
     const cid = Number(clientId);
     if (refClientIds.has(cid)) continue;
-    const client = db.prepare("SELECT nome, cnpj FROM clients WHERE id = ?").get(cid);
-    if (!client) continue;
     result.push({
       client_id:       cid,
-      client_nome:     client.nome,
-      cnpj:            client.cnpj,
-      reference_price: hist.valor_unitario,
+      client_nome:     hist.client.nome,
+      cnpj:            hist.client.cnpj,
+      reference_price: Number(hist.valorUnitario),
       source:          "proposal",
-      updated_at:      hist.data_proposta,
+      updated_at:      hist.dataProposta,
       notes:           null,
-      numero_proposta: hist.numero_proposta,
+      numero_proposta: hist.numeroProposta,
       ref_id:          null,
     });
   }
@@ -262,9 +272,9 @@ async function upsertClientPriceRef(partId, clientId, referencePrice, notes, use
     where: { partId_clientId: { partId, clientId } },
     update: {
       referencePrice,
-      notes:          notes   ?? null,
-      source:         "manual",
-      updatedByUserId: userId ?? null,
+      notes:           notes   ?? null,
+      source:          "manual",
+      updatedByUserId: userId  ?? null,
     },
     create: {
       partId,
@@ -279,9 +289,6 @@ async function upsertClientPriceRef(partId, clientId, referencePrice, notes, use
   return mapPartRef(result);
 }
 
-// Retorna preço de referência manual para um par (part, client).
-// Nota: após migração, novos registros estão em PostgreSQL. proposal.repository.js
-// ainda consulta SQLite diretamente em getLastItemPriceForClient — bridge separada.
 async function getManualPriceRef(partId, clientId) {
   const r = await prisma.partClientPriceRef.findUnique({
     where: { partId_clientId: { partId, clientId } },
@@ -295,20 +302,14 @@ async function getManualPriceRef(partId, clientId) {
   };
 }
 
-// ── Bridge síncrona para proposal flow (proposal.service.js) ─────────────────
-// findPartByComposition permanece síncrona para manter:
-//   1. proposal.service.js sem await no loop de auto-registro (proposal ainda em SQLite)
-//   2. compatibilidade com migrate.js backfill
-// Remover quando proposal migrar para Prisma.
-
-function findPartByComposition(nome, marca, modelo) {
-  return db.prepare(`
-    SELECT * FROM parts
-    WHERE nome  IS ?
-      AND marca  IS ?
-      AND modelo IS ?
-    LIMIT 1
-  `).get(nome || null, marca || null, modelo || null);
+async function findPartByComposition(nome, marca, modelo) {
+  return prisma.part.findFirst({
+    where: {
+      nome:   nome   || null,
+      marca:  marca  || null,
+      modelo: modelo || null,
+    },
+  });
 }
 
 module.exports = {

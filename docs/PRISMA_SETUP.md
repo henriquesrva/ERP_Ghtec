@@ -1,20 +1,21 @@
 # Prisma — Setup e Guia de Uso
 
-## Estado atual (Passo 3.5.6 — concluído)
+## Estado atual (Passo 3.5.7 — concluído)
 
-Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Módulos `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user` e `part` migrados para Prisma** — repositories, services e controllers todos async/await. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
+Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Todos os módulos do core migrados para Prisma**: `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part` e agora **`proposal` (proposals, proposal_items, price_history)**. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
 
 `npm run prisma:status` → `Database schema is up to date!`
-`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD de categorias, responsáveis, objetos, condições comerciais, clientes, usuários, peças e referências de preço
+`node scripts/check-prisma-connection.js` → ✅ SELECT 1, CRUD completo + fluxo real de proposta (proposal + proposal_items + price_history + cascade delete)
 `node scripts/seed-postgres.js` → cria usuário admin inicial no PostgreSQL (idempotente)
 
-**Runtime híbrido**: `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part` → Prisma/PostgreSQL. Os demais módulos ainda usam `better-sqlite3` via `src/db/connection.js`.
+**Runtime PostgreSQL/Prisma** (fonte única de verdade): `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part`, **`proposal`, `proposal_items`, `price_history`**
 
-**Nota crítica — `deleteCondition`**: ao deletar uma condição comercial, o código primeiro nulifica `commercial_condition_id` nas propostas via SQLite (tabela `proposals` ainda não migrada), depois deleta do PostgreSQL via Prisma. Isso preserva integridade referencial durante a fase híbrida.
+**Runtime SQLite/better-sqlite3** (ainda não migrado): `stock_movements`, `kanban_tasks`, `kanban_comments`, `fornecedores`, `notas_recebidas`, `itens_nota_recebida`, `contas_pagar`, `categorias_despesa`, `session`
 
-**Nota crítica — bridges em `proposal.repository.js`**: as 6 funções de cliente (`findClientByCnpj`, `findClientsByName`, `findClientsByExactName`, `findClientById`, `createClient`, `searchClients`) foram movidas para implementações SQLite locais no próprio `proposal.repository.js`. Isso mantém o fluxo de criação de propostas síncrono e preserva os testes de integração (que inserem clientes via SQLite em memória). Ao migrar `proposals` para Prisma, substituir essas bridges por chamadas async ao `client.repository`.
+**Bridges restantes** (aguardando migração de stock/kanban/financeiro):
+- `part.repository.deletePart` → `stock_movements` check + `itens_nota_recebida` nulificação via SQLite (tabelas ainda não migradas)
 
-**Nota crítica — `countClientProposals` e `getProfitAnalysis`**: permanecem como bridges SQLite síncronas em `client.repository.js`. O service chama `repo.countClientProposals(id)` sem `await`. O `getProfitAnalysis` faz JOIN com `proposals`, `proposal_items`, `price_history` e `parts` — todos ainda em SQLite. Quando `proposals` migrar, essas funções devem ser reescritas em Prisma.
+**Não há mais bridges de proposals**: `createProposalAtomic` usa `prisma.$transaction`, `deleteProposalAndRelated` usa cascade PostgreSQL, `deleteCondition` usa `prisma.$transaction` com `updateMany + delete`.
 
 ---
 

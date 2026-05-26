@@ -15,9 +15,10 @@ const {
 const {
   searchItemDescriptions,
   getLastItemPriceForClient,
-  findClientsByName,
   findProposalRowById,
 } = require("./proposal.repository");
+
+const { findClientsByName } = require("../client/client.repository");
 
 const { findUserById: findAuthUserById } = require("../auth/auth.repository");
 
@@ -71,8 +72,6 @@ async function createProposal(req, res) {
       });
     }
 
-    // Mapeia códigos conhecidos para o status HTTP correto.
-    // Evita retornar 500 para erros de validação ou conflito que são do usuário.
     const STATUS_MAP = {
       VALIDATION: 400, NOT_FOUND: 404, FORBIDDEN: 403,
       CONFLICT: 409, SIGNATURE_REQUIRED: 400,
@@ -86,45 +85,34 @@ async function createProposal(req, res) {
   }
 }
 
-function listProposals(req, res) {
+async function listProposals(req, res) {
   try {
-    const proposals = getAllProposals();
+    const proposals = await getAllProposals();
     return res.json(proposals);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao listar propostas."
-    });
+    return res.status(500).json({ success: false, message: "Erro ao listar propostas." });
   }
 }
 
-function getProposal(req, res) {
+async function getProposal(req, res) {
   try {
-    const proposal = getProposalById(req.params.id);
-
+    const proposal = await getProposalById(req.params.id);
     if (!proposal) {
-      return res.status(404).json({
-        success: false,
-        message: "Proposta não encontrada."
-      });
+      return res.status(404).json({ success: false, message: "Proposta não encontrada." });
     }
-
     return res.json(proposal);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      success: false,
-      message: "Erro ao buscar proposta."
-    });
+    return res.status(500).json({ success: false, message: "Erro ao buscar proposta." });
   }
 }
 
-function searchItemsHandler(req, res) {
+async function searchItemsHandler(req, res) {
   try {
     const q = (req.query.q || "").trim();
     if (!q) return res.json([]);
-    const rows = searchItemDescriptions(q);
+    const rows = await searchItemDescriptions(q);
     return res.json(rows.map(r => r.descricao));
   } catch (error) {
     console.error(error);
@@ -132,23 +120,22 @@ function searchItemsHandler(req, res) {
   }
 }
 
-function getItemPriceHandler(req, res) {
+async function getItemPriceHandler(req, res) {
   try {
     const { clientId, clienteNome, descricao } = req.query;
     if (!descricao) return res.json(null);
 
     let resolvedClientId = clientId ? parseInt(clientId, 10) : null;
 
-    // Fallback: resolve pelo nome quando clientId não for enviado
     if (!resolvedClientId && clienteNome) {
-      const matches = findClientsByName(clienteNome);
+      const matches = await findClientsByName(clienteNome);
       if (matches.length === 1) resolvedClientId = matches[0].id;
     }
 
     if (!resolvedClientId) return res.json(null);
 
     const partId = req.query.partId ? parseInt(req.query.partId, 10) : null;
-    const row = getLastItemPriceForClient(resolvedClientId, descricao, partId);
+    const row = await getLastItemPriceForClient(resolvedClientId, descricao, partId);
     return res.json(row || null);
   } catch (error) {
     console.error(error);
@@ -156,9 +143,9 @@ function getItemPriceHandler(req, res) {
   }
 }
 
-function deleteProposalHandler(req, res) {
+async function deleteProposalHandler(req, res) {
   try {
-    deleteProposalService(Number(req.params.id));
+    await deleteProposalService(Number(req.params.id));
     return res.json({ success: true, message: "Proposta excluída com sucesso." });
   } catch (error) {
     console.error(error);
@@ -169,23 +156,23 @@ function deleteProposalHandler(req, res) {
   }
 }
 
-function listKanbanProposalsHandler(req, res) {
+async function listKanbanProposalsHandler(req, res) {
   try {
-    return res.json(getKanbanProposals());
+    return res.json(await getKanbanProposals());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao carregar kanban." });
   }
 }
 
-function updateKanbanStatusHandler(req, res) {
+async function updateKanbanStatusHandler(req, res) {
   try {
     const { status } = req.body;
     if (!status) {
       return res.status(400).json({ success: false, message: "O campo 'status' é obrigatório." });
     }
     const userRole = req.session.userRole || "user";
-    updateKanbanStatus(Number(req.params.id), status, userRole);
+    await updateKanbanStatus(Number(req.params.id), status, userRole);
     return res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -197,16 +184,16 @@ function updateKanbanStatusHandler(req, res) {
   }
 }
 
-function markExecutionHandler(req, res) {
+async function markExecutionHandler(req, res) {
   try {
     const id = Number(req.params.id);
-    markProposalExecuted(
+    await markProposalExecuted(
       id, req.body,
       req.session.userRole || "user",
       req.session.userId,
       req.session.userName || "Usuário"
     );
-    const row = findProposalRowById(id);
+    const row = await findProposalRowById(id);
     return res.json({
       success: true,
       execution: {
@@ -226,10 +213,10 @@ function markExecutionHandler(req, res) {
   }
 }
 
-function removeExecutionHandler(req, res) {
+async function removeExecutionHandler(req, res) {
   try {
     const id = Number(req.params.id);
-    const result = removeProposalExecution(
+    const result = await removeProposalExecution(
       id,
       req.session.userRole || "user",
       req.session.userId,
@@ -244,10 +231,10 @@ function removeExecutionHandler(req, res) {
   }
 }
 
-function registerApprovalHandler(req, res) {
+async function registerApprovalHandler(req, res) {
   try {
     const id = Number(req.params.id);
-    registerApproval(
+    await registerApproval(
       id,
       {
         approval_date:            req.body.approval_date            || null,
@@ -257,7 +244,7 @@ function registerApprovalHandler(req, res) {
       req.session.userId,
       req.session.userName || "Usuário"
     );
-    const row = findProposalRowById(id);
+    const row = await findProposalRowById(id);
     return res.json({
       success: true,
       approval: {
@@ -274,37 +261,36 @@ function registerApprovalHandler(req, res) {
   }
 }
 
-function registerBillingHandler(req, res) {
+async function registerBillingHandler(req, res) {
   try {
     const id = Number(req.params.id);
     const userRole = req.session.userRole || "user";
 
-    // Verifica permissão antes de persistir qualquer dado
-    const proposalRow = findProposalRowById(id);
+    const proposalRow = await findProposalRowById(id);
     if (!proposalRow) return res.status(404).json({ success: false, message: "Proposta não encontrada." });
     if (!canMoveKanban(userRole, proposalRow.kanban_status, "faturado")) {
       return res.status(403).json({ success: false, message: "Você não tem permissão para faturar esta proposta." });
     }
 
-    registerBilling(
+    await registerBilling(
       id,
       {
-        billing_date:  req.body.billing_date  || null,
+        billing_date:   req.body.billing_date   || null,
         invoice_number: req.body.invoice_number || null,
-        billing_notes: req.body.billing_notes || null,
+        billing_notes:  req.body.billing_notes  || null,
       },
       req.session.userId,
       req.session.userName || "Usuário"
     );
-    updateKanbanStatus(id, "faturado", userRole);
-    const row = findProposalRowById(id);
+    await updateKanbanStatus(id, "faturado", userRole);
+    const row = await findProposalRowById(id);
     return res.json({
       success: true,
       billing: {
-        billing_date:  row.billing_date,
+        billing_date:   row.billing_date,
         invoice_number: row.invoice_number,
-        billing_notes: row.billing_notes,
-        billed_at:     row.billed_at,
+        billing_notes:  row.billing_notes,
+        billed_at:      row.billed_at,
       },
     });
   } catch (err) {
