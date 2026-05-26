@@ -26,6 +26,7 @@ Isso muda fundamentalmente a estratégia.
 | `kanban` ✅   | `kanban_tasks`, `kanban_comments` |
 | `fornecedor` ✅ | `fornecedores` |
 | `categoria_despesa` ✅ | `categorias_despesa` |
+| `nota_recebida` ✅ | `notas_recebidas`, `itens_nota_recebida` |
 
 ### Módulos em SQLite/better-sqlite3
 
@@ -36,7 +37,7 @@ Isso muda fundamentalmente a estratégia.
 | ~~`kanban`~~ | ~~`kanban_tasks`, `kanban_comments`~~ | ~~284~~ → migrado Fase 5 |
 | ~~`fornecedor`~~ | ~~`fornecedores`~~ | ~~154~~ → migrado Fase 6 |
 | ~~`categoria_despesa`~~ | ~~`categorias_despesa`~~ | ~~48~~ → migrado Fase 6 |
-| `nota_recebida` | `notas_recebidas`, `itens_nota_recebida` | 322 |
+| ~~`nota_recebida`~~ | ~~`notas_recebidas`, `itens_nota_recebida`~~ | ~~322~~ → migrado Fase 7 |
 | `conta_pagar` | `contas_pagar` | 207 |
 
 ---
@@ -417,9 +418,32 @@ Grupo 8: conta_pagar
 
 ---
 
-### Fase 7 — Migrar `nota_recebida` + `itens_nota_recebida`
+### Fase 7 — Migrar `nota_recebida` + `itens_nota_recebida` ✅ CONCLUÍDA
+
+**Escopo:** `src/modules/nota_recebida/nota_recebida.repository.js`, `nota_recebida.service.js`, `nota_recebida.controller.js`
 
 **Dependências Prisma já migradas:** `fornecedor` (Fase 6), `categoria_despesa` (Fase 6), `users` (Fase 1), `parts` (Fase 2)
+
+**Arquivos alterados:**
+- `src/modules/nota_recebida/nota_recebida.repository.js` — reescrito Prisma async; `mapNotaRecebida()` + `mapItemNotaRecebida()`; `createNotaComItens` + `updateNotaComItens` via `prisma.$transaction`; bridges SQLite mantidas: `findNotaContasPagar`, `countContasAbertas`, `insertContasPagarBridge` (usa `PRAGMA foreign_keys = OFF` para inserir `contas_pagar` com `nota_recebida_id` do PostgreSQL)
+- `src/modules/nota_recebida/nota_recebida.service.js` — totalmente async; `const repo = require(...)`; `TIPOS_NOTA_VALIDOS = ["produto", "servico", "misto"]` (alinhado ao enum `TipoNota` do Prisma)
+- `src/modules/nota_recebida/nota_recebida.controller.js` — todos os handlers async
+- `src/modules/part/part.repository.js` — bridge `itens_nota_recebida` em `deletePart` removida → `prisma.itemNotaRecebida.updateMany`; import `db` removido
+- `src/modules/fornecedor/fornecedor.repository.js` — bridges de notas atualizadas: `total_notas` via `_count`, `getFornecedorDetalhes` via `prisma.notaRecebida.findMany`; bridges de contas mantidas
+- `src/modules/categoria_despesa/categoria_despesa.repository.js` — bridge de notas atualizada: `countUsoCategoria.notas` via `prisma.notaRecebida.count`; bridge de contas mantida
+- `tests/services/nota_recebida.service.test.js` — 22 testes vi.spyOn (criado)
+- `scripts/check-prisma-connection.js` — seção 14 adicionada (fluxo nota + itens + cascade delete)
+
+**Decisão técnica — `insertContasPagarBridge`**: Ao gerar contas a pagar a partir de uma nota, o `nota_recebida_id` inserido no SQLite aponta para um ID do PostgreSQL. O SQLite tem FK `contas_pagar.nota_recebida_id → notas_recebidas.id` ativa. Como a tabela `notas_recebidas` do SQLite está vazia após a migração, a inserção falharia. A bridge desativa temporariamente as FKs com `PRAGMA foreign_keys = OFF` (try/finally garante re-ativação). Seguro em Node.js/better-sqlite3 (single-threaded, síncrono).
+
+**Bridges removidas:** bridge `itens_nota_recebida` em `part.repository.deletePart`
+
+**Bridges restantes após esta fase:**
+- `nota_recebida.repository` → `findNotaContasPagar`, `countContasAbertas`, `insertContasPagarBridge` (conta_pagar ainda em SQLite)
+- `fornecedor.repository` → counts e detalhes de `contas_pagar` via SQLite
+- `categoria_despesa.repository` → count de `contas_pagar` via SQLite
+
+**Resultado:** `npm test` → **377 testes passando**. `node scripts/check-prisma-connection.js` → ✅ 14 seções.
 
 ---
 
@@ -454,8 +478,11 @@ Após todas as fases:
 
 ## 8. Próxima Ação Recomendada
 
-**Executar a Fase 6: migrar `fornecedor` + `categoria_despesa` para Prisma.**
+**Executar a Fase 8: migrar `conta_pagar` para Prisma.**
 
-Ambos são simples (sem dependências cruzadas problemáticas). Desbloqueiam a Fase 7 (`nota_recebida`) que depende dos dois. Após migrar `nota_recebida`, a bridge restante em `part.repository.deletePart` (nulificação de `itens_nota_recebida`) também pode ser removida.
+Com `nota_recebida`, `fornecedor` e `categoria_despesa` já em Prisma, todas as dependências de `conta_pagar` estão resolvidas. Após migrar `conta_pagar`:
+- Todas as bridges SQLite de notas/contas em `nota_recebida.repository`, `fornecedor.repository` e `categoria_despesa.repository` serão removidas.
+- `insertContasPagarBridge` (com PRAGMA FK OFF) poderá ser aposentada — a criação de contas passará a usar `prisma.$transaction` atômico junto com a nota.
+- `src/db/connection.js` ficará usado apenas por `sessionStore.js`.
 
-Ordem recomendada das fases restantes: `fornecedor + categoria_despesa` → `nota_recebida + itens_nota_recebida` → `conta_pagar` → Limpeza Final.
+Ordem recomendada: `conta_pagar` → Limpeza Final (remover `db/init.js`, `db/migrate.js`, limpar `better-sqlite3`).

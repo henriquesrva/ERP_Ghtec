@@ -1,36 +1,23 @@
-const db = require("../../db/connection");
-const {
-  listNotasRecebidas,
-  findNotaById,
-  findNotaContasPagar,
-  listItensNota,
-  insertItem,
-  deleteItensNota,
-  checkDuplicataNota,
-  checkDuplicataChave,
-  createNota,
-  updateNota,
-  cancelarNota,
-  countContasAbertas,
-} = require("./nota_recebida.repository");
+const repo = require("./nota_recebida.repository");
 
-const TIPOS_NOTA_VALIDOS = ["produto", "servico", "despesa", "outro"];
+// TipoNota suportado pelo enum Prisma: produto, servico, misto
+const TIPOS_NOTA_VALIDOS = ["produto", "servico", "misto"];
 
-function getAllNotas(filtros) {
-  return listNotasRecebidas(filtros);
+async function getAllNotas(filtros) {
+  return repo.listNotasRecebidas(filtros);
 }
 
-function getNotaById(id) {
-  const nota = findNotaById(id);
+async function getNotaById(id) {
+  const nota = await repo.findNotaById(id);
   if (!nota) throw Object.assign(new Error("Nota não encontrada."), { code: "NOT_FOUND" });
   return nota;
 }
 
-function getNotaDetalhes(id) {
-  const nota = findNotaById(id);
+async function getNotaDetalhes(id) {
+  const nota = await repo.findNotaById(id);
   if (!nota) throw Object.assign(new Error("Nota não encontrada."), { code: "NOT_FOUND" });
-  const contas = findNotaContasPagar(id);
-  const itens  = listItensNota(id);
+  const itens  = await repo.listItensNota(id);
+  const contas = repo.findNotaContasPagar(id); // bridge síncrona — conta_pagar ainda em SQLite
   return { nota, contas, itens };
 }
 
@@ -71,9 +58,9 @@ function validateItens(itens) {
   });
 }
 
-function checkDuplicatas(data, excludeId = null) {
+async function checkDuplicatas(data, excludeId = null) {
   if (data.numero_nota && data.serie) {
-    const dup = checkDuplicataNota(data.fornecedor_id, data.numero_nota, data.serie, excludeId);
+    const dup = await repo.checkDuplicataNota(data.fornecedor_id, data.numero_nota, data.serie, excludeId);
     if (dup) {
       throw Object.assign(
         new Error(`Já existe uma nota com número ${data.numero_nota} / série ${data.serie} para este fornecedor.`),
@@ -82,7 +69,7 @@ function checkDuplicatas(data, excludeId = null) {
     }
   }
   if (data.chave_acesso?.trim()) {
-    const dupChave = checkDuplicataChave(data.chave_acesso, excludeId);
+    const dupChave = await repo.checkDuplicataChave(data.chave_acesso, excludeId);
     if (dupChave) {
       throw Object.assign(
         new Error("Já existe uma nota cadastrada com esta chave de acesso."),
@@ -94,13 +81,13 @@ function checkDuplicatas(data, excludeId = null) {
 
 function buildParcelas(data, notaId, userId) {
   const parcelas = [];
-  const numParcelas = parseInt(data.parcelas_quantidade) || 1;
-  const valorTotal = parseFloat(data.valor_total);
-  const dataEmissao = data.data_entrada;
-  const vencimentoBase = data.parcela_vencimento_inicial || data.data_entrada;
+  const numParcelas   = parseInt(data.parcelas_quantidade) || 1;
+  const valorTotal    = parseFloat(data.valor_total);
+  const dataEmissao   = data.data_entrada;
+  const vencBase      = data.parcela_vencimento_inicial || data.data_entrada;
   const formaPagamento = data.forma_pagamento || null;
-  const categId = data.categoria_despesa_id || null;
-  const descBase = data.descricao || `NF ${data.numero_nota || "s/n"}`;
+  const categId       = data.categoria_despesa_id || null;
+  const descBase      = data.descricao || `NF ${data.numero_nota || "s/n"}`;
 
   if (numParcelas === 1) {
     parcelas.push({
@@ -110,7 +97,7 @@ function buildParcelas(data, notaId, userId) {
       descricao:            descBase,
       valor:                Math.round(valorTotal * 100) / 100,
       data_emissao:         dataEmissao,
-      data_vencimento:      vencimentoBase,
+      data_vencimento:      vencBase,
       forma_pagamento:      formaPagamento,
       status:               "em_aberto",
       parcela_numero:       1,
@@ -120,19 +107,18 @@ function buildParcelas(data, notaId, userId) {
     return parcelas;
   }
 
-  const valorParcela = Math.floor((valorTotal / numParcelas) * 100) / 100;
-  const somaParc = valorParcela * (numParcelas - 1);
+  const valorParcela  = Math.floor((valorTotal / numParcelas) * 100) / 100;
+  const somaParc      = valorParcela * (numParcelas - 1);
   const ultimaParcela = Math.round((valorTotal - somaParc) * 100) / 100;
-
-  const [anoBase, mesBase, diaBase] = vencimentoBase.split("-").map(Number);
+  const [anoBase, mesBase, diaBase] = vencBase.split("-").map(Number);
 
   for (let i = 0; i < numParcelas; i++) {
     let mes = mesBase + i;
     let ano = anoBase + Math.floor((mes - 1) / 12);
     mes = ((mes - 1) % 12) + 1;
-    const dia = String(diaBase).padStart(2, "0");
+    const dia    = String(diaBase).padStart(2, "0");
     const mesStr = String(mes).padStart(2, "0");
-    const venc = `${ano}-${mesStr}-${dia}`;
+    const venc   = `${ano}-${mesStr}-${dia}`;
 
     parcelas.push({
       fornecedor_id:        data.fornecedor_id,
@@ -153,78 +139,50 @@ function buildParcelas(data, notaId, userId) {
   return parcelas;
 }
 
-// Transação atômica: cria nota + itens + parcelas de contas a pagar
-function createNotaComContas(data, userId) {
+// Transação atômica Prisma: cria nota + itens.
+// Bridge SQLite: cria parcelas de contas_pagar em SQLite (conta_pagar não migrado).
+// Nota: nota_recebida_id nas contas aponta para PostgreSQL ID — FK relaxada temporariamente.
+async function createNotaComContas(data, userId) {
   validateNota(data);
-  checkDuplicatas(data);
+  await checkDuplicatas(data);
 
   const itens = Array.isArray(data.itens) ? data.itens : [];
   validateItens(itens);
 
-  const insertConta = db.prepare(`
-    INSERT INTO contas_pagar (
-      fornecedor_id, nota_recebida_id, categoria_despesa_id,
-      descricao, valor, data_emissao, data_vencimento,
-      forma_pagamento, status, parcela_numero, parcela_total, created_by
-    ) VALUES (
-      @fornecedor_id, @nota_recebida_id, @categoria_despesa_id,
-      @descricao, @valor, @data_emissao, @data_vencimento,
-      @forma_pagamento, @status, @parcela_numero, @parcela_total, @created_by
-    )
-  `);
+  const nota = await repo.createNotaComItens({ ...data, itens }, userId);
 
-  const run = db.transaction(() => {
-    const notaId = createNota({ ...data, created_by: userId });
+  if (data.gerar_contas_pagar) {
+    const parcelas = buildParcelas(data, nota.id, userId);
+    repo.insertContasPagarBridge(parcelas);
+  }
 
-    for (let i = 0; i < itens.length; i++) {
-      insertItem(notaId, itens[i], i + 1);
-    }
-
-    if (data.gerar_contas_pagar) {
-      const parcelas = buildParcelas(data, notaId, userId);
-      for (const p of parcelas) insertConta.run(p);
-    }
-
-    return notaId;
-  });
-
-  const notaId = run();
-  return findNotaById(notaId);
+  return nota;
 }
 
-function updateNotaExistente(id, data, userId) {
-  const existing = findNotaById(id);
+async function updateNotaExistente(id, data, userId) {
+  const existing = await repo.findNotaById(id);
   if (!existing) throw Object.assign(new Error("Nota não encontrada."), { code: "NOT_FOUND" });
   if (existing.status === "cancelada") {
     throw Object.assign(new Error("Não é possível editar uma nota cancelada."), { code: "VALIDATION" });
   }
   validateNota(data);
-  checkDuplicatas(data, id);
+  await checkDuplicatas(data, id);
 
   const itens = Array.isArray(data.itens) ? data.itens : [];
   validateItens(itens);
 
-  // v1: delete + reinsert (safe enquanto não houver movimentação de estoque vinculada)
-  const run = db.transaction(() => {
-    updateNota(id, data);
-    deleteItensNota(id);
-    for (let i = 0; i < itens.length; i++) {
-      insertItem(id, itens[i], i + 1);
-    }
-  });
-
-  run();
-  return findNotaById(id);
+  return repo.updateNotaComItens(id, { ...data, itens });
 }
 
-function cancelarNotaById(id, userId) {
-  const existing = findNotaById(id);
+async function cancelarNotaById(id, userId) {
+  const existing = await repo.findNotaById(id);
   if (!existing) throw Object.assign(new Error("Nota não encontrada."), { code: "NOT_FOUND" });
   if (existing.status === "cancelada") {
     throw Object.assign(new Error("Nota já está cancelada."), { code: "VALIDATION" });
   }
 
-  const contasAbertas = countContasAbertas(id);
+  // Bridge síncrona — conta_pagar ainda em SQLite
+  const contasAbertas = repo.countContasAbertas(id);
   if (contasAbertas > 0) {
     throw Object.assign(
       new Error(`Esta nota possui ${contasAbertas} conta(s) a pagar em aberto. Cancele-as antes de cancelar a nota.`),
@@ -232,7 +190,7 @@ function cancelarNotaById(id, userId) {
     );
   }
 
-  cancelarNota(id);
+  await repo.cancelarNota(id);
 }
 
 module.exports = {

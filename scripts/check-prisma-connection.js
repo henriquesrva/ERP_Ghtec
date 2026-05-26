@@ -566,6 +566,119 @@ async function main() {
   await prisma.categoriaDespesa.delete({ where: { id: cat.id } });
   console.log(`   ✅  categoria deletada`);
 
+  // 14. nota_recebida + itens_nota_recebida — fluxo real
+  console.log("\n14. nota_recebida + itens_nota_recebida — fluxo real...");
+
+  const nUser = await prisma.user.findFirst({ where: { role: "admin" } });
+  if (!nUser) throw new Error("Nenhum usuário admin encontrado. Execute scripts/seed-postgres.js primeiro.");
+
+  // Dados de suporte
+  const nForn = await prisma.fornecedor.create({
+    data: { razaoSocial: "Fornecedor Check Nota", cidade: "BH", estado: "MG" },
+  });
+  const nCat = await prisma.categoriaDespesa.create({
+    data: { nome: "Categoria Check Nota" },
+  });
+  const nPartCat = await prisma.partCategory.create({
+    data: { name: "Cat Check Nota", code: "CCN_CHK" },
+  });
+  const nPart = await prisma.part.create({
+    data: { nome: "Peça Check Nota", precoCompra: 10, categoryId: nPartCat.id },
+  });
+  console.log(`   ✅  dados de suporte criados (fornecedor=${nForn.id}, cat=${nCat.id}, part=${nPart.id})`);
+
+  // Criar nota com 2 itens via $transaction
+  const nNota = await prisma.$transaction(async (tx) => {
+    const nota = await tx.notaRecebida.create({
+      data: {
+        fornecedorId:       nForn.id,
+        dataEntrada:        new Date("2026-05-15"),
+        valorTotal:         250.00,
+        tipoNota:           "produto",
+        status:             "lancada",
+        createdById:        nUser.id,
+        categoriaDespesaId: nCat.id,
+        descricao:          "Nota de teste check-prisma",
+      },
+    });
+    await tx.itemNotaRecebida.createMany({
+      data: [
+        {
+          notaRecebidaId: nota.id,
+          numeroItem:     1,
+          descricao:      "Parafuso M8",
+          ncm:            "73181500",
+          quantidade:     10,
+          valorUnitario:  15.00,
+          valorTotal:     150.00,
+          produtoId:      nPart.id,
+        },
+        {
+          notaRecebidaId: nota.id,
+          numeroItem:     2,
+          descricao:      "Porca M8",
+          quantidade:     10,
+          valorUnitario:  10.00,
+          valorTotal:     100.00,
+        },
+      ],
+    });
+    return nota;
+  });
+  console.log(`   ✅  nota criada via $transaction: id=${nNota.id}, valor=${nNota.valorTotal}`);
+
+  // Verificar itens
+  const nItens = await prisma.itemNotaRecebida.findMany({
+    where:   { notaRecebidaId: nNota.id },
+    orderBy: { numeroItem: "asc" },
+  });
+  if (nItens.length !== 2) throw new Error(`Esperava 2 itens, encontrou ${nItens.length}`);
+  console.log(`   ✅  ${nItens.length} itens encontrados`);
+  console.log(`       item 1: "${nItens[0].descricao}", produto_id=${nItens[0].produtoId}, total=${Number(nItens[0].valorTotal)}`);
+  console.log(`       item 2: "${nItens[1].descricao}", produto_id=${nItens[1].produtoId}`);
+
+  // Atualizar campo na nota
+  const nNotaUpd = await prisma.notaRecebida.update({
+    where: { id: nNota.id },
+    data:  { observacoes: "Observação de teste atualizada" },
+  });
+  if (nNotaUpd.observacoes !== "Observação de teste atualizada") throw new Error("Campo observacoes não atualizado");
+  console.log(`   ✅  campo observacoes atualizado`);
+
+  // Listagem com filtro por fornecedor
+  const nLista = await prisma.notaRecebida.findMany({
+    where:   { fornecedorId: nForn.id },
+    include: { itens: true },
+  });
+  if (nLista.length !== 1) throw new Error(`Esperava 1 nota na listagem, encontrou ${nLista.length}`);
+  if (nLista[0].itens.length !== 2) throw new Error(`Esperava 2 itens na listagem, encontrou ${nLista[0].itens.length}`);
+  console.log(`   ✅  listagem: ${nLista.length} nota(s), ${nLista[0].itens.length} itens`);
+
+  // findUnique com includes
+  const nNotaFull = await prisma.notaRecebida.findUnique({
+    where:   { id: nNota.id },
+    include: {
+      fornecedor:       { select: { razaoSocial: true } },
+      categoriaDespesa: { select: { nome: true } },
+      itens:            true,
+    },
+  });
+  if (!nNotaFull) throw new Error("Nota não encontrada via findUnique");
+  console.log(`   ✅  findUnique: fornecedor="${nNotaFull.fornecedor.razaoSocial}", cat="${nNotaFull.categoriaDespesa?.nome}"`);
+
+  // Deletar nota e verificar cascade de itens
+  await prisma.notaRecebida.delete({ where: { id: nNota.id } });
+  const nItensApos = await prisma.itemNotaRecebida.count({ where: { notaRecebidaId: nNota.id } });
+  if (nItensApos !== 0) throw new Error(`Cascade delete falhou — ${nItensApos} itens ainda existem`);
+  console.log(`   ✅  cascade delete OK: itens após delete=${nItensApos}`);
+
+  // Limpeza de suporte
+  await prisma.part.delete({ where: { id: nPart.id } });
+  await prisma.partCategory.delete({ where: { id: nPartCat.id } });
+  await prisma.categoriaDespesa.delete({ where: { id: nCat.id } });
+  await prisma.fornecedor.delete({ where: { id: nForn.id } });
+  console.log(`   ✅  dados de suporte removidos`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 

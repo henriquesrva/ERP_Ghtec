@@ -1,5 +1,5 @@
 const prisma = require("../../db/prisma");
-const db     = require("../../db/connection"); // bridge: notas_recebidas + contas_pagar ainda em SQLite
+const db     = require("../../db/connection"); // bridge: contas_pagar ainda em SQLite
 
 function mapFornecedor(f) {
   if (!f) return null;
@@ -31,11 +31,13 @@ async function listAllFornecedores({ includeInactive = false } = {}) {
   const fornecedores = await prisma.fornecedor.findMany({
     where:   includeInactive ? {} : { ativo: true },
     orderBy: { razaoSocial: "asc" },
+    include: { _count: { select: { notasRecebidas: true } } },
   });
   return fornecedores.map((f) => {
-    const mapped     = mapFornecedor(f);
-    const total_notas  = db.prepare("SELECT COUNT(*) AS n FROM notas_recebidas WHERE fornecedor_id = ?").get(f.id)?.n ?? 0;
-    const total_contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar    WHERE fornecedor_id = ?").get(f.id)?.n ?? 0;
+    const mapped = mapFornecedor(f);
+    const total_notas  = f._count.notasRecebidas;
+    // Bridge: contas_pagar ainda em SQLite
+    const total_contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar WHERE fornecedor_id = ?").get(f.id)?.n ?? 0;
     return { ...mapped, total_notas, total_contas };
   });
 }
@@ -127,10 +129,10 @@ async function desativarFornecedor(id) {
   await prisma.fornecedor.update({ where: { id }, data: { ativo: false } });
 }
 
-// Bridge: notas e contas ainda em SQLite
-function countVinculos(id) {
-  const notas  = db.prepare("SELECT COUNT(*) AS n FROM notas_recebidas WHERE fornecedor_id = ?").get(id)?.n ?? 0;
-  const contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar    WHERE fornecedor_id = ?").get(id)?.n ?? 0;
+// countVinculos: notas via Prisma, contas via bridge SQLite
+async function countVinculos(id) {
+  const notas  = await prisma.notaRecebida.count({ where: { fornecedorId: id } });
+  const contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar WHERE fornecedor_id = ?").get(id)?.n ?? 0;
   return { notas, contas };
 }
 
@@ -138,18 +140,25 @@ async function getFornecedorDetalhes(id) {
   const f = await prisma.fornecedor.findUnique({ where: { id } });
   if (!f) return null;
 
-  // Bridge: notas e contas ainda em SQLite
-  const notas = db.prepare(`
-    SELECT nr.id, nr.numero_nota, nr.serie, nr.tipo_nota,
-           nr.data_entrada, nr.valor_total, nr.status,
-           cd.nome AS categoria_nome
-    FROM notas_recebidas nr
-    LEFT JOIN categorias_despesa cd ON cd.id = nr.categoria_despesa_id
-    WHERE nr.fornecedor_id = ?
-    ORDER BY nr.data_entrada DESC
-    LIMIT 20
-  `).all(id);
+  // notas: Prisma (migrado)
+  const notasRaw = await prisma.notaRecebida.findMany({
+    where:   { fornecedorId: id },
+    include: { categoriaDespesa: { select: { nome: true } } },
+    orderBy: { dataEntrada: "desc" },
+    take:    20,
+  });
+  const notas = notasRaw.map((nr) => ({
+    id:             nr.id,
+    numero_nota:    nr.numeroNota,
+    serie:          nr.serie,
+    tipo_nota:      nr.tipoNota,
+    data_entrada:   nr.dataEntrada,
+    valor_total:    Number(nr.valorTotal),
+    status:         nr.status,
+    categoria_nome: nr.categoriaDespesa?.nome ?? null,
+  }));
 
+  // Bridge: contas ainda em SQLite
   const contas = db.prepare(`
     SELECT cp.id, cp.descricao, cp.valor, cp.data_vencimento,
            cp.status, cp.data_pagamento, cp.parcela_numero, cp.parcela_total,

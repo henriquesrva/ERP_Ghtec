@@ -1,5 +1,4 @@
 const prisma = require("../../db/prisma");
-const db = require("../../db/connection");
 
 function mapPart(p) {
   if (!p) return null;
@@ -131,8 +130,8 @@ async function deletePart(id) {
     throw err;
   }
 
-  // itens_nota_recebida ainda em SQLite (financeiro não migrado)
-  db.prepare("UPDATE itens_nota_recebida SET produto_id = NULL WHERE produto_id = ?").run(id);
+  // nulificar produto_id nos itens de nota que referenciam esta peça
+  await prisma.itemNotaRecebida.updateMany({ where: { produtoId: id }, data: { produtoId: null } });
 
   // price_history em PostgreSQL — nulificar FK antes de deletar a peça
   await prisma.priceHistory.updateMany({ where: { partId: id }, data: { partId: null } });

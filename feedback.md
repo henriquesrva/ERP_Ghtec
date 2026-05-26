@@ -1,63 +1,45 @@
-# Feedback — Passo 3.5.10: Migrar fornecedor + categoria_despesa para Prisma
+# Feedback — Passo 3.5.11: Migrar nota_recebida + itens_nota_recebida para Prisma
 
 ## O que foi feito
 
-**6 arquivos de produção reescritos:**
+**8 arquivos de produção reescritos/editados:**
 
-1. **`src/modules/fornecedor/fornecedor.repository.js`** — reescrita completa para Prisma async. `mapFornecedor()` (camelCase→snake_case). `findFornecedorByCnpj` via `prisma.$queryRaw` com `REPLACE` aninhado (Prisma não suporta REPLACE em WHERE nativo). `searchFornecedores` via `contains` com `mode: "insensitive"` (ILIKE PostgreSQL). `listAllFornecedores`/`countVinculos`/`getFornecedorDetalhes` mantêm SQLite bridges (`db.prepare`) para queries em `notas_recebidas` e `contas_pagar` (ainda não migrados).
+1. `src/modules/nota_recebida/nota_recebida.repository.js` — reescrita completa para Prisma async. Mappers `mapNotaRecebida()` e `mapItemNotaRecebida()`. `createNotaComItens` e `updateNotaComItens` via `prisma.$transaction`. Bridges SQLite mantidas: `findNotaContasPagar`, `countContasAbertas`, `insertContasPagarBridge`.
+2. `src/modules/nota_recebida/nota_recebida.service.js` — totalmente async, `const repo = require(...)`. `TIPOS_NOTA_VALIDOS` corrigido para `["produto", "servico", "misto"]` (alinhado ao enum `TipoNota` do Prisma).
+3. `src/modules/nota_recebida/nota_recebida.controller.js` — todos os handlers async, upload multer preservado.
+4. `src/modules/part/part.repository.js` — bridge SQLite `itens_nota_recebida` em `deletePart` removida → `prisma.itemNotaRecebida.updateMany`. Import `db` removido.
+5. `src/modules/fornecedor/fornecedor.repository.js` — notas migradas para Prisma: `total_notas` via `_count`, `getFornecedorDetalhes` via `prisma.notaRecebida.findMany`. Bridges de contas mantidas.
+6. `src/modules/categoria_despesa/categoria_despesa.repository.js` — `countUsoCategoria.notas` migrado para `prisma.notaRecebida.count`. Bridge de contas mantida.
 
-2. **`src/modules/fornecedor/fornecedor.service.js`** — totalmente convertido para async/await. Usa `const repo = require("./fornecedor.repository")` (não destructuring) para compatibilidade com `vi.spyOn`. `checkDupCnpj` agora async (awaita `repo.findFornecedorByCnpj`). Toda a lógica de negócio (validateRequired, checkDupCnpj, NOT_FOUND, DUPLICATE_CNPJ) preservada identicamente.
+**1 arquivo de teste criado:**
 
-3. **`src/modules/fornecedor/fornecedor.controller.js`** — todos os 7 handlers convertidos para `async function` com `await`.
+7. `tests/services/nota_recebida.service.test.js` — 25 testes vi.spyOn cobrindo todos os casos de sucesso e erro de todos os handlers do service.
 
-4. **`src/modules/categoria_despesa/categoria_despesa.repository.js`** — reescrita completa para Prisma async. `mapCategoriaDespesa()` (camelCase→snake_case). `listCategoriasDespesa` com `apenasAtivas` filter via `where: { ativo: true }`. `countUsoCategoria` mantém SQLite bridge para notas e contas.
+**1 script de validação atualizado:**
 
-5. **`src/modules/categoria_despesa/categoria_despesa.service.js`** — totalmente convertido para async/await. Usa `const repo = require("./categoria_despesa.repository")`. Lógica de negócio (VALIDATION, NOT_FOUND) preservada identicamente.
+8. `scripts/check-prisma-connection.js` — seção 14 adicionada (fluxo completo: criar fornecedor/categoria/part de suporte, criar nota com 2 itens via `$transaction`, verificar itens, atualizar campo, listar, cascade delete, limpeza).
 
-6. **`src/modules/categoria_despesa/categoria_despesa.controller.js`** — todos os 4 handlers convertidos para `async function` com `await`.
+**2 docs atualizados:**
+- `docs/PRISMA_SETUP.md` — estado atualizado para Passo 3.5.11, bridges restantes atualizadas, nota_recebida.service.test.js adicionado ao índice de arquivos.
+- `docs/POSTGRES_CUTOVER_PLAN.md` — Fase 7 marcada como ✅ CONCLUÍDA com detalhes técnicos, tabela de módulos SQLite atualizada, "Próxima Ação Recomendada" apontando para Fase 8 (conta_pagar).
 
-**2 arquivos de testes criados:**
+## Decisão técnica chave — `insertContasPagarBridge` com PRAGMA FK OFF
 
-7. **`tests/services/fornecedor.service.test.js`** — 15 testes com vi.spyOn. Cobre: getAllFornecedores, getFornecedorById, searchFornecedoresByQuery, getFornecedorDetalhesById (NOT_FOUND + sucesso), createNewFornecedor (VALIDATION + DUPLICATE_CNPJ + sucesso + sem CNPJ), updateExistingFornecedor (NOT_FOUND + VALIDATION + DUPLICATE_CNPJ + sucesso), desativarFornecedorById (NOT_FOUND + sucesso).
+Ao gerar contas a pagar a partir de uma nota, o `nota_recebida_id` inserido no SQLite aponta para um ID do PostgreSQL. O SQLite tem FK `contas_pagar.nota_recebida_id → notas_recebidas.id` ativa. Como a tabela `notas_recebidas` do SQLite está vazia após a migração, a inserção falharia com "FOREIGN KEY constraint failed".
 
-8. **`tests/services/categoria_despesa.service.test.js`** — 10 testes com vi.spyOn. Cobre: getAllCategorias (default + apenasAtivas=false), getCategoriaById, createCategoria (VALIDATION + sucesso), updateCategoria (NOT_FOUND + VALIDATION + sucesso), desativarCategoria (NOT_FOUND + sucesso).
-
-**Scripts e docs atualizados:**
-
-- `scripts/check-prisma-connection.js` — seções 12+13: CRUD real de fornecedor (com findByCnpj via $queryRaw, soft-delete, filtro ativos), CRUD real de categoria_despesa (create, update, soft-delete, filtro ativas, limpeza).
-- `docs/PRISMA_SETUP.md` — estado atualizado para Passo 3.5.10.
-- `docs/POSTGRES_CUTOVER_PLAN.md` — Fase 6 marcada como ✅ CONCLUÍDA; tabela de módulos SQLite atualizada.
-
----
+Solução: `insertContasPagarBridge()` desativa temporariamente as FKs com `db.pragma("foreign_keys = OFF")` dentro de um try/finally que garante `db.pragma("foreign_keys = ON")` mesmo em caso de erro. Seguro em Node.js/better-sqlite3 (single-threaded síncrono — sem risco de race condition entre conexões).
 
 ## Resultados de validação
 
-- `npm test` → **355 testes passando, 0 falhas** (330 anteriores + 25 novos)
+- `npm run prisma:status` → `Database schema is up to date!`
+- `npm test` → **380 testes passando** (25 novos do nota_recebida.service.test.js)
+- `node scripts/check-prisma-connection.js` → ✅ **14 seções**, incluindo fluxo completo de nota_recebida + cascade delete de itens
 
----
+## Estado atual das bridges SQLite
 
-## Decisão técnica: findFornecedorByCnpj via $queryRaw
+Restam apenas bridges relacionadas a `contas_pagar` (ainda em SQLite):
+- `nota_recebida.repository` → `findNotaContasPagar`, `countContasAbertas`, `insertContasPagarBridge`
+- `fornecedor.repository` → counts e detalhes de contas
+- `categoria_despesa.repository` → count de contas
 
-O CNPJ pode estar armazenado com ou sem formatação (pontos, barra, traço). A busca normaliza via `REPLACE` aninhado — comportamento idêntico ao SQLite. Prisma não suporta `REPLACE` em condições `where` nativas, por isso usa `prisma.$queryRaw` com tagged template literal. O resultado vem com colunas snake_case (nomenclatura real do PostgreSQL), compatível com o que o service espera (`existing.id`, `existing.razao_social`).
-
----
-
-## Bridges mantidas
-
-3 funções do `fornecedor.repository` e 1 do `categoria_despesa.repository` fazem queries SQLite em `notas_recebidas` e `contas_pagar`:
-- `listAllFornecedores` — busca Prisma + count SQLite por fornecedor
-- `countVinculos` — counts diretos SQLite
-- `getFornecedorDetalhes` — fornecedor Prisma + notas/contas SQLite
-- `countUsoCategoria` — counts diretos SQLite
-
-Removidas na Fase 7 (nota_recebida) e Fase 8 (conta_pagar).
-
----
-
-## Estado do sistema
-
-**Runtime PostgreSQL/Prisma:** `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part`, `proposal`, `proposal_items`, `price_history`, `stock_movements`, `kanban_tasks`, `kanban_comments`, **`fornecedores`, `categorias_despesa`**
-
-**Runtime SQLite** (restante): `notas_recebidas`, `itens_nota_recebida`, `contas_pagar`, `session`
-
-**Próximos passos:** Fase 7 — migrar `nota_recebida` + `itens_nota_recebida`
+Todas serão removidas na **Fase 8** (migração de `conta_pagar`).

@@ -1,5 +1,5 @@
 const prisma = require("../../db/prisma");
-const db     = require("../../db/connection"); // bridge: notas_recebidas + contas_pagar ainda em SQLite
+const db     = require("../../db/connection"); // bridge: contas_pagar ainda em SQLite
 
 function mapCategoriaDespesa(c) {
   if (!c) return null;
@@ -49,10 +49,10 @@ async function desativarCategoriaDespesa(id) {
   await prisma.categoriaDespesa.update({ where: { id }, data: { ativo: false } });
 }
 
-// Bridge: notas e contas ainda em SQLite
-function countUsoCategoria(id) {
-  const notas  = db.prepare("SELECT COUNT(*) AS n FROM notas_recebidas WHERE categoria_despesa_id = ?").get(id)?.n ?? 0;
-  const contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar    WHERE categoria_despesa_id = ?").get(id)?.n ?? 0;
+// countUsoCategoria: notas via Prisma, contas via bridge SQLite
+async function countUsoCategoria(id) {
+  const notas  = await prisma.notaRecebida.count({ where: { categoriaDespesaId: id } });
+  const contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar WHERE categoria_despesa_id = ?").get(id)?.n ?? 0;
   return { notas, contas };
 }
 

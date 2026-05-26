@@ -1,13 +1,6 @@
-const {
-  getAllNotas,
-  getNotaById,
-  getNotaDetalhes,
-  createNotaComContas,
-  updateNotaExistente,
-  cancelarNotaById,
-} = require("./nota_recebida.service");
+const svc = require("./nota_recebida.service");
 
-function listNotasHandler(req, res) {
+async function listNotasHandler(req, res) {
   try {
     const filtros = {};
     if (req.query.fornecedor_id) filtros.fornecedor_id = Number(req.query.fornecedor_id);
@@ -15,16 +8,16 @@ function listNotasHandler(req, res) {
     if (req.query.categoria_id)  filtros.categoria_id  = Number(req.query.categoria_id);
     if (req.query.limit)         filtros.limit         = Math.min(Number(req.query.limit) || 100, 500);
     if (req.query.offset)        filtros.offset        = Number(req.query.offset) || 0;
-    return res.json(getAllNotas(filtros));
+    return res.json(await svc.getAllNotas(filtros));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar notas recebidas." });
   }
 }
 
-function getNotaHandler(req, res) {
+async function getNotaHandler(req, res) {
   try {
-    return res.json(getNotaDetalhes(Number(req.params.id)));
+    return res.json(await svc.getNotaDetalhes(Number(req.params.id)));
   } catch (err) {
     console.error(err);
     if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
@@ -32,7 +25,7 @@ function getNotaHandler(req, res) {
   }
 }
 
-function createNotaHandler(req, res) {
+async function createNotaHandler(req, res) {
   try {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, message: "Não autenticado." });
@@ -59,7 +52,7 @@ function createNotaHandler(req, res) {
     }
     if (!Array.isArray(data.itens)) data.itens = [];
 
-    const nota = createNotaComContas(data, userId);
+    const nota = await svc.createNotaComContas(data, userId);
     return res.status(201).json({ success: true, nota });
   } catch (err) {
     console.error(err);
@@ -70,7 +63,7 @@ function createNotaHandler(req, res) {
   }
 }
 
-function updateNotaHandler(req, res) {
+async function updateNotaHandler(req, res) {
   try {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, message: "Não autenticado." });
@@ -85,7 +78,7 @@ function updateNotaHandler(req, res) {
     }
     if (!Array.isArray(data.itens)) data.itens = [];
 
-    const nota = updateNotaExistente(Number(req.params.id), data, userId);
+    const nota = await svc.updateNotaExistente(Number(req.params.id), data, userId);
     return res.json({ success: true, nota });
   } catch (err) {
     console.error(err);
@@ -97,13 +90,13 @@ function updateNotaHandler(req, res) {
   }
 }
 
-function cancelarNotaHandler(req, res) {
+async function cancelarNotaHandler(req, res) {
   try {
     const role = req.session.userRole;
     if (role !== "admin" && role !== "financeiro") {
       return res.status(403).json({ success: false, message: "Apenas administradores e o financeiro podem cancelar notas." });
     }
-    cancelarNotaById(Number(req.params.id), req.session.userId);
+    await svc.cancelarNotaById(Number(req.params.id), req.session.userId);
     return res.json({ success: true, message: "Nota cancelada com sucesso." });
   } catch (err) {
     console.error(err);
