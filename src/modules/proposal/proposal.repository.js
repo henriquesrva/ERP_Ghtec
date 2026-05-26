@@ -1,5 +1,4 @@
 const prisma = require("../../db/prisma");
-const db = require("../../db/connection");
 const { normalizeText } = require("../../shared/utils/normalize");
 const { KANBAN_STATUSES } = require("../../shared/domain/kanban");
 

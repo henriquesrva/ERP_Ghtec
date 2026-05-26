@@ -17,7 +17,7 @@ async function getNotaDetalhes(id) {
   const nota = await repo.findNotaById(id);
   if (!nota) throw Object.assign(new Error("Nota não encontrada."), { code: "NOT_FOUND" });
   const itens  = await repo.listItensNota(id);
-  const contas = repo.findNotaContasPagar(id); // bridge síncrona — conta_pagar ainda em SQLite
+  const contas = await repo.findNotaContasPagar(id);
   return { nota, contas, itens };
 }
 
@@ -139,9 +139,6 @@ function buildParcelas(data, notaId, userId) {
   return parcelas;
 }
 
-// Transação atômica Prisma: cria nota + itens.
-// Bridge SQLite: cria parcelas de contas_pagar em SQLite (conta_pagar não migrado).
-// Nota: nota_recebida_id nas contas aponta para PostgreSQL ID — FK relaxada temporariamente.
 async function createNotaComContas(data, userId) {
   validateNota(data);
   await checkDuplicatas(data);
@@ -153,7 +150,7 @@ async function createNotaComContas(data, userId) {
 
   if (data.gerar_contas_pagar) {
     const parcelas = buildParcelas(data, nota.id, userId);
-    repo.insertContasPagarBridge(parcelas);
+    await repo.criarContasPagar(parcelas);
   }
 
   return nota;
@@ -181,8 +178,7 @@ async function cancelarNotaById(id, userId) {
     throw Object.assign(new Error("Nota já está cancelada."), { code: "VALIDATION" });
   }
 
-  // Bridge síncrona — conta_pagar ainda em SQLite
-  const contasAbertas = repo.countContasAbertas(id);
+  const contasAbertas = await repo.countContasAbertas(id);
   if (contasAbertas > 0) {
     throw Object.assign(
       new Error(`Esta nota possui ${contasAbertas} conta(s) a pagar em aberto. Cancele-as antes de cancelar a nota.`),

@@ -679,6 +679,132 @@ async function main() {
   await prisma.fornecedor.delete({ where: { id: nForn.id } });
   console.log(`   ✅  dados de suporte removidos`);
 
+  // 15. conta_pagar — fluxo real
+  console.log("\n15. conta_pagar — fluxo real...");
+
+  const cpUser = await prisma.user.findFirst({ where: { role: "admin" } });
+  if (!cpUser) throw new Error("Nenhum usuário admin encontrado. Execute scripts/seed-postgres.js primeiro.");
+
+  // Dados de suporte
+  const cpForn = await prisma.fornecedor.create({
+    data: { razaoSocial: "Fornecedor Check Conta", cidade: "BH", estado: "MG" },
+  });
+  const cpCat = await prisma.categoriaDespesa.create({
+    data: { nome: "Categoria Check Conta" },
+  });
+  console.log(`   ✅  dados de suporte criados (fornecedor=${cpForn.id}, cat=${cpCat.id})`);
+
+  // Criar conta a pagar (em_aberto)
+  const cpConta1 = await prisma.contaPagar.create({
+    data: {
+      fornecedorId:       cpForn.id,
+      categoriaDespesaId: cpCat.id,
+      descricao:          "Conta de teste check-prisma",
+      valor:              250.00,
+      dataEmissao:        new Date("2026-05-01"),
+      dataVencimento:     new Date("2026-06-01"),
+      status:             "em_aberto",
+      createdById:        cpUser.id,
+    },
+  });
+  console.log(`   ✅  conta criada: id=${cpConta1.id}, status=${cpConta1.status}`);
+
+  // Criar segunda conta para cancelar
+  const cpConta2 = await prisma.contaPagar.create({
+    data: {
+      fornecedorId: cpForn.id,
+      descricao:    "Conta cancelável check-prisma",
+      valor:        100.00,
+      dataEmissao:  new Date("2026-05-01"),
+      dataVencimento: new Date("2026-07-01"),
+      status:       "em_aberto",
+      createdById:  cpUser.id,
+    },
+  });
+  console.log(`   ✅  segunda conta criada: id=${cpConta2.id}`);
+
+  // findUnique com includes
+  const cpFound = await prisma.contaPagar.findUnique({
+    where:   { id: cpConta1.id },
+    include: {
+      fornecedor:       { select: { razaoSocial: true } },
+      categoriaDespesa: { select: { nome: true } },
+      createdBy:        { select: { nome: true } },
+    },
+  });
+  if (!cpFound) throw new Error("Conta não encontrada via findUnique");
+  console.log(`   ✅  findUnique: fornecedor="${cpFound.fornecedor.razaoSocial}", cat="${cpFound.categoriaDespesa?.nome}"`);
+
+  // Listagem com filtro por fornecedor
+  const cpLista = await prisma.contaPagar.findMany({
+    where: { fornecedorId: cpForn.id },
+  });
+  if (cpLista.length !== 2) throw new Error(`Esperava 2 contas na listagem, encontrou ${cpLista.length}`);
+  console.log(`   ✅  listagem: ${cpLista.length} conta(s)`);
+
+  // Marcar como paga
+  await prisma.contaPagar.update({
+    where: { id: cpConta1.id },
+    data: {
+      status:       "pago",
+      dataPagamento: new Date("2026-06-01"),
+      valorPago:    250.00,
+      formaPagamento: "pix",
+      paidById:     cpUser.id,
+    },
+  });
+  const cpPaga = await prisma.contaPagar.findUnique({ where: { id: cpConta1.id } });
+  if (cpPaga.status !== "pago") throw new Error("Conta deveria estar paga");
+  console.log(`   ✅  conta marcada como paga: status=${cpPaga.status}, valor_pago=${Number(cpPaga.valorPago)}`);
+
+  // Cancelar segunda conta
+  await prisma.contaPagar.update({
+    where: { id: cpConta2.id },
+    data: { status: "cancelado", cancelledById: cpUser.id, cancelledAt: new Date(), cancelReason: "Teste" },
+  });
+  const cpCancelada = await prisma.contaPagar.findUnique({ where: { id: cpConta2.id } });
+  if (cpCancelada.status !== "cancelado") throw new Error("Conta deveria estar cancelada");
+  console.log(`   ✅  segunda conta cancelada: status=${cpCancelada.status}`);
+
+  // Verificar contagem de contas no fornecedor via _count
+  const cpFornCount = await prisma.fornecedor.findUnique({
+    where:   { id: cpForn.id },
+    include: { _count: { select: { contasPagar: true, notasRecebidas: true } } },
+  });
+  if (cpFornCount._count.contasPagar !== 2) throw new Error(`Esperava 2 contas no fornecedor, encontrou ${cpFornCount._count.contasPagar}`);
+  console.log(`   ✅  _count no fornecedor: contas=${cpFornCount._count.contasPagar}`);
+
+  // Verificar contagem na categoria
+  const cpCatCount = await prisma.categoriaDespesa.findUnique({
+    where:   { id: cpCat.id },
+    include: { _count: { select: { contasPagar: true } } },
+  });
+  if (cpCatCount._count.contasPagar !== 1) throw new Error(`Esperava 1 conta na categoria, encontrou ${cpCatCount._count.contasPagar}`);
+  console.log(`   ✅  _count na categoria: contas=${cpCatCount._count.contasPagar}`);
+
+  // Verificar resumo financeiro parcial (aggregates)
+  const aggAberto = await prisma.contaPagar.aggregate({
+    _sum: { valor: true },
+    where: { fornecedorId: cpForn.id, status: "em_aberto" },
+  });
+  if (Number(aggAberto._sum.valor ?? 0) !== 0) throw new Error("Não deveria ter contas em aberto (ambas foram pagas/canceladas)");
+  console.log(`   ✅  aggregate total_aberto para este fornecedor: ${Number(aggAberto._sum.valor ?? 0)}`);
+
+  // Verificar groupBy por categoria
+  const grouped = await prisma.contaPagar.groupBy({
+    by:    ["categoriaDespesaId"],
+    _count: { id: true },
+    _sum:   { valor: true },
+    where: { fornecedorId: cpForn.id },
+  });
+  console.log(`   ✅  groupBy: ${grouped.length} grupo(s) encontrado(s)`);
+
+  // Limpeza
+  await prisma.contaPagar.deleteMany({ where: { fornecedorId: cpForn.id } });
+  await prisma.categoriaDespesa.delete({ where: { id: cpCat.id } });
+  await prisma.fornecedor.delete({ where: { id: cpForn.id } });
+  console.log(`   ✅  dados de suporte removidos`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 

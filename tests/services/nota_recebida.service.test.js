@@ -110,7 +110,7 @@ describe("getNotaDetalhes", () => {
     const itens = [fakeItem()];
     vi.spyOn(repo, "findNotaById").mockResolvedValue(fake);
     vi.spyOn(repo, "listItensNota").mockResolvedValue(itens);
-    vi.spyOn(repo, "findNotaContasPagar").mockReturnValue([]);
+    vi.spyOn(repo, "findNotaContasPagar").mockResolvedValue([]);
 
     const result = await getNotaDetalhes(1);
     expect(result).toEqual({ nota: fake, itens, contas: [] });
@@ -165,7 +165,7 @@ describe("createNotaComContas", () => {
     );
   });
 
-  it("cria nota com gerar_contas_pagar=true chama insertContasPagarBridge", async () => {
+  it("cria nota com gerar_contas_pagar=true chama criarContasPagar", async () => {
     const nota = fakeNota({ id: 5, valor_total: 200 });
     const dataComContas = {
       ...validData,
@@ -177,12 +177,12 @@ describe("createNotaComContas", () => {
     vi.spyOn(repo, "checkDuplicataNota").mockResolvedValue(null);
     vi.spyOn(repo, "checkDuplicataChave").mockResolvedValue(null);
     vi.spyOn(repo, "createNotaComItens").mockResolvedValue(nota);
-    vi.spyOn(repo, "insertContasPagarBridge").mockImplementation(() => {});
+    vi.spyOn(repo, "criarContasPagar").mockResolvedValue(undefined);
 
     await createNotaComContas(dataComContas, 1);
 
-    expect(repo.insertContasPagarBridge).toHaveBeenCalledOnce();
-    const parcelas = repo.insertContasPagarBridge.mock.calls[0][0];
+    expect(repo.criarContasPagar).toHaveBeenCalledOnce();
+    const parcelas = repo.criarContasPagar.mock.calls[0][0];
     expect(parcelas).toHaveLength(1);
     expect(parcelas[0]).toMatchObject({
       fornecedor_id:    10,
@@ -292,7 +292,7 @@ describe("updateNotaExistente", () => {
 describe("cancelarNotaById", () => {
   it("cancela nota sem contas abertas", async () => {
     vi.spyOn(repo, "findNotaById").mockResolvedValue(fakeNota());
-    vi.spyOn(repo, "countContasAbertas").mockReturnValue(0);
+    vi.spyOn(repo, "countContasAbertas").mockResolvedValue(0);
     vi.spyOn(repo, "cancelarNota").mockResolvedValue(undefined);
 
     await expect(cancelarNotaById(1, 1)).resolves.toBeUndefined();
@@ -313,7 +313,7 @@ describe("cancelarNotaById", () => {
 
   it("lança HAS_CONTAS_ABERTAS se existem contas em aberto", async () => {
     vi.spyOn(repo, "findNotaById").mockResolvedValue(fakeNota());
-    vi.spyOn(repo, "countContasAbertas").mockReturnValue(2);
+    vi.spyOn(repo, "countContasAbertas").mockResolvedValue(2);
 
     await expect(cancelarNotaById(1, 1)).rejects.toMatchObject({
       code:  "HAS_CONTAS_ABERTAS",

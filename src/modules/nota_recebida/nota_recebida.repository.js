@@ -1,5 +1,4 @@
 const prisma = require("../../db/prisma");
-const db     = require("../../db/connection"); // bridge: contas_pagar ainda em SQLite
 
 // ── Helpers de coerção ────────────────────────────────────────────────────────
 
@@ -232,15 +231,15 @@ function buildItemData(notaId, item, numero) {
 
 async function listNotasRecebidas({ fornecedor_id, status, categoria_id, limit = 100, offset = 0 } = {}) {
   const where = {};
-  if (fornecedor_id) where.fornecedorId    = Number(fornecedor_id);
-  if (status)        where.status          = status;
+  if (fornecedor_id) where.fornecedorId       = Number(fornecedor_id);
+  if (status)        where.status             = status;
   if (categoria_id)  where.categoriaDespesaId = Number(categoria_id);
 
   const rows = await prisma.notaRecebida.findMany({
     where,
     include: {
       ...NOTA_INCLUDE,
-      _count: { select: { itens: true } },
+      _count: { select: { itens: true, contasPagar: true } },
     },
     orderBy: { dataEntrada: "desc" },
     take:    limit,
@@ -249,11 +248,7 @@ async function listNotasRecebidas({ fornecedor_id, status, categoria_id, limit =
 
   return rows.map((nr) => {
     const mapped = mapNotaRecebida(nr);
-    // Bridge: total_contas de contas_pagar ainda em SQLite
-    const total_contas = db.prepare(
-      "SELECT COUNT(*) AS n FROM contas_pagar WHERE nota_recebida_id = ?"
-    ).get(nr.id)?.n ?? 0;
-    return { ...mapped, total_contas, total_itens: nr._count.itens };
+    return { ...mapped, total_contas: nr._count.contasPagar, total_itens: nr._count.itens };
   });
 }
 
@@ -265,20 +260,44 @@ async function findNotaById(id) {
   return mapNotaRecebida(nr);
 }
 
-// Bridge: contas_pagar ainda em SQLite
-function findNotaContasPagar(notaId) {
-  return db.prepare(`
-    SELECT
-      cp.*,
-      CASE WHEN cp.status = 'em_aberto' AND cp.data_vencimento < date('now') THEN 1 ELSE 0 END AS atrasado,
-      upaid.nome AS pago_por_nome,
-      ucanc.nome AS cancelado_por_nome
-    FROM contas_pagar cp
-    LEFT JOIN users upaid ON upaid.id = cp.paid_by
-    LEFT JOIN users ucanc ON ucanc.id = cp.cancelled_by
-    WHERE cp.nota_recebida_id = ?
-    ORDER BY cp.parcela_numero ASC, cp.data_vencimento ASC
-  `).all(notaId);
+async function findNotaContasPagar(notaId) {
+  const rows = await prisma.contaPagar.findMany({
+    where:   { notaRecebidaId: notaId },
+    include: {
+      paidBy:      { select: { nome: true } },
+      cancelledBy: { select: { nome: true } },
+    },
+    orderBy: [{ parcelaNumero: "asc" }, { dataVencimento: "asc" }],
+  });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return rows.map(cp => ({
+    id:                    cp.id,
+    nota_recebida_id:      cp.notaRecebidaId,
+    fornecedor_id:         cp.fornecedorId,
+    categoria_despesa_id:  cp.categoriaDespesaId,
+    descricao:             cp.descricao,
+    valor:                 Number(cp.valor),
+    data_emissao:          cp.dataEmissao,
+    data_vencimento:       cp.dataVencimento,
+    forma_pagamento:       cp.formaPagamento,
+    status:                cp.status,
+    data_pagamento:        cp.dataPagamento,
+    valor_pago:            cp.valorPago != null ? Number(cp.valorPago) : null,
+    comprovante_pagamento: cp.comprovantePagamento,
+    paid_by:               cp.paidById,
+    cancelled_by:          cp.cancelledById,
+    cancelled_at:          cp.cancelledAt,
+    cancel_reason:         cp.cancelReason,
+    observacoes:           cp.observacoes,
+    parcela_numero:        cp.parcelaNumero,
+    parcela_total:         cp.parcelaTotal,
+    created_by:            cp.createdById,
+    created_at:            cp.createdAt,
+    atrasado:              cp.status === "em_aberto" && cp.dataVencimento < today ? 1 : 0,
+    pago_por_nome:         cp.paidBy?.nome      ?? null,
+    cancelado_por_nome:    cp.cancelledBy?.nome ?? null,
+  }));
 }
 
 async function listItensNota(notaId) {
@@ -312,12 +331,10 @@ async function checkDuplicataChave(chave_acesso, excludeId = null) {
   return found;
 }
 
-// Bridge: conta_pagar ainda em SQLite
-function countContasAbertas(notaId) {
-  return db.prepare(
-    `SELECT COUNT(*) AS n FROM contas_pagar
-     WHERE nota_recebida_id = ? AND status NOT IN ('cancelado', 'pago')`
-  ).get(notaId).n;
+async function countContasAbertas(notaId) {
+  return prisma.contaPagar.count({
+    where: { notaRecebidaId: notaId, status: "em_aberto" },
+  });
 }
 
 // Cria nota + itens em transação Prisma
@@ -349,27 +366,24 @@ async function cancelarNota(id) {
   await prisma.notaRecebida.update({ where: { id }, data: { status: "cancelada" } });
 }
 
-// Bridge: insere contas a pagar em SQLite com FK relaxada temporariamente.
-// nota_recebida_id aponta para PostgreSQL ID — FK enforce desativado enquanto
-// contas_pagar não migra para Prisma.
-function insertContasPagarBridge(parcelas) {
-  const insertConta = db.prepare(`
-    INSERT INTO contas_pagar (
-      fornecedor_id, nota_recebida_id, categoria_despesa_id,
-      descricao, valor, data_emissao, data_vencimento,
-      forma_pagamento, status, parcela_numero, parcela_total, created_by
-    ) VALUES (
-      @fornecedor_id, @nota_recebida_id, @categoria_despesa_id,
-      @descricao, @valor, @data_emissao, @data_vencimento,
-      @forma_pagamento, @status, @parcela_numero, @parcela_total, @created_by
-    )
-  `);
-  db.pragma("foreign_keys = OFF");
-  try {
-    for (const p of parcelas) insertConta.run(p);
-  } finally {
-    db.pragma("foreign_keys = ON");
-  }
+// Cria parcelas de contas a pagar em lote via Prisma
+async function criarContasPagar(parcelas) {
+  await prisma.contaPagar.createMany({
+    data: parcelas.map(p => ({
+      fornecedorId:       p.fornecedor_id,
+      notaRecebidaId:     p.nota_recebida_id     ?? null,
+      categoriaDespesaId: p.categoria_despesa_id ?? null,
+      descricao:          p.descricao,
+      valor:              p.valor,
+      dataEmissao:        new Date(p.data_emissao),
+      dataVencimento:     new Date(p.data_vencimento),
+      formaPagamento:     p.forma_pagamento       ?? null,
+      status:             "em_aberto",
+      parcelaNumero:      p.parcela_numero        ?? null,
+      parcelaTotal:       p.parcela_total         ?? null,
+      createdById:        p.created_by,
+    })),
+  });
 }
 
 module.exports = {
@@ -383,5 +397,5 @@ module.exports = {
   createNotaComItens,
   updateNotaComItens,
   cancelarNota,
-  insertContasPagarBridge,
+  criarContasPagar,
 };

@@ -443,13 +443,42 @@ Grupo 8: conta_pagar
 - `fornecedor.repository` → counts e detalhes de `contas_pagar` via SQLite
 - `categoria_despesa.repository` → count de `contas_pagar` via SQLite
 
-**Resultado:** `npm test` → **377 testes passando**. `node scripts/check-prisma-connection.js` → ✅ 14 seções.
+**Resultado:** `npm test` → **380 testes passando**. `node scripts/check-prisma-connection.js` → ✅ 14 seções.
 
 ---
 
-### Fase 8 — Migrar `conta_pagar`
+### Fase 8 — Migrar `conta_pagar` ✅ CONCLUÍDA
+
+**Escopo:** `src/modules/conta_pagar/conta_pagar.repository.js`, `conta_pagar.service.js`, `conta_pagar.controller.js`
 
 **Dependências Prisma já migradas:** `fornecedor` (Fase 6), `nota_recebida` (Fase 7), `categoria_despesa` (Fase 6), `users` (Fase 1)
+
+**Arquivos alterados:**
+- `src/modules/conta_pagar/conta_pagar.repository.js` — reescrito Prisma async; `mapContaPagar()`; `startOfToday()` para comparações de data consistentes com SQLite; `getResumoFinanceiro` via `Promise.all` com `aggregate` + `groupBy`; sem bridges SQLite
+- `src/modules/conta_pagar/conta_pagar.service.js` — totalmente async; `const repo = require(...)`
+- `src/modules/conta_pagar/conta_pagar.controller.js` — todos os handlers async
+- `src/modules/nota_recebida/nota_recebida.repository.js` — bridges removidas: `findNotaContasPagar` → Prisma async; `countContasAbertas` → Prisma async; `insertContasPagarBridge` → renomeado `criarContasPagar` via `prisma.contaPagar.createMany` (sem PRAGMA); import `db` removido; `listNotasRecebidas` usa `_count.contasPagar` em vez de SQLite bridge
+- `src/modules/nota_recebida/nota_recebida.service.js` — `await repo.findNotaContasPagar`, `await repo.countContasAbertas`, `await repo.criarContasPagar`
+- `src/modules/fornecedor/fornecedor.repository.js` — bridges de contas removidas: `listAllFornecedores` usa `_count.contasPagar`; `countVinculos` usa `prisma.contaPagar.count`; `getFornecedorDetalhes` via `prisma.contaPagar.findMany`; import `db` removido
+- `src/modules/categoria_despesa/categoria_despesa.repository.js` — bridge de contas removida: `countUsoCategoria.contas` via `prisma.contaPagar.count`; import `db` removido
+- `src/modules/proposal/proposal.repository.js` — import `db` órfão removido
+- `tests/services/nota_recebida.service.test.js` — mocks atualizados: `findNotaContasPagar` e `countContasAbertas` → `.mockResolvedValue`; `insertContasPagarBridge` → `criarContasPagar`
+- `tests/services/conta_pagar.service.test.js` — 28 testes vi.spyOn (criado)
+- `scripts/check-prisma-connection.js` — seção 15 adicionada (conta + baixa + cancelamento + aggregate + groupBy + _count)
+
+**Decisão técnica — `startOfToday()`**: O SQLite comparava datas com `date('now')` (só data, sem hora). O PostgreSQL armazena datetimes. Para manter comportamento idêntico (contas do dia atual não aparecem como atrasadas), usa-se `new Date()` com `setHours(0,0,0,0)` em todas as comparações de `dataVencimento`.
+
+**Decisão técnica — `getResumoFinanceiro`**: Substituiu queries SQL complexas por `Promise.all` com 6 queries Prisma paralelas (`aggregate` × 3 + `findMany` × 1 + `aggregate` × 1 + `groupBy` × 1). Nomes de categorias resolvidos com uma 7ª query `findMany` após o groupBy. Comportamento equivalente ao original.
+
+**Bridges removidas (todas):**
+- `nota_recebida.repository` → `findNotaContasPagar`, `countContasAbertas`, `insertContasPagarBridge`
+- `fornecedor.repository` → counts e detalhes de `contas_pagar`
+- `categoria_despesa.repository` → count de `contas_pagar`
+- `proposal.repository` → import `db` órfão
+
+**Bridges restantes após esta fase:** Nenhuma nos módulos de negócio. Apenas `sessionStore.js` usa SQLite.
+
+**Resultado:** `npm test` → **408 testes passando**. `node scripts/check-prisma-connection.js` → ✅ 15 seções.
 
 ---
 

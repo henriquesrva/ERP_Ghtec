@@ -1,5 +1,4 @@
 const prisma = require("../../db/prisma");
-const db     = require("../../db/connection"); // bridge: contas_pagar ainda em SQLite
 
 function mapFornecedor(f) {
   if (!f) return null;
@@ -31,14 +30,15 @@ async function listAllFornecedores({ includeInactive = false } = {}) {
   const fornecedores = await prisma.fornecedor.findMany({
     where:   includeInactive ? {} : { ativo: true },
     orderBy: { razaoSocial: "asc" },
-    include: { _count: { select: { notasRecebidas: true } } },
+    include: { _count: { select: { notasRecebidas: true, contasPagar: true } } },
   });
   return fornecedores.map((f) => {
     const mapped = mapFornecedor(f);
-    const total_notas  = f._count.notasRecebidas;
-    // Bridge: contas_pagar ainda em SQLite
-    const total_contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar WHERE fornecedor_id = ?").get(f.id)?.n ?? 0;
-    return { ...mapped, total_notas, total_contas };
+    return {
+      ...mapped,
+      total_notas:  f._count.notasRecebidas,
+      total_contas: f._count.contasPagar,
+    };
   });
 }
 
@@ -129,10 +129,11 @@ async function desativarFornecedor(id) {
   await prisma.fornecedor.update({ where: { id }, data: { ativo: false } });
 }
 
-// countVinculos: notas via Prisma, contas via bridge SQLite
 async function countVinculos(id) {
-  const notas  = await prisma.notaRecebida.count({ where: { fornecedorId: id } });
-  const contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar WHERE fornecedor_id = ?").get(id)?.n ?? 0;
+  const [notas, contas] = await Promise.all([
+    prisma.notaRecebida.count({ where: { fornecedorId: id } }),
+    prisma.contaPagar.count({ where: { fornecedorId: id } }),
+  ]);
   return { notas, contas };
 }
 
@@ -140,7 +141,6 @@ async function getFornecedorDetalhes(id) {
   const f = await prisma.fornecedor.findUnique({ where: { id } });
   if (!f) return null;
 
-  // notas: Prisma (migrado)
   const notasRaw = await prisma.notaRecebida.findMany({
     where:   { fornecedorId: id },
     include: { categoriaDespesa: { select: { nome: true } } },
@@ -158,16 +158,24 @@ async function getFornecedorDetalhes(id) {
     categoria_nome: nr.categoriaDespesa?.nome ?? null,
   }));
 
-  // Bridge: contas ainda em SQLite
-  const contas = db.prepare(`
-    SELECT cp.id, cp.descricao, cp.valor, cp.data_vencimento,
-           cp.status, cp.data_pagamento, cp.parcela_numero, cp.parcela_total,
-           CASE WHEN cp.status = 'em_aberto' AND cp.data_vencimento < date('now') THEN 1 ELSE 0 END AS atrasado
-    FROM contas_pagar cp
-    WHERE cp.fornecedor_id = ?
-    ORDER BY cp.data_vencimento ASC
-    LIMIT 20
-  `).all(id);
+  const contasRaw = await prisma.contaPagar.findMany({
+    where:   { fornecedorId: id },
+    orderBy: { dataVencimento: "asc" },
+    take:    20,
+  });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const contas = contasRaw.map(cp => ({
+    id:              cp.id,
+    descricao:       cp.descricao,
+    valor:           Number(cp.valor),
+    data_vencimento: cp.dataVencimento,
+    status:          cp.status,
+    data_pagamento:  cp.dataPagamento,
+    parcela_numero:  cp.parcelaNumero,
+    parcela_total:   cp.parcelaTotal,
+    atrasado:        cp.status === "em_aberto" && cp.dataVencimento < today ? 1 : 0,
+  }));
 
   return { fornecedor: mapFornecedor(f), notas, contas };
 }

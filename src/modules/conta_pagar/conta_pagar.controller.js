@@ -1,14 +1,6 @@
-const {
-  getAllContas,
-  getContaById,
-  createNewConta,
-  updateExistingConta,
-  darBaixa,
-  cancelar,
-  getResumo,
-} = require("./conta_pagar.service");
+const svc = require("./conta_pagar.service");
 
-function listContasHandler(req, res) {
+async function listContasHandler(req, res) {
   try {
     const filtros = {};
     if (req.query.fornecedor_id)   filtros.fornecedor_id   = Number(req.query.fornecedor_id);
@@ -17,16 +9,16 @@ function listContasHandler(req, res) {
     if (req.query.forma_pagamento) filtros.forma_pagamento = req.query.forma_pagamento;
     if (req.query.limit)           filtros.limit           = Math.min(Number(req.query.limit) || 100, 500);
     if (req.query.offset)          filtros.offset          = Number(req.query.offset) || 0;
-    return res.json(getAllContas(filtros));
+    return res.json(await svc.getAllContas(filtros));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar contas a pagar." });
   }
 }
 
-function getContaHandler(req, res) {
+async function getContaHandler(req, res) {
   try {
-    return res.json(getContaById(Number(req.params.id)));
+    return res.json(await svc.getContaById(Number(req.params.id)));
   } catch (err) {
     console.error(err);
     if (err.code === "NOT_FOUND") return res.status(404).json({ success: false, message: err.message });
@@ -34,11 +26,11 @@ function getContaHandler(req, res) {
   }
 }
 
-function createContaHandler(req, res) {
+async function createContaHandler(req, res) {
   try {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, message: "Não autenticado." });
-    const conta = createNewConta(req.body, userId);
+    const conta = await svc.createNewConta(req.body, userId);
     return res.status(201).json({ success: true, conta });
   } catch (err) {
     console.error(err);
@@ -47,9 +39,9 @@ function createContaHandler(req, res) {
   }
 }
 
-function updateContaHandler(req, res) {
+async function updateContaHandler(req, res) {
   try {
-    const conta = updateExistingConta(Number(req.params.id), req.body);
+    const conta = await svc.updateExistingConta(Number(req.params.id), req.body);
     return res.json({ success: true, conta });
   } catch (err) {
     console.error(err);
@@ -59,7 +51,7 @@ function updateContaHandler(req, res) {
   }
 }
 
-function baixarContaHandler(req, res) {
+async function baixarContaHandler(req, res) {
   try {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ success: false, message: "Não autenticado." });
@@ -72,7 +64,7 @@ function baixarContaHandler(req, res) {
     const baixaData = { ...req.body };
     if (baixaData.valor_pago) baixaData.valor_pago = parseFloat(baixaData.valor_pago);
 
-    const conta = darBaixa(Number(req.params.id), baixaData, userId, comprovantePath);
+    const conta = await svc.darBaixa(Number(req.params.id), baixaData, userId, comprovantePath);
     return res.json({ success: true, conta });
   } catch (err) {
     console.error(err);
@@ -82,14 +74,14 @@ function baixarContaHandler(req, res) {
   }
 }
 
-function cancelarContaHandler(req, res) {
+async function cancelarContaHandler(req, res) {
   try {
     const role = req.session.userRole;
     if (role !== "admin" && role !== "financeiro") {
       return res.status(403).json({ success: false, message: "Apenas administradores e o financeiro podem cancelar contas." });
     }
     const { motivo } = req.body;
-    const conta = cancelar(Number(req.params.id), motivo, req.session.userId);
+    const conta = await svc.cancelar(Number(req.params.id), motivo, req.session.userId);
     return res.json({ success: true, conta });
   } catch (err) {
     console.error(err);
@@ -99,9 +91,9 @@ function cancelarContaHandler(req, res) {
   }
 }
 
-function getResumoHandler(req, res) {
+async function getResumoHandler(req, res) {
   try {
-    return res.json(getResumo());
+    return res.json(await svc.getResumo());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao carregar resumo financeiro." });
