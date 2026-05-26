@@ -493,6 +493,79 @@ async function main() {
   if (afterDel !== 0) throw new Error(`Esperava 0 comentários após delete, encontrou ${afterDel}`);
   console.log(`   ✅  task e comentários deletados`);
 
+  // 12. fornecedores — CRUD
+  console.log("\n12. fornecedores — CRUD...");
+  const forn = await prisma.fornecedor.create({
+    data: {
+      razaoSocial:  "Fornecedor Teste Script",
+      nomeFantasia: "Teste Script",
+      cnpj:         "00.000.000/0001-99",
+      cidade:       "Campinas",
+      estado:       "SP",
+    },
+  });
+  console.log(`   ✅  fornecedor criado: id=${forn.id}, razao_social=${forn.razaoSocial}`);
+
+  // Buscar por ID
+  const fornFound = await prisma.fornecedor.findUnique({ where: { id: forn.id } });
+  if (!fornFound) throw new Error("Fornecedor não encontrado após criação");
+  console.log(`   ✅  findUnique: ${fornFound.razaoSocial}`);
+
+  // Buscar por CNPJ via $queryRaw (replicando findFornecedorByCnpj)
+  const digits = "00000000000199";
+  const cnpjRows = await prisma.$queryRaw`
+    SELECT id, razao_social FROM fornecedores
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj,'.',''),'/',''),'-',''),' ','') = ${digits}
+    LIMIT 1
+  `;
+  if (!cnpjRows.length) throw new Error("Busca por CNPJ via $queryRaw não retornou resultado");
+  console.log(`   ✅  findByCnpj via $queryRaw: id=${cnpjRows[0].id}`);
+
+  // Soft-delete (desativar)
+  await prisma.fornecedor.update({ where: { id: forn.id }, data: { ativo: false } });
+  const fornDesativado = await prisma.fornecedor.findUnique({ where: { id: forn.id } });
+  if (fornDesativado.ativo !== false) throw new Error("Fornecedor deveria estar inativo");
+  console.log(`   ✅  fornecedor desativado (ativo=false)`);
+
+  // listAllFornecedores activos — não deve incluir o inativo
+  const ativos = await prisma.fornecedor.findMany({ where: { ativo: true } });
+  const inAtivos = ativos.some((f) => f.id === forn.id);
+  if (inAtivos) throw new Error("Inativo apareceu na lista de ativos");
+  console.log(`   ✅  inativo excluído da lista de ativos`);
+
+  // Limpeza
+  await prisma.fornecedor.delete({ where: { id: forn.id } });
+  console.log(`   ✅  fornecedor deletado`);
+
+  // 13. categorias_despesa — CRUD
+  console.log("\n13. categorias_despesa — CRUD...");
+  const cat = await prisma.categoriaDespesa.create({
+    data: { nome: "Categoria Teste Script", descricao: "Desc teste" },
+  });
+  console.log(`   ✅  categoria criada: id=${cat.id}, nome=${cat.nome}`);
+
+  // findUnique
+  const catFound = await prisma.categoriaDespesa.findUnique({ where: { id: cat.id } });
+  if (!catFound) throw new Error("Categoria não encontrada após criação");
+  console.log(`   ✅  findUnique: ${catFound.nome}`);
+
+  // Update
+  await prisma.categoriaDespesa.update({ where: { id: cat.id }, data: { nome: "Categoria Atualizada" } });
+  const catUpd = await prisma.categoriaDespesa.findUnique({ where: { id: cat.id } });
+  if (catUpd.nome !== "Categoria Atualizada") throw new Error("Nome não foi atualizado");
+  console.log(`   ✅  nome atualizado: ${catUpd.nome}`);
+
+  // Soft-delete
+  await prisma.categoriaDespesa.update({ where: { id: cat.id }, data: { ativo: false } });
+  const ativas = await prisma.categoriaDespesa.findMany({ where: { ativo: true } });
+  const inAtiva = ativas.some((c) => c.id === cat.id);
+  if (inAtiva) throw new Error("Inativa apareceu na lista de ativas");
+  console.log(`   ✅  categoria desativada e excluída da lista de ativas`);
+
+  // Limpeza
+  await prisma.categoriaDespesa.delete({ where: { id: cat.id } });
+  console.log(`   ✅  categoria deletada`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 

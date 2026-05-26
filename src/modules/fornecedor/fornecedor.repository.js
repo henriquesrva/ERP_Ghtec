@@ -1,122 +1,144 @@
-const db = require("../../db/connection");
+const prisma = require("../../db/prisma");
+const db     = require("../../db/connection"); // bridge: notas_recebidas + contas_pagar ainda em SQLite
+
+function mapFornecedor(f) {
+  if (!f) return null;
+  return {
+    id:                f.id,
+    razao_social:      f.razaoSocial,
+    nome_fantasia:     f.nomeFantasia,
+    cnpj:              f.cnpj,
+    inscricao_estadual: f.inscricaoEstadual,
+    email:             f.email,
+    telefone:          f.telefone,
+    endereco:          f.endereco,
+    cidade:            f.cidade,
+    estado:            f.estado,
+    cep:               f.cep,
+    observacoes:       f.observacoes,
+    ativo:             f.ativo,
+    created_at:        f.createdAt,
+    updated_at:        f.updatedAt,
+  };
+}
 
 function stripCnpj(cnpj) {
   if (!cnpj) return null;
   return cnpj.replace(/\D/g, "");
 }
 
-function listAllFornecedores({ includeInactive = false } = {}) {
-  const where = includeInactive ? "" : "WHERE f.ativo = 1";
-  return db.prepare(`
-    SELECT
-      f.id, f.razao_social, f.nome_fantasia, f.cnpj,
-      f.email, f.telefone, f.cidade, f.estado, f.ativo,
-      f.created_at, f.updated_at,
-      (SELECT COUNT(*) FROM notas_recebidas nr WHERE nr.fornecedor_id = f.id) AS total_notas,
-      (SELECT COUNT(*) FROM contas_pagar cp WHERE cp.fornecedor_id = f.id) AS total_contas
-    FROM fornecedores f
-    ${where}
-    ORDER BY f.razao_social ASC
-  `).all();
+async function listAllFornecedores({ includeInactive = false } = {}) {
+  const fornecedores = await prisma.fornecedor.findMany({
+    where:   includeInactive ? {} : { ativo: true },
+    orderBy: { razaoSocial: "asc" },
+  });
+  return fornecedores.map((f) => {
+    const mapped     = mapFornecedor(f);
+    const total_notas  = db.prepare("SELECT COUNT(*) AS n FROM notas_recebidas WHERE fornecedor_id = ?").get(f.id)?.n ?? 0;
+    const total_contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar    WHERE fornecedor_id = ?").get(f.id)?.n ?? 0;
+    return { ...mapped, total_notas, total_contas };
+  });
 }
 
-function findFornecedorById(id) {
-  return db.prepare(`SELECT * FROM fornecedores WHERE id = ?`).get(id);
+async function findFornecedorById(id) {
+  return mapFornecedor(await prisma.fornecedor.findUnique({ where: { id } }));
 }
 
-function findFornecedorByCnpj(cnpj) {
+async function findFornecedorByCnpj(cnpj) {
   const digits = stripCnpj(cnpj);
   if (!digits) return null;
-  return db.prepare(`
-    SELECT * FROM fornecedores
-    WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj,'.',''),'/',''),'-',''),' ','') = ?
-    LIMIT 1
-  `).get(digits);
-}
-
-function searchFornecedores(q, { includeInactive = false } = {}) {
-  const term = `%${q}%`;
-  const atvFilter = includeInactive ? "" : "AND ativo = 1";
-  return db.prepare(`
-    SELECT id, razao_social, nome_fantasia, cnpj, cidade, estado, ativo
+  const rows = await prisma.$queryRaw`
+    SELECT id, razao_social, nome_fantasia, cnpj, ativo
     FROM fornecedores
-    WHERE (razao_social LIKE ? OR nome_fantasia LIKE ? OR cnpj LIKE ?)
-      ${atvFilter}
-    ORDER BY razao_social ASC
-    LIMIT 15
-  `).all(term, term, term);
+    WHERE REPLACE(REPLACE(REPLACE(REPLACE(cnpj,'.',''),'/',''),'-',''),' ','') = ${digits}
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
 }
 
-function createFornecedor(data) {
-  const result = db.prepare(`
-    INSERT INTO fornecedores (
-      razao_social, nome_fantasia, cnpj, inscricao_estadual,
-      email, telefone, endereco, cidade, estado, cep, observacoes
-    ) VALUES (
-      @razao_social, @nome_fantasia, @cnpj, @inscricao_estadual,
-      @email, @telefone, @endereco, @cidade, @estado, @cep, @observacoes
-    )
-  `).run({
-    razao_social:       data.razao_social       ?? null,
-    nome_fantasia:      data.nome_fantasia       ?? null,
-    cnpj:               data.cnpj               ?? null,
-    inscricao_estadual: data.inscricao_estadual  ?? null,
-    email:              data.email              ?? null,
-    telefone:           data.telefone           ?? null,
-    endereco:           data.endereco           ?? null,
-    cidade:             data.cidade             ?? null,
-    estado:             data.estado             ?? null,
-    cep:                data.cep                ?? null,
-    observacoes:        data.observacoes        ?? null,
+async function searchFornecedores(q, { includeInactive = false } = {}) {
+  const rows = await prisma.fornecedor.findMany({
+    where: {
+      AND: [
+        includeInactive ? {} : { ativo: true },
+        {
+          OR: [
+            { razaoSocial:  { contains: q, mode: "insensitive" } },
+            { nomeFantasia: { contains: q, mode: "insensitive" } },
+            { cnpj:         { contains: q, mode: "insensitive" } },
+          ],
+        },
+      ],
+    },
+    select: { id: true, razaoSocial: true, nomeFantasia: true, cnpj: true, cidade: true, estado: true, ativo: true },
+    orderBy: { razaoSocial: "asc" },
+    take: 15,
   });
-  return result.lastInsertRowid;
+  return rows.map((f) => ({
+    id:           f.id,
+    razao_social: f.razaoSocial,
+    nome_fantasia: f.nomeFantasia,
+    cnpj:         f.cnpj,
+    cidade:       f.cidade,
+    estado:       f.estado,
+    ativo:        f.ativo,
+  }));
 }
 
-function updateFornecedor(id, data) {
-  db.prepare(`
-    UPDATE fornecedores SET
-      razao_social       = @razao_social,
-      nome_fantasia      = @nome_fantasia,
-      cnpj               = @cnpj,
-      inscricao_estadual = @inscricao_estadual,
-      email              = @email,
-      telefone           = @telefone,
-      endereco           = @endereco,
-      cidade             = @cidade,
-      estado             = @estado,
-      cep                = @cep,
-      observacoes        = @observacoes
-    WHERE id = @id
-  `).run({
-    id,
-    razao_social:       data.razao_social       ?? null,
-    nome_fantasia:      data.nome_fantasia       ?? null,
-    cnpj:               data.cnpj               ?? null,
-    inscricao_estadual: data.inscricao_estadual  ?? null,
-    email:              data.email              ?? null,
-    telefone:           data.telefone           ?? null,
-    endereco:           data.endereco           ?? null,
-    cidade:             data.cidade             ?? null,
-    estado:             data.estado             ?? null,
-    cep:                data.cep                ?? null,
-    observacoes:        data.observacoes        ?? null,
+async function createFornecedor(data) {
+  const f = await prisma.fornecedor.create({
+    data: {
+      razaoSocial:       data.razao_social       ?? null,
+      nomeFantasia:      data.nome_fantasia       ?? null,
+      cnpj:              data.cnpj               ?? null,
+      inscricaoEstadual: data.inscricao_estadual  ?? null,
+      email:             data.email              ?? null,
+      telefone:          data.telefone           ?? null,
+      endereco:          data.endereco           ?? null,
+      cidade:            data.cidade             ?? null,
+      estado:            data.estado             ?? null,
+      cep:               data.cep                ?? null,
+      observacoes:       data.observacoes        ?? null,
+    },
+  });
+  return f.id;
+}
+
+async function updateFornecedor(id, data) {
+  await prisma.fornecedor.update({
+    where: { id },
+    data: {
+      razaoSocial:       data.razao_social       ?? null,
+      nomeFantasia:      data.nome_fantasia       ?? null,
+      cnpj:              data.cnpj               ?? null,
+      inscricaoEstadual: data.inscricao_estadual  ?? null,
+      email:             data.email              ?? null,
+      telefone:          data.telefone           ?? null,
+      endereco:          data.endereco           ?? null,
+      cidade:            data.cidade             ?? null,
+      estado:            data.estado             ?? null,
+      cep:               data.cep                ?? null,
+      observacoes:       data.observacoes        ?? null,
+    },
   });
 }
 
-function desativarFornecedor(id) {
-  db.prepare(`UPDATE fornecedores SET ativo = 0 WHERE id = ?`).run(id);
+async function desativarFornecedor(id) {
+  await prisma.fornecedor.update({ where: { id }, data: { ativo: false } });
 }
 
+// Bridge: notas e contas ainda em SQLite
 function countVinculos(id) {
-  const notas  = db.prepare(`SELECT COUNT(*) AS n FROM notas_recebidas WHERE fornecedor_id = ?`).get(id).n;
-  const contas = db.prepare(`SELECT COUNT(*) AS n FROM contas_pagar    WHERE fornecedor_id = ?`).get(id).n;
+  const notas  = db.prepare("SELECT COUNT(*) AS n FROM notas_recebidas WHERE fornecedor_id = ?").get(id)?.n ?? 0;
+  const contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar    WHERE fornecedor_id = ?").get(id)?.n ?? 0;
   return { notas, contas };
 }
 
-function getFornecedorDetalhes(id) {
-  const fornecedor = db.prepare(`SELECT * FROM fornecedores WHERE id = ?`).get(id);
-  if (!fornecedor) return null;
+async function getFornecedorDetalhes(id) {
+  const f = await prisma.fornecedor.findUnique({ where: { id } });
+  if (!f) return null;
 
+  // Bridge: notas e contas ainda em SQLite
   const notas = db.prepare(`
     SELECT nr.id, nr.numero_nota, nr.serie, nr.tipo_nota,
            nr.data_entrada, nr.valor_total, nr.status,
@@ -138,7 +160,7 @@ function getFornecedorDetalhes(id) {
     LIMIT 20
   `).all(id);
 
-  return { fornecedor, notas, contas };
+  return { fornecedor: mapFornecedor(f), notas, contas };
 }
 
 module.exports = {

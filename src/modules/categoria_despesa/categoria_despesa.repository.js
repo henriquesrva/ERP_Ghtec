@@ -1,40 +1,58 @@
-const db = require("../../db/connection");
+const prisma = require("../../db/prisma");
+const db     = require("../../db/connection"); // bridge: notas_recebidas + contas_pagar ainda em SQLite
 
-function listCategoriasDespesa({ apenasAtivas = true } = {}) {
-  const where = apenasAtivas ? "WHERE ativo = 1" : "";
-  return db.prepare(`
-    SELECT id, nome, descricao, ativo, created_at, updated_at
-    FROM categorias_despesa
-    ${where}
-    ORDER BY nome ASC
-  `).all();
+function mapCategoriaDespesa(c) {
+  if (!c) return null;
+  return {
+    id:         c.id,
+    nome:       c.nome,
+    descricao:  c.descricao,
+    ativo:      c.ativo,
+    created_at: c.createdAt,
+    updated_at: c.updatedAt,
+  };
 }
 
-function findCategoriaDespesaById(id) {
-  return db.prepare(`SELECT * FROM categorias_despesa WHERE id = ?`).get(id);
+async function listCategoriasDespesa({ apenasAtivas = true } = {}) {
+  const rows = await prisma.categoriaDespesa.findMany({
+    where:   apenasAtivas ? { ativo: true } : {},
+    orderBy: { nome: "asc" },
+  });
+  return rows.map(mapCategoriaDespesa);
 }
 
-function createCategoriaDespesa(data) {
-  const result = db.prepare(`
-    INSERT INTO categorias_despesa (nome, descricao)
-    VALUES (@nome, @descricao)
-  `).run({ nome: data.nome.trim(), descricao: data.descricao?.trim() ?? null });
-  return result.lastInsertRowid;
+async function findCategoriaDespesaById(id) {
+  return mapCategoriaDespesa(await prisma.categoriaDespesa.findUnique({ where: { id } }));
 }
 
-function updateCategoriaDespesa(id, data) {
-  db.prepare(`
-    UPDATE categorias_despesa SET nome = @nome, descricao = @descricao WHERE id = @id
-  `).run({ id, nome: data.nome.trim(), descricao: data.descricao?.trim() ?? null });
+async function createCategoriaDespesa(data) {
+  const c = await prisma.categoriaDespesa.create({
+    data: {
+      nome:      data.nome.trim(),
+      descricao: data.descricao?.trim() ?? null,
+    },
+  });
+  return c.id;
 }
 
-function desativarCategoriaDespesa(id) {
-  db.prepare(`UPDATE categorias_despesa SET ativo = 0 WHERE id = ?`).run(id);
+async function updateCategoriaDespesa(id, data) {
+  await prisma.categoriaDespesa.update({
+    where: { id },
+    data: {
+      nome:      data.nome.trim(),
+      descricao: data.descricao?.trim() ?? null,
+    },
+  });
 }
 
+async function desativarCategoriaDespesa(id) {
+  await prisma.categoriaDespesa.update({ where: { id }, data: { ativo: false } });
+}
+
+// Bridge: notas e contas ainda em SQLite
 function countUsoCategoria(id) {
-  const notas  = db.prepare(`SELECT COUNT(*) AS n FROM notas_recebidas WHERE categoria_despesa_id = ?`).get(id).n;
-  const contas = db.prepare(`SELECT COUNT(*) AS n FROM contas_pagar    WHERE categoria_despesa_id = ?`).get(id).n;
+  const notas  = db.prepare("SELECT COUNT(*) AS n FROM notas_recebidas WHERE categoria_despesa_id = ?").get(id)?.n ?? 0;
+  const contas = db.prepare("SELECT COUNT(*) AS n FROM contas_pagar    WHERE categoria_despesa_id = ?").get(id)?.n ?? 0;
   return { notas, contas };
 }
 

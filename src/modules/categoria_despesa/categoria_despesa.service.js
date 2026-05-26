@@ -1,42 +1,35 @@
-const {
-  listCategoriasDespesa,
-  findCategoriaDespesaById,
-  createCategoriaDespesa,
-  updateCategoriaDespesa,
-  desativarCategoriaDespesa,
-  countUsoCategoria,
-} = require("./categoria_despesa.repository");
+const repo = require("./categoria_despesa.repository");
 
-function getAllCategorias({ apenasAtivas } = {}) {
-  return listCategoriasDespesa({ apenasAtivas: apenasAtivas !== false });
+async function getAllCategorias({ apenasAtivas } = {}) {
+  return repo.listCategoriasDespesa({ apenasAtivas: apenasAtivas !== false });
 }
 
-function getCategoriaById(id) {
-  return findCategoriaDespesaById(id);
+async function getCategoriaById(id) {
+  return repo.findCategoriaDespesaById(id);
 }
 
-function createCategoria(data) {
+async function createCategoria(data) {
   if (!data.nome?.trim()) {
     throw Object.assign(new Error("O campo 'nome' é obrigatório."), { code: "VALIDATION" });
   }
-  const id = createCategoriaDespesa(data);
-  return findCategoriaDespesaById(id);
+  const id = await repo.createCategoriaDespesa(data);
+  return repo.findCategoriaDespesaById(id);
 }
 
-function updateCategoria(id, data) {
-  const existing = findCategoriaDespesaById(id);
+async function updateCategoria(id, data) {
+  const existing = await repo.findCategoriaDespesaById(id);
   if (!existing) throw Object.assign(new Error("Categoria não encontrada."), { code: "NOT_FOUND" });
   if (!data.nome?.trim()) {
     throw Object.assign(new Error("O campo 'nome' é obrigatório."), { code: "VALIDATION" });
   }
-  updateCategoriaDespesa(id, data);
-  return findCategoriaDespesaById(id);
+  await repo.updateCategoriaDespesa(id, data);
+  return repo.findCategoriaDespesaById(id);
 }
 
-function desativarCategoria(id) {
-  const existing = findCategoriaDespesaById(id);
+async function desativarCategoria(id) {
+  const existing = await repo.findCategoriaDespesaById(id);
   if (!existing) throw Object.assign(new Error("Categoria não encontrada."), { code: "NOT_FOUND" });
-  desativarCategoriaDespesa(id);
+  await repo.desativarCategoriaDespesa(id);
 }
 
 module.exports = {

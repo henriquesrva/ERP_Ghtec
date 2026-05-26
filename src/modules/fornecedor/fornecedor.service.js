@@ -1,29 +1,19 @@
-const {
-  listAllFornecedores,
-  findFornecedorById,
-  findFornecedorByCnpj,
-  searchFornecedores,
-  createFornecedor,
-  updateFornecedor,
-  desativarFornecedor,
-  countVinculos,
-  getFornecedorDetalhes,
-} = require("./fornecedor.repository");
+const repo = require("./fornecedor.repository");
 
-function getAllFornecedores({ includeInactive } = {}) {
-  return listAllFornecedores({ includeInactive });
+async function getAllFornecedores({ includeInactive } = {}) {
+  return repo.listAllFornecedores({ includeInactive });
 }
 
-function getFornecedorById(id) {
-  return findFornecedorById(id);
+async function getFornecedorById(id) {
+  return repo.findFornecedorById(id);
 }
 
-function searchFornecedoresByQuery(q, opts) {
-  return searchFornecedores(q, opts);
+async function searchFornecedoresByQuery(q, opts) {
+  return repo.searchFornecedores(q, opts);
 }
 
-function getFornecedorDetalhesById(id) {
-  const result = getFornecedorDetalhes(id);
+async function getFornecedorDetalhesById(id) {
+  const result = await repo.getFornecedorDetalhes(id);
   if (!result) {
     const err = new Error("Fornecedor não encontrado.");
     err.code = "NOT_FOUND";
@@ -38,9 +28,9 @@ function validateRequired(data) {
   }
 }
 
-function checkDupCnpj(cnpj, excludeId = null) {
+async function checkDupCnpj(cnpj, excludeId = null) {
   if (!cnpj?.trim()) return;
-  const existing = findFornecedorByCnpj(cnpj);
+  const existing = await repo.findFornecedorByCnpj(cnpj);
   if (existing && existing.id !== excludeId) {
     const err = new Error(
       `Já existe um fornecedor cadastrado com este CNPJ (id=${existing.id}: ${existing.razao_social}).`
@@ -51,30 +41,30 @@ function checkDupCnpj(cnpj, excludeId = null) {
   }
 }
 
-function createNewFornecedor(data) {
+async function createNewFornecedor(data) {
   validateRequired(data);
-  checkDupCnpj(data.cnpj);
-  const id = createFornecedor(data);
-  return findFornecedorById(id);
+  await checkDupCnpj(data.cnpj);
+  const id = await repo.createFornecedor(data);
+  return repo.findFornecedorById(id);
 }
 
-function updateExistingFornecedor(id, data) {
-  const existing = findFornecedorById(id);
+async function updateExistingFornecedor(id, data) {
+  const existing = await repo.findFornecedorById(id);
   if (!existing) {
     throw Object.assign(new Error("Fornecedor não encontrado."), { code: "NOT_FOUND" });
   }
   validateRequired(data);
-  checkDupCnpj(data.cnpj, id);
-  updateFornecedor(id, data);
-  return findFornecedorById(id);
+  await checkDupCnpj(data.cnpj, id);
+  await repo.updateFornecedor(id, data);
+  return repo.findFornecedorById(id);
 }
 
-function desativarFornecedorById(id) {
-  const existing = findFornecedorById(id);
+async function desativarFornecedorById(id) {
+  const existing = await repo.findFornecedorById(id);
   if (!existing) {
     throw Object.assign(new Error("Fornecedor não encontrado."), { code: "NOT_FOUND" });
   }
-  desativarFornecedor(id);
+  await repo.desativarFornecedor(id);
 }
 
 module.exports = {

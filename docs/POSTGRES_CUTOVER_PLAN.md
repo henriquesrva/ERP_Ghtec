@@ -24,6 +24,8 @@ Isso muda fundamentalmente a estratégia.
 | `proposal` ✅ | `proposals`, `proposal_items`, `price_history` |
 | `stock` ✅    | `stock_movements` |
 | `kanban` ✅   | `kanban_tasks`, `kanban_comments` |
+| `fornecedor` ✅ | `fornecedores` |
+| `categoria_despesa` ✅ | `categorias_despesa` |
 
 ### Módulos em SQLite/better-sqlite3
 
@@ -32,10 +34,8 @@ Isso muda fundamentalmente a estratégia.
 | ~~`proposal`~~ | ~~`proposals`, `proposal_items`, `price_history`~~ | ~~429~~ → migrado Fase 3 |
 | ~~`stock`~~ | ~~`stock_movements`~~ | ~~224~~ → migrado Fase 4 |
 | ~~`kanban`~~ | ~~`kanban_tasks`, `kanban_comments`~~ | ~~284~~ → migrado Fase 5 |
-| `stock` | `stock_movements` | 224 |
-| `kanban` | `kanban_tasks`, `kanban_comments` | 142 |
-| `fornecedor` | `fornecedores` | 154 |
-| `categoria_despesa` | `categorias_despesa` | 48 |
+| ~~`fornecedor`~~ | ~~`fornecedores`~~ | ~~154~~ → migrado Fase 6 |
+| ~~`categoria_despesa`~~ | ~~`categorias_despesa`~~ | ~~48~~ → migrado Fase 6 |
 | `nota_recebida` | `notas_recebidas`, `itens_nota_recebida` | 322 |
 | `conta_pagar` | `contas_pagar` | 207 |
 
@@ -384,9 +384,34 @@ Grupo 8: conta_pagar
 
 ---
 
-### Fase 6 — Migrar `fornecedor` + `categoria_despesa`
+### Fase 6 — Migrar `fornecedor` + `categoria_despesa` ✅ CONCLUÍDA
 
-**Escopo:** 2 repositórios simples, sem dependências cruzadas problemáticas
+**Escopo:** `src/modules/fornecedor/`, `src/modules/categoria_despesa/`
+
+**Dependências Prisma já migradas:** sem FKs problemáticas para outros módulos SQLite
+
+**Arquivos alterados:**
+- `src/modules/fornecedor/fornecedor.repository.js` — reescrito Prisma async; `mapFornecedor()`; `findFornecedorByCnpj` via `$queryRaw` (REPLACE); `listAllFornecedores`/`countVinculos`/`getFornecedorDetalhes` com SQLite bridges para notas/contas
+- `src/modules/fornecedor/fornecedor.service.js` — totalmente async; `const repo = require(...)`; `checkDupCnpj` async
+- `src/modules/fornecedor/fornecedor.controller.js` — todos os 7 handlers async
+- `src/modules/categoria_despesa/categoria_despesa.repository.js` — reescrito Prisma async; `mapCategoriaDespesa()`; `countUsoCategoria` com SQLite bridge para notas/contas
+- `src/modules/categoria_despesa/categoria_despesa.service.js` — totalmente async; `const repo = require(...)`
+- `src/modules/categoria_despesa/categoria_despesa.controller.js` — todos os 4 handlers async
+- `tests/services/fornecedor.service.test.js` — 15 testes vi.spyOn (criado)
+- `tests/services/categoria_despesa.service.test.js` — 10 testes vi.spyOn (criado)
+- `scripts/check-prisma-connection.js` — seções 12+13 adicionadas (CRUD fornecedor + findByCnpj via $queryRaw; CRUD categoria)
+
+**Decisão técnica — findFornecedorByCnpj**: CNPJ pode ter formatação variável. A query usa `REPLACE` aninhado para normalizar (igual ao comportamento SQLite). Prisma não suporta `REPLACE` em WHERE nativo — `$queryRaw` com tagged template. Resultado já em snake_case (colunas do PostgreSQL). Service lê apenas `id` e `razao_social` da resposta.
+
+**Bridges mantidas** (notas e contas ainda em SQLite):
+- `fornecedor.repository.listAllFornecedores` — counts de notas/contas via `db.prepare(...).get(id)` por linha
+- `fornecedor.repository.countVinculos` — counts diretos via SQLite
+- `fornecedor.repository.getFornecedorDetalhes` — detalhe de notas (com JOIN categorias_despesa) e contas via SQLite
+- `categoria_despesa.repository.countUsoCategoria` — counts diretos via SQLite
+
+**Bridges removidas:** nenhuma (módulos eram puros SQLite sem bridges pré-existentes)
+
+**Resultado:** `npm test` → **355 testes passando**. `node scripts/check-prisma-connection.js` → ✅ 13 seções.
 
 **Dependências Prisma já migradas:** sem FKs problemáticas para outros módulos SQLite
 
