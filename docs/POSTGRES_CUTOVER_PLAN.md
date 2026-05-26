@@ -482,14 +482,33 @@ Grupo 8: conta_pagar
 
 ---
 
-### Fase Final — Limpeza
+### Fase Final — Limpeza ✅ CONCLUÍDA (Passo 3.6)
 
-Após todas as fases:
-- Remover `src/db/init.js` e `src/db/migrate.js` (substituídos por Prisma migrations)
-- Remover chamadas a `init.js`/`migrate.js` em `src/server.js`
-- Atualizar `src/db/connection.js` — manter apenas para `sessionStore.js` (sessions.sqlite)
-- Remover `better-sqlite3` de `dependencies` (manter apenas para `sessionStore.js` ou migrar sessions para outro store)
-- Apagar `database.sqlite`
+**Objetivo:** Remover o legado SQLite do banco principal, mantendo SQLite apenas para sessões.
+
+**Arquivos removidos:**
+- `src/db/init.js` — substituído por Prisma migration `20260525153903_init_schema`
+- `src/db/migrate.js` — substituído por Prisma migrations
+- `src/db/connection.js` — banco principal agora é PostgreSQL; `sessionStore.js` tem conexão própria
+- `tests/setup/testDb.js` — órfão: nenhum teste importava; todos os tests usam `vi.spyOn`
+- `tests/setup/fixtures.js` — órfão: nenhum teste importava
+
+**Arquivos modificados:**
+- `src/server.js` — removida chamada a `require("./db/migrate")` no startup
+- `src/app.js` — import `db` substituído por `prisma`; `/health` usa `prisma.$queryRaw` (async); resposta atualizada para `{ ok, db: "postgres", prisma, sessionStore: "sqlite" }`
+- `src/middleware/errorHandler.js` — adicionados códigos Prisma: `P2002` (unique) → 409, `P2003` (FK) → 409, `P2025` (not found) → 404
+- `package.json` — removido script `init-db` (que chamava `src/db/init.js`)
+
+**`database.sqlite`:** arquivo físico permanece no disco. Pode ser removido manualmente quando o deploy em produção for feito com PostgreSQL.
+
+**`better-sqlite3`:** mantido em `dependencies` pois `sessionStore.js` usa `better-sqlite3` diretamente (conexão própria com `sessions.sqlite`).
+
+**Estado final:**
+- `src/db/` contém apenas `prisma.js`
+- SQLite exclusivamente em `src/middleware/sessionStore.js` (sessions)
+- Banco principal: PostgreSQL/Prisma
+
+**Resultado:** `npm test` → **408 testes passando**. `node scripts/check-prisma-connection.js` → ✅ 15 seções.
 
 ---
 
@@ -507,11 +526,9 @@ Após todas as fases:
 
 ## 8. Próxima Ação Recomendada
 
-**Executar a Fase 8: migrar `conta_pagar` para Prisma.**
+**Fase Final concluída.** Migração Prisma/PostgreSQL completa.
 
-Com `nota_recebida`, `fornecedor` e `categoria_despesa` já em Prisma, todas as dependências de `conta_pagar` estão resolvidas. Após migrar `conta_pagar`:
-- Todas as bridges SQLite de notas/contas em `nota_recebida.repository`, `fornecedor.repository` e `categoria_despesa.repository` serão removidas.
-- `insertContasPagarBridge` (com PRAGMA FK OFF) poderá ser aposentada — a criação de contas passará a usar `prisma.$transaction` atômico junto com a nota.
-- `src/db/connection.js` ficará usado apenas por `sessionStore.js`.
-
-Ordem recomendada: `conta_pagar` → Limpeza Final (remover `db/init.js`, `db/migrate.js`, limpar `better-sqlite3`).
+Próximos passos recomendados:
+1. **Testes manuais de fluxo crítico** — geração de proposta + PDF, kanban, financeiro
+2. **Deploy PostgreSQL em produção** — provisionar banco, rodar `prisma migrate deploy`, ajustar `DATABASE_URL`
+3. Remover `database.sqlite` físico após confirmar produção estável

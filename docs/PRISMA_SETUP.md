@@ -1,20 +1,21 @@
 # Prisma — Setup e Guia de Uso
 
-## Estado atual (Passo 3.5.12 — concluído)
+## Estado atual (Passo 3.6 — Fase Final concluída)
 
-Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Todos os módulos de negócio migrados para Prisma**: `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part`, `proposal`, `stock`, `kanban`, `fornecedor`, `categoria_despesa`, `nota_recebida`, `itens_nota_recebida` e agora **`conta_pagar`**. **Runtime Prisma configurado com driver adapter `@prisma/adapter-pg` + `pg`.**
+Prisma 7.x instalado, PostgreSQL local via Docker Compose, schema Prisma completo migrado (`20260525153903_init_schema`). **Todos os módulos de negócio migrados para Prisma**. **Limpeza SQLite concluída**: `src/db/init.js`, `src/db/migrate.js` e `src/db/connection.js` removidos. `src/db/` contém apenas `prisma.js`. `better-sqlite3` mantido exclusivamente para `sessionStore.js`.
 
 `npm run prisma:status` → `Database schema is up to date!`
 `node scripts/check-prisma-connection.js` → ✅ 15 seções (inclui CRUD real de conta_pagar + aggregate + groupBy)
 `node scripts/seed-postgres.js` → cria usuário admin inicial no PostgreSQL (idempotente)
 
-**Runtime PostgreSQL/Prisma** (fonte única de verdade — todos os módulos de negócio): `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part`, `proposal`, `proposal_items`, `price_history`, `stock_movements`, `kanban_tasks`, `kanban_comments`, `fornecedores`, `categorias_despesa`, `notas_recebidas`, `itens_nota_recebida`, **`contas_pagar`**
+**Runtime PostgreSQL/Prisma** (fonte única de verdade — todos os módulos de negócio): `category`, `responsavel`, `objeto`, `condition`, `client`, `auth/user`, `part`, `proposal`, `proposal_items`, `price_history`, `stock_movements`, `kanban_tasks`, `kanban_comments`, `fornecedores`, `categorias_despesa`, `notas_recebidas`, `itens_nota_recebida`, `contas_pagar`
 
-**Runtime SQLite/better-sqlite3** (infraestrutura apenas): `session` (sessionStore.js)
+**Runtime SQLite/better-sqlite3** (infraestrutura apenas): `session` (sessionStore.js → `sessions.sqlite`)
 
-**Bridges restantes**: Nenhuma. Todo `src/db/connection.js` em módulos de negócio foi removido. O único uso restante é:
-- `src/app.js` → `/health` endpoint (checa SQLite de sessão — intencional)
+**Bridges restantes**: Nenhuma. `src/db/connection.js` removido. O único uso de `better-sqlite3` é:
 - `src/middleware/sessionStore.js` → armazenamento de sessões (não migrar)
+
+**`/health` endpoint**: usa `prisma.$queryRaw\`SELECT 1\`` para checar PostgreSQL. Resposta: `{ ok, db: "postgres", prisma: true, sessionStore: "sqlite" }`.
 
 **Nota sobre movement_type 'contagem'**: O enum Prisma `MovementType` tem apenas `entrada` e `saida`. Movimentos de contagem de estoque são armazenados com `movementType: entrada|saida` + `entryType: 'contagem'`. O mapper `mapStockMovement()` converte de volta para `movement_type: 'contagem'` na resposta da API, preservando o contrato com o frontend.
 
@@ -220,9 +221,8 @@ npm run prisma:status
 - ~~**Passo 3.5.3:** Migrar `client`~~ — **concluído**
 - ~~**Passo 3.5.5:** Migrar `auth/user`~~ — **concluído**
 - ~~**Passo 3.5.6:** Migrar `part` + `part_client_price_references`~~ — **concluído**
-- **Passo 3.5.x:** Migrar demais repositories de better-sqlite3 para Prisma Client
+- ~~**Passo 3.5.x:** Migrar demais repositories de better-sqlite3 para Prisma Client~~ — **concluído**
   - ~~`proposal`~~ ✅ — ~~`stock`~~ ✅ — ~~`kanban`~~ ✅ — ~~`fornecedor`~~ ✅ — ~~`categoria_despesa`~~ ✅ — ~~`nota_recebida`~~ ✅ — ~~`conta_pagar`~~ ✅
-  - **Todos os módulos de negócio migrados.** Apenas `sessionStore` permanece em SQLite.
-- **Passo 3.6:** Fase Final de limpeza — remover `src/db/init.js`, `src/db/migrate.js`, chamadas de init em `server.js`, `database.sqlite`. Decidir se `session` migra para outro store ou permanece em SQLite.
-- **Passo 3.7:** Atualizar `errorHandler.js` para códigos de erro Prisma (`P2002`, `P2003`, `P2025`)
-- **Passo 3.8:** Deploy com PostgreSQL em produção
+- ~~**Passo 3.6:** Fase Final de limpeza~~ — **concluído** (`init.js`, `migrate.js`, `connection.js` removidos; `/health` usa Prisma; `errorHandler` com P2002/P2003/P2025)
+- ~~**Passo 3.7:** Atualizar `errorHandler.js` para códigos de erro Prisma (`P2002`, `P2003`, `P2025`)~~ — **concluído junto com Passo 3.6**
+- **Passo 3.8:** Deploy com PostgreSQL em produção — próximo passo

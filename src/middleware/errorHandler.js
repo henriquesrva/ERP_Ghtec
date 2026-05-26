@@ -26,6 +26,10 @@ const CODE_TO_STATUS = {
   INSUFFICIENT_STOCK:           409,
   SQLITE_CONSTRAINT_UNIQUE:     409,
   SQLITE_CONSTRAINT_FOREIGNKEY: 409,
+  // Prisma error codes
+  P2002: 409, // unique constraint violation
+  P2003: 409, // foreign key constraint violation
+  P2025: 404, // record not found (update/delete on non-existent)
 };
 
 // Campos extras que alguns erros carregam e que o front-end já consome.

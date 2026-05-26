@@ -113,7 +113,8 @@ Só atualize este arquivo quando uma mudança alterar a estrutura permanente do 
 |---|---|
 | Runtime | Node.js (CommonJS) |
 | Framework backend | Express 4 |
-| Banco de dados | SQLite via `better-sqlite3` (síncrono, modo WAL) |
+| Banco de dados principal | PostgreSQL via Prisma 7.x + `@prisma/adapter-pg` |
+| Banco de dados de sessão | SQLite via `better-sqlite3` (`sessions.sqlite`) |
 | Autenticação | `express-session` + `bcryptjs` |
 | Template de PDF | Handlebars (`.hbs`) |
 | Renderização de PDF | Puppeteer (headless Chrome) |
@@ -124,15 +125,18 @@ Só atualize este arquivo quando uma mudança alterar a estrutura permanente do 
 
 **Dependências (`package.json`):**
 ```
-bcryptjs          — hash de senhas
-better-sqlite3    — banco de dados síncrono
-dotenv            — carregamento de .env
-express           — framework HTTP
-express-session   — gerenciamento de sessão
-handlebars        — template para PDF
-multer            — upload de arquivos
-pdf-lib           — manipulação e merge de PDFs
-puppeteer         — renderização headless do PDF
+@prisma/adapter-pg — driver adapter Prisma para PostgreSQL
+@prisma/client     — cliente Prisma gerado
+bcryptjs           — hash de senhas
+better-sqlite3     — banco de sessões (sessions.sqlite via sessionStore.js)
+dotenv             — carregamento de .env
+express            — framework HTTP
+express-session    — gerenciamento de sessão
+handlebars         — template para PDF
+multer             — upload de arquivos
+pdf-lib            — manipulação e merge de PDFs
+pg                 — driver PostgreSQL nativo
+puppeteer          — renderização headless do PDF
 ```
 
 **Dependências de desenvolvimento (`devDependencies`):**
@@ -141,21 +145,24 @@ prisma            — CLI do Prisma (migrações, introspect, studio)
 vitest            — runner de testes
 ```
 
-> **Prisma 7.x em uso no runtime para o módulo `category`.** Runtime híbrido: `category` → Prisma/PostgreSQL com `@prisma/adapter-pg`; todos os demais módulos → `better-sqlite3` via `src/db/connection.js`. PostgreSQL local via `docker-compose.yml`. Migration `20260525153903_init_schema` aplicada. Singleton em `src/db/prisma.js`. Validação: `node scripts/check-prisma-connection.js`. Ver `docs/PRISMA_SETUP.md` para detalhes.
+> **Migração Prisma/PostgreSQL concluída (Passo 3.6).** Todos os módulos de negócio usam Prisma/PostgreSQL. `src/db/` contém apenas `prisma.js` (singleton com `@prisma/adapter-pg`). `better-sqlite3` permanece exclusivamente para `sessionStore.js` (`sessions.sqlite`). PostgreSQL local via `docker-compose.yml`. Migration `20260525153903_init_schema` aplicada. Ver `docs/PRISMA_SETUP.md` e `docs/POSTGRES_CUTOVER_PLAN.md` para detalhes.
 
 **Variáveis de ambiente (`.env`):**
 ```
 SESSION_SECRET    — segredo do cookie de sessão (obrigatório em produção)
 PORT              — porta do servidor (padrão: 3000)
 NODE_ENV          — development | production
-DATABASE_URL      — PostgreSQL (usado por Prisma CLI + runtime do módulo category)
+DATABASE_URL      — PostgreSQL (usado por Prisma CLI e runtime)
 ```
 
 **Como rodar:**
 ```bash
 npm install
-npm run init-db    # cria tabelas base (run once)
-npm run dev        # sobe o servidor (migrate.js roda automaticamente)
+docker compose up -d postgres    # sobe PostgreSQL local
+npm run prisma:generate           # gera client Prisma
+npm run prisma:migrate            # aplica migrations (apenas na primeira vez)
+node scripts/seed-postgres.js     # cria usuário admin (run once)
+npm run dev                       # sobe o servidor
 ```
 
 **Acesso:** `http://localhost:3000`
@@ -244,7 +251,7 @@ service.js      → Regras de negócio, validações, orquestração
 repository.js   → Queries SQL diretas, sem lógica de negócio
 ```
 
-**Regra importante:** `better-sqlite3` é **síncrono** por design. As funções do `repository.js` nunca usam `async/await`. O único `await` no sistema é nas camadas que chamam Puppeteer (geração de PDF).
+**Regra importante:** Todos os `repository.js` são **async** (usam Prisma Client). O padrão `async/await` permeia controller → service → repository.
 
 ### Comunicação Frontend ↔ Backend
 
@@ -256,9 +263,9 @@ REST API pura. O frontend faz `fetch()` para endpoints JSON do Express. Não há
 Usuário → HTML/JS do browser → fetch() → Express (app.js)
     → requireAuth middleware
     → controller (parse req, responde res)
-    → service (regras de negócio)
-    → repository (SQL via better-sqlite3)
-    → database.sqlite
+    → service (regras de negócio, async/await)
+    → repository (Prisma Client async)
+    → PostgreSQL (Docker/produção)
     → resposta JSON → frontend → DOM
 ```
 
@@ -671,18 +678,17 @@ Multer com 3 destinos:
 
 - ~~`valor_total_extenso` vem do payload do frontend~~ — **resolvido**: gerado pelo backend via `valorPorExtenso(total)`
 - ~~Sessão armazenada em memória~~ — **resolvido**: `sessionStore.js` com `sessions.sqlite`
+- ~~`migrate.js` cresce linearmente sem versionamento~~ — **resolvido**: substituído por Prisma migrations
 - Puppeteer sem fila: múltiplas gerações simultâneas podem consumir muita memória
-- `migrate.js` cresce linearmente sem versionamento
 
 ### Validações e Proteções Implementadas (2026-05)
 
 - `validateProposalItems()` no `proposal.service.js` — valida array não vazio, descrição obrigatória por item, quantidade inteira > 0, preço não negativo. Retorna 400 antes de tocar o banco.
 - `createProposalAtomic()` no `proposal.repository.js` — proposta + itens + price_history em uma única transação. Qualquer falha reverte tudo.
-- `foreign_keys = ON` no SQLite — chaves estrangeiras agora são aplicadas pelo banco. Deleção inválida retorna erro 409 via `errorHandler`.
-- `deleteCondition` no `condition.repository.js` — nulifica o FK em `proposals` antes de deletar, em transação.
-- `busy_timeout = 5000` no SQLite — evita `SQLITE_BUSY` em picos de escrita.
+- FKs e constraints garantidas pelo PostgreSQL — erros Prisma P2002/P2003/P2025 mapeados em `errorHandler.js` para 409/409/404.
+- `deleteCondition` no `condition.repository.js` — nulifica o FK em `proposals` antes de deletar, em transação Prisma.
 - Cookie de sessão com `httpOnly: true`, `sameSite: "lax"`, `secure: true` em produção.
-- `/health` verifica acesso ao banco — retorna 503 se o SQLite estiver inacessível.
+- `/health` usa `prisma.$queryRaw\`SELECT 1\`` — retorna 503 se PostgreSQL estiver inacessível.
 
 ---
 
@@ -735,17 +741,9 @@ Presentes em: `clients`, `parts`, `part_categories`, `users`, `commercial_condit
 
 ### Estratégia de Migração
 
-O arquivo `src/db/migrate.js` é executado automaticamente a cada start do servidor (via `server.js`). Usa `ALTER TABLE ... ADD COLUMN` com verificação prévia via `PRAGMA table_info()` para garantir idempotência. Não há rollback nem versionamento sequencial.
+O schema é gerenciado por Prisma Migrations (`prisma/migrations/`). Migration `20260525153903_init_schema` contém o DDL completo (19 tabelas, 6 enums, índices, FKs). Para aplicar em novo ambiente: `npm run prisma:migrate`. Para produção: `prisma migrate deploy`.
 
-O `migrate.js` também executa backfills: importa `proposal_items` para `price_history` e cria peças em `parts` a partir do histórico se ainda não existirem.
-
-### Pragmas SQLite Ativos (connection.js)
-
-```javascript
-db.pragma("journal_mode = WAL");   // melhor performance para leituras concorrentes
-db.pragma("foreign_keys = ON");    // FK enforcement habilitado (OFF por padrão no SQLite)
-db.pragma("busy_timeout = 5000");  // aguarda até 5s antes de falhar em SQLITE_BUSY
-```
+Os arquivos legados `src/db/init.js` e `src/db/migrate.js` foram removidos no Passo 3.6.
 
 ### Riscos de Inconsistência
 
@@ -916,18 +914,18 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 5. **Geração de PDF em 3 camadas (Puppeteer + pdf-lib):** solução robusta para marcas d'água independentes do conteúdo, necessária porque Puppeteer tem limitações de renderização CSS de impressão.
 6. **CSS da proposta injetado inline no HTML:** garante renderização correta pelo Puppeteer sem dependência de URLs externas.
 7. **Assets do PDF em base64 Data URI:** evita problemas de path durante renderização headless.
-8. **Migrações por código em `migrate.js`:** escolha pragmática para ambiente sem ORM. Usa `ALTER TABLE IF NOT EXISTS` para idempotência.
-9. **Separação controller → service → repository:** garante que SQL fique no repository e regras de negócio no service. Não misturar.
+8. ~~**Migrações por código em `migrate.js`:**~~ **Prisma Migrations** (Passo 3.6): schema gerenciado via `prisma/migrations/`. `src/db/init.js` e `src/db/migrate.js` removidos.
+9. **Separação controller → service → repository:** garante que queries Prisma fiquem no repository e regras de negócio no service. Não misturar. Todos os layers são async.
 10. ~~**Sessão em memória:**~~ **Session store persistente** implementada em `sessionStore.js` (ver item 17). Não há mais sessão em memória.
-11. **Backfill no `migrate.js`:** garante que dados antigos sejam migrados automaticamente sem intervenção manual.
+11. ~~**Backfill no `migrate.js`:**~~ histórico já consolidado. Backfills eram responsabilidade do `migrate.js` legado (removido no Passo 3.6).
 12. **CommonJS (não ESM):** padrão do projeto. Não migrar para ESM sem necessidade.
-13. **`better-sqlite3` síncrono:** nunca usar `async/await` em funções de repository.
-14. **`foreign_keys = ON` no SQLite:** habilitado explicitamente em `connection.js` — sem isso o SQLite ignora FKs silenciosamente. Qualquer novo DELETE que envolva FKs deve verificar dependências ou nulificá-las em transação antes.
-15. **`createProposalAtomic()`:** função no `proposal.repository.js` que agrupa criação de proposta, itens e price_history em uma única transação. Operação central do sistema — não fragmentar de volta em chamadas separadas.
+13. **Prisma Client async:** todos os `repository.js` usam `async/await` com Prisma. `better-sqlite3` permanece apenas em `sessionStore.js` (síncrono, por design do express-session).
+14. **FKs garantidas pelo PostgreSQL:** constraints de integridade aplicadas pelo banco. Erros Prisma P2002/P2003/P2025 tratados em `errorHandler.js`.
+15. **`createProposalAtomic()`:** função no `proposal.repository.js` que agrupa criação de proposta, itens e price_history em `prisma.$transaction`. Operação central do sistema — não fragmentar.
 16. **Cookie de sessão hardened:** `httpOnly: true`, `sameSite: "lax"`, `secure: isProd`. Não regredir esses atributos.
-17. **Session store persistente (`sessionStore.js`):** store customizado usando `better-sqlite3` com arquivo `sessions.sqlite` separado do banco principal. Sem nova dependência. Sessões sobrevivem a restarts do servidor. Limpeza automática de sessões expiradas a cada 15 minutos.
+17. **Session store persistente (`sessionStore.js`):** store customizado usando `better-sqlite3` com arquivo `sessions.sqlite` separado do banco principal. `better-sqlite3` permanece em `dependencies` exclusivamente por causa desta dependência. Sessões sobrevivem a restarts do servidor. Limpeza automática a cada 15 minutos.
 18. **`valor_total_extenso` gerado pelo backend:** `extensao.js` suporta qualquer valor monetário em BRL. O service ignora o campo do payload do frontend e gera o extenso a partir do `total` calculado. Valor aparece no PDF abaixo do total.
-19. **Infraestrutura de testes com Vitest:** `NODE_ENV=test` faz `connection.js` abrir banco `:memory:` (nunca toca `database.sqlite`). Cada arquivo de teste roda em worker isolado (registry próprio → DB próprio). Setup em `tests/setup/testDb.js` roda `init.js` + `migrate.js` para montar o schema completo. `clearAllTables()` chamado em `beforeEach` para isolamento entre casos. Rodar com `npm test`. `validateProposalItems` e `parsePrecoCompra` são exported dos respectivos services para permitir teste unitário direto.
+19. **Infraestrutura de testes com Vitest:** 408 testes em 18 arquivos, todos usando `vi.spyOn` para mockar os repositories. Sem dependência de banco de dados — nenhum teste toca PostgreSQL ou SQLite. Cada arquivo de teste tem isolamento de módulo garantido pelo Vitest. Rodar com `npm test`. `validateProposalItems` e `parsePrecoCompra` são exported dos respectivos services para testes unitários diretos.
 20. **Assinatura da proposta vem do usuário logado:** a entidade `responsaveis` é legada e não deve ser usada como fonte principal para novas propostas. O `proposal.controller.js` monta o bloco `responsavel` a partir de `user.nome`, `user.signature_cargo` e `user.signature_telefone` do usuário da sessão — ignorando qualquer campo `responsavel` enviado pelo frontend. O backend bloqueia criação de proposta se o usuário não tiver `signature_cargo` nem `signature_telefone` configurados (`SIGNATURE_REQUIRED`). O snapshot da assinatura é salvo em `responsavel_nome/cargo/email/telefone` nas colunas da proposta e não é recalculado retroativamente.
 21. **Regras de domínio do Kanban em `src/shared/domain/kanban.js`:** `KANBAN_STATUSES`, `KANBAN_LABELS`, `isValidKanbanStatus()`, `canMoveKanban()` e `assertCanMoveKanban()` estão centralizados neste módulo. Tanto `proposal.service.js` quanto `kanban.service.js` importam daqui — sem dependência cruzada entre os dois módulos.
 
@@ -957,7 +955,7 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 - ~~Autosave de rascunho~~ — **implementado** (`localStorage` em `nova-proposta.html`)
 - ~~Adicionar testes automatizados nos services críticos~~ — **implementado** (Vitest, 74 testes, banco em memória, `tests/`)
 - Implementar singleton do browser Puppeteer com fila para evitar múltiplas instâncias simultâneas
-- Adotar migrações sequenciais numeradas no lugar do `migrate.js` monolítico
+- ~~Adotar migrações sequenciais numeradas~~ — **implementado** (Prisma Migrations)
 - Separar CSS específico de cada página do `styles.css` global de forma sistemática
 
 ### 16.2 Melhorias de UI/UX
@@ -1108,7 +1106,7 @@ O `errorHandler.js` captura e responde com status adequado.
 
 3. **O fluxo de PDF tem 3 camadas por design** (conteúdo + 2 marcas d'água via pdf-lib). Não simplifique sem entender o motivo e testar com 1, 2 e 5+ páginas.
 
-4. **`better-sqlite3` é síncrono.** Nunca use `async/await` nas funções do `repository.js` — é síncrono por design. O `await` só aparece nas camadas que chamam Puppeteer.
+4. **Prisma é async.** Todas as funções de `repository.js` são `async`. Não remova `await` de chamadas ao Prisma Client. O único uso de `better-sqlite3` (síncrono) é em `sessionStore.js`.
 
 5. **O padrão controller → service → repository deve ser mantido.** Não coloque SQL no controller, não coloque regras de negócio no repository.
 
@@ -1121,7 +1119,7 @@ O `errorHandler.js` captura e responde com status adequado.
 - Leia o fluxo completo do módulo (controller → service → repository) antes de propor mudanças
 - Entenda se a alteração afeta `price_history`, `proposals` ou `parts` — essas tabelas têm dados críticos
 - Verifique se há rotas em `app.js` que precisam ser atualizadas
-- Verifique se `migrate.js` precisa de nova migração
+- Para mudanças de schema, use `npm run prisma:migrate` (gera e aplica nova migration)
 
 ### Cuidados específicos
 
@@ -1130,7 +1128,7 @@ O `errorHandler.js` captura e responde com status adequado.
 - **Geração de PDF:** sempre teste com propostas simples (1 item) e complexas (10+ itens, 2+ páginas) antes de declarar sucesso.
 - **Assets do PDF:** os arquivos `marcatopo.png`, `marcabaixo.jpg`, `marca_fixa.png` e `LogoGHTEC.png` em `src/assets/` são críticos. Se o nome ou extensão mudar, o `assetDataUri()` vai lançar erro e a geração de proposta vai falhar completamente.
 - **Autocomplete de itens:** respeite a prioridade `part_client_price_references > price_history` na sugestão de preço.
-- **Não sugira PostgreSQL** sem conversa estratégica — SQLite é escolha intencional.
+- **Banco é PostgreSQL/Prisma.** `better-sqlite3` permanece apenas para `sessionStore.js` — não expanda seu uso.
 - **Não sugira bundler (Webpack, Vite)** sem necessidade clara — frontend vanilla é intencional.
 - **Não adicione dependências** sem necessidade real — o `package.json` enxuto é intencional.
 
@@ -1163,8 +1161,8 @@ Expansão incremental: autosave de rascunho, relatórios de lucratividade, integ
 1. ~~**Imediato:** Corrigir `extensao.js`~~ — **feito**
 2. ~~**Curto prazo:** Autosave e session store~~ — **feito**
 3. ~~**Médio prazo:** Testes automatizados nos services críticos~~ — **feito** · Concluir redesign de UI (Fases 3-5)
-4. **Longo prazo:** Migrações versionadas, relatórios, integração fiscal, Puppeteer com fila
+4. **Longo prazo:** Relatórios de lucratividade, integração fiscal, Puppeteer com fila
 
 ---
 
-*Atualizado em 2026-05-25 — Passo 3.5.1.1: driver adapter `@prisma/adapter-pg` configurado; módulo `category` conecta ao PostgreSQL em runtime via Prisma; demais módulos continuam em SQLite/better-sqlite3; 157 testes, 8 arquivos, todos passando.*
+*Atualizado em 2026-05-26 — Passo 3.6: migração Prisma/PostgreSQL concluída. Todos os módulos de negócio usam Prisma. `src/db/` contém apenas `prisma.js`. `better-sqlite3` apenas para `sessionStore.js`. 408 testes passando, 18 arquivos.*

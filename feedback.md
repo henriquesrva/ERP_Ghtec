@@ -1,49 +1,50 @@
-# Feedback — Passo 3.5.12
+# Feedback — Passo 3.6 (Fase Final de Limpeza)
 
 ## O que foi feito
 
-Migração completa do módulo `conta_pagar` para Prisma/PostgreSQL e remoção de todas as bridges SQLite restantes nos módulos de negócio.
+Remoção completa do legado SQLite do banco principal. `src/db/` agora contém apenas `prisma.js`.
 
-### Arquivos alterados
+## Auditoria SQLite antes das mudanças
 
-**Reescritos para Prisma:**
-- `src/modules/conta_pagar/conta_pagar.repository.js` — `mapContaPagar`, `startOfToday`, `listContasPagar`, `findContaById`, `createConta`, `updateConta`, `baixarConta`, `cancelarConta`, `getResumoFinanceiro` (6 queries paralelas via `Promise.all`)
-- `src/modules/conta_pagar/conta_pagar.service.js` — async, `const repo = require(...)` para compatibilidade com `vi.spyOn`
-- `src/modules/conta_pagar/conta_pagar.controller.js` — async, preservou upload de comprovante via multer
+| Arquivo | Uso |
+|---------|-----|
+| `src/db/connection.js` | `src/app.js` (health check) + `tests/setup/testDb.js` + `tests/setup/fixtures.js` |
+| `src/db/init.js` | script `init-db` no package.json + `tests/setup/testDb.js` |
+| `src/db/migrate.js` | `src/server.js` no startup + `tests/setup/testDb.js` |
+| `src/middleware/sessionStore.js` | própria conexão `better-sqlite3` com `sessions.sqlite` (mantida) |
+| `tests/setup/testDb.js` | **órfão** — nenhum teste importava (todos usam vi.spyOn) |
+| `tests/setup/fixtures.js` | **órfão** — nenhum teste importava |
 
-**Bridges removidas:**
-- `src/modules/nota_recebida/nota_recebida.repository.js` — `findNotaContasPagar`, `countContasAbertas`, `insertContasPagarBridge` (→ `criarContasPagar` via `createMany`); `_count.contasPagar` em `listNotasRecebidas`
-- `src/modules/nota_recebida/nota_recebida.service.js` — awaits corrigidos, renomeado para `criarContasPagar`
-- `src/modules/fornecedor/fornecedor.repository.js` — `countVinculos` + `getFornecedorDetalhes` contas via Prisma; `_count.contasPagar` em `listAllFornecedores`
-- `src/modules/categoria_despesa/categoria_despesa.repository.js` — `countUsoCategoria` via `Promise.all` Prisma
-- `src/modules/proposal/proposal.repository.js` — import `db` órfão removido
+## Arquivos removidos
 
-**Testes:**
-- `tests/services/conta_pagar.service.test.js` — criado, 28 testes
-- `tests/services/nota_recebida.service.test.js` — mocks atualizados (`criarContasPagar`, awaits)
+- `src/db/init.js`
+- `src/db/migrate.js`
+- `src/db/connection.js`
+- `tests/setup/testDb.js`
+- `tests/setup/fixtures.js`
 
-**Scripts e docs:**
-- `scripts/check-prisma-connection.js` — seção 15 adicionada (CRUD completo de conta_pagar)
-- `docs/PRISMA_SETUP.md` — atualizado para Passo 3.5.12
-- `docs/POSTGRES_CUTOVER_PLAN.md` — Fase 8 marcada CONCLUÍDA
+## Arquivos modificados
+
+- `src/server.js` — removido `require("./db/migrate")` do startup
+- `src/app.js` — import `db` substituído por `prisma`; `/health` usa `await prisma.$queryRaw\`SELECT 1\``; resposta agora `{ ok, db: "postgres", prisma: true, sessionStore: "sqlite" }`
+- `src/middleware/errorHandler.js` — adicionados P2002 → 409, P2003 → 409, P2025 → 404
+- `package.json` — removido script `init-db`
+- `docs/PRISMA_SETUP.md` — estado atualizado para Passo 3.6
+- `docs/POSTGRES_CUTOVER_PLAN.md` — Fase Final marcada CONCLUÍDA com detalhes técnicos; próxima ação = deploy PostgreSQL
+- `docs/SYSTEM_CONTEXT.md` — stack atualizada (PostgreSQL como banco principal); fluxo de dados atualizado; decisões técnicas 8/13/14/19 reescritas; how-to atualizado com docker compose + prisma
+
+## Estado final
+
+- `src/db/` → apenas `prisma.js`
+- `better-sqlite3` → apenas `sessionStore.js` (`sessions.sqlite`)
+- `database.sqlite` → arquivo físico permanece no disco (remover no deploy de produção)
 
 ## Resultados
 
 - `npm test` → **408 testes passando** (18 arquivos)
-- `node scripts/check-prisma-connection.js` → **15 seções OK**
 - `npm run prisma:status` → `Database schema is up to date!`
-
-## Decisões técnicas
-
-- `atrasado` calculado no mapper JS com `startOfToday()` — equivalente ao `date('now')` do SQLite
-- PRAGMA `foreign_keys = OFF` eliminado — desnecessário no PostgreSQL
-- `getResumoFinanceiro` usa `groupBy` com `orderBy: { _sum: { valor: "desc" } }` + lookup separado para nomes de categoria
-- `baixarConta` atualiza `observacoes` condicionalmente (só se não-null)
+- `node scripts/check-prisma-connection.js` → **15 seções OK**
 
 ## Próximo passo
 
-**Fase Final — limpeza:**
-- Remover `src/db/init.js` e `src/db/migrate.js`
-- Remover chamadas de init em `server.js`
-- Decidir destino de `database.sqlite` e `sessionStore`
-- Atualizar `errorHandler.js` para códigos Prisma (`P2002`, `P2003`, `P2025`)
+Deploy PostgreSQL em produção: provisionar banco, ajustar `DATABASE_URL`, rodar `prisma migrate deploy`, rodar `seed-postgres.js`.

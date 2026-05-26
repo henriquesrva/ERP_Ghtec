@@ -144,7 +144,7 @@ const {
   getResumoHandler,
 } = require("./modules/conta_pagar/conta_pagar.controller");
 
-const db = require("./db/connection");
+const prisma = require("./db/prisma");
 const app = express();
 
 const isProd = process.env.NODE_ENV === "production";
@@ -187,12 +187,12 @@ app.put("/users/me/signature",  updateSignatureHandler);
 app.put("/users/:id/role",     changeUserRoleHandler);
 app.delete("/users/:id",       deleteUserHandler);
 
-app.get("/health", (req, res) => {
+app.get("/health", async (req, res) => {
   try {
-    db.prepare("SELECT 1").get();
-    res.json({ ok: true, db: "ok", env: process.env.NODE_ENV || "development" });
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true, db: "postgres", prisma: true, sessionStore: "sqlite" });
   } catch (e) {
-    console.error("[HEALTH] DB inacessível:", e.message);
+    console.error("[HEALTH] PostgreSQL inacessível:", e.message);
     res.status(503).json({ ok: false, db: "error", message: "Banco de dados indisponível." });
   }
 });

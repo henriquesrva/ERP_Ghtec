@@ -6,8 +6,6 @@ if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
   process.exit(1);
 }
 
-require("./db/migrate");
-
 const app = require("./app");
 
 const PORT = process.env.PORT || 3000;
