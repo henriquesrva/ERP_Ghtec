@@ -429,6 +429,70 @@ async function main() {
   await prisma.partCategory.delete({ where: { id: sCat.id } });
   console.log(`   ✅  dados de teste removidos`);
 
+  // 11. kanban_tasks + kanban_comments — fluxo real
+  console.log("\n11. kanban_tasks + kanban_comments — fluxo real...");
+
+  const kUser = await prisma.user.findFirst({ where: { role: "admin" } });
+  if (!kUser) throw new Error("Nenhum usuário admin encontrado. Execute scripts/seed-postgres.js primeiro.");
+
+  // Criar task
+  const kTask = await prisma.kanbanTask.create({
+    data: {
+      title:       "Tarefa Check Prisma",
+      description: "Criada pelo script de validação",
+      createdById: kUser.id,
+    },
+  });
+  console.log(`   ✅  task criada: id=${kTask.id}, status=${kTask.kanbanStatus}`);
+
+  // Mover status
+  const kUpdated = await prisma.kanbanTask.update({
+    where: { id: kTask.id },
+    data:  { kanbanStatus: "aguardando_compra", kanbanStatusUpdatedAt: new Date() },
+  });
+  if (kUpdated.kanbanStatus !== "aguardando_compra") throw new Error("Status não atualizado");
+  console.log(`   ✅  status movido para: ${kUpdated.kanbanStatus}`);
+
+  // Adicionar comentário na task (relação polimórfica — sem FK)
+  const kComment = await prisma.kanbanComment.create({
+    data: {
+      cardType: "task",
+      cardId:   kTask.id,
+      userId:   kUser.id,
+      userNome: kUser.nome,
+      comment:  "Comentário de teste na task",
+    },
+  });
+  console.log(`   ✅  comentário criado: id=${kComment.id}, card_type=${kComment.cardType}, card_id=${kComment.cardId}`);
+
+  // Adicionar comentário polimórfico em proposal (card_id=0, sem FK real)
+  const kCommentProp = await prisma.kanbanComment.create({
+    data: {
+      cardType: "proposal",
+      cardId:   0,
+      userId:   kUser.id,
+      userNome: kUser.nome,
+      comment:  "Auto-comentário de sistema (teste polimórfico)",
+    },
+  });
+  console.log(`   ✅  comentário polimórfico em proposal: id=${kCommentProp.id}`);
+
+  // Listar comentários da task
+  const kComments = await prisma.kanbanComment.findMany({
+    where:   { cardType: "task", cardId: kTask.id },
+    orderBy: { createdAt: "asc" },
+  });
+  if (kComments.length !== 1) throw new Error(`Esperava 1 comentário na task, encontrou ${kComments.length}`);
+  console.log(`   ✅  ${kComments.length} comentário(s) na task`);
+
+  // Deletar comentários e task (simulando deleteTask do service)
+  await prisma.kanbanComment.deleteMany({ where: { cardType: "task",     cardId: kTask.id } });
+  await prisma.kanbanComment.deleteMany({ where: { cardType: "proposal", cardId: 0        } });
+  await prisma.kanbanTask.delete({ where: { id: kTask.id } });
+  const afterDel = await prisma.kanbanComment.count({ where: { cardType: "task", cardId: kTask.id } });
+  if (afterDel !== 0) throw new Error(`Esperava 0 comentários após delete, encontrou ${afterDel}`);
+  console.log(`   ✅  task e comentários deletados`);
+
   console.log("\n✅  Prisma conectado ao PostgreSQL com sucesso!\n");
 }
 

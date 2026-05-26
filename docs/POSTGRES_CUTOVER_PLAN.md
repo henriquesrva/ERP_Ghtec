@@ -23,6 +23,7 @@ Isso muda fundamentalmente a estratégia.
 | `part` ✅ | `parts`, `part_client_price_references` |
 | `proposal` ✅ | `proposals`, `proposal_items`, `price_history` |
 | `stock` ✅    | `stock_movements` |
+| `kanban` ✅   | `kanban_tasks`, `kanban_comments` |
 
 ### Módulos em SQLite/better-sqlite3
 
@@ -30,6 +31,7 @@ Isso muda fundamentalmente a estratégia.
 |--------|-----------|---------------------|
 | ~~`proposal`~~ | ~~`proposals`, `proposal_items`, `price_history`~~ | ~~429~~ → migrado Fase 3 |
 | ~~`stock`~~ | ~~`stock_movements`~~ | ~~224~~ → migrado Fase 4 |
+| ~~`kanban`~~ | ~~`kanban_tasks`, `kanban_comments`~~ | ~~284~~ → migrado Fase 5 |
 | `stock` | `stock_movements` | 224 |
 | `kanban` | `kanban_tasks`, `kanban_comments` | 142 |
 | `fornecedor` | `fornecedores` | 154 |
@@ -356,13 +358,29 @@ Grupo 8: conta_pagar
 
 ---
 
-### Fase 5 — Migrar `kanban`
+### Fase 5 — Migrar `kanban` ✅ CONCLUÍDA
 
 **Escopo:** `src/modules/kanban/kanban.repository.js`, `kanban.service.js`, `kanban.controller.js`
 
-**Dependências Prisma já migradas:** `users` (Fase 1)
+**Dependências Prisma já migradas:** `users` (Fase 1), `proposals` (Fase 3)
 
-**Atenção:** `kanban_comments` é polimórfico (`card_type` + `card_id`). Sem FK no Prisma. `proposal.service.js` chama `addKanbanComment` — após esta fase, essa chamada vira Prisma async. `proposal.service.js` precisará de pequeno ajuste para `await addKanbanComment(...)`.
+**Arquivos alterados:**
+- `src/modules/kanban/kanban.repository.js` — reescrito Prisma async; `mapKanbanTask()` + `mapKanbanComment()`; `listCards()` via 2 queries paralelas (proposals + tasks) + merge JS com sort por `created_at`; relação polimórfica de `kanban_comments` preservada (sem FK)
+- `src/modules/kanban/kanban.service.js` — totalmente async; `const repo = require(...)`
+- `src/modules/kanban/kanban.controller.js` — todos os handlers async
+- `src/modules/proposal/proposal.service.js` — `await` adicionado nos 4 `kanbanRepo.addComment(...)` (auto-comentários do sistema)
+- `tests/services/kanban.service.test.js` — 24 testes vi.spyOn (criado)
+- `scripts/check-prisma-connection.js` — seção 11 adicionada (task, mover status, comentário task, comentário polimórfico, limpeza)
+
+**Decisão técnica — listCards (UNION)**: A query SQLite usava `UNION ALL` com `julianday()` para filtrar proposals antigas. Na versão Prisma, duas queries paralelas com `Promise.all` substituem o UNION — proposals com `NOT` filter para exclusão por data, tasks sem filtro. Merge em JS com `sort` por `created_at`. Equivalente funcional completo.
+
+**Decisão técnica — kanban_comments polimórfico**: `cardId` não tem FK. Um comentário com `cardType: 'proposal'` e `cardId: proposta.id` não tem constraint de integridade no banco — validação de existência permanece no service (comportamento idêntico ao SQLite).
+
+**Bridges removidas:** nenhuma (kanban não tinha bridges — era puro SQLite)
+
+**Ajuste em proposal.service.js:** 4 chamadas `kanbanRepo.addComment(...)` receberam `await`. Try/catch do auto-comentário preservado. Comportamento idêntico ao anterior (falha do comentário loga e não propaga para o fluxo principal).
+
+**Resultado:** `npm test` → **330 testes passando**. `node scripts/check-prisma-connection.js` → ✅ 11 seções.
 
 ---
 
@@ -411,8 +429,8 @@ Após todas as fases:
 
 ## 8. Próxima Ação Recomendada
 
-**Executar a Fase 5: migrar `kanban` para Prisma.**
+**Executar a Fase 6: migrar `fornecedor` + `categoria_despesa` para Prisma.**
 
-Com `users` (Fase 1) já em Prisma, `kanban_tasks` e `kanban_comments` podem ser migrados. Atenção à relação polimórfica de `kanban_comments` (sem FK real). Após esta fase, `proposal.service.js` precisará de pequeno ajuste para `await addKanbanComment(...)`.
+Ambos são simples (sem dependências cruzadas problemáticas). Desbloqueiam a Fase 7 (`nota_recebida`) que depende dos dois. Após migrar `nota_recebida`, a bridge restante em `part.repository.deletePart` (nulificação de `itens_nota_recebida`) também pode ser removida.
 
-Módulos restantes após kanban: `fornecedor`/`categoria_despesa` → `nota_recebida` → `conta_pagar`.
+Ordem recomendada das fases restantes: `fornecedor + categoria_despesa` → `nota_recebida + itens_nota_recebida` → `conta_pagar` → Limpeza Final.

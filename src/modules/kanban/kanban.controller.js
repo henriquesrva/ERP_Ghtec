@@ -1,17 +1,17 @@
 const svc = require("./kanban.service");
 
-function listCardsHandler(req, res) {
+async function listCardsHandler(req, res) {
   try {
-    return res.json(svc.getAllCards());
+    return res.json(await svc.getAllCards());
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao listar cards." });
   }
 }
 
-function createTaskHandler(req, res) {
+async function createTaskHandler(req, res) {
   try {
-    const task = svc.createTask(req.body, req.session.userId);
+    const task = await svc.createTask(req.body, req.session.userId);
     return res.status(201).json({ success: true, task });
   } catch (err) {
     console.error(err);
@@ -20,9 +20,9 @@ function createTaskHandler(req, res) {
   }
 }
 
-function updateTaskHandler(req, res) {
+async function updateTaskHandler(req, res) {
   try {
-    const task = svc.updateTask(Number(req.params.id), req.body);
+    const task = await svc.updateTask(Number(req.params.id), req.body);
     return res.json({ success: true, task });
   } catch (err) {
     console.error(err);
@@ -32,11 +32,11 @@ function updateTaskHandler(req, res) {
   }
 }
 
-function moveTaskHandler(req, res) {
+async function moveTaskHandler(req, res) {
   try {
     const { status } = req.body;
     if (!status) return res.status(400).json({ success: false, message: "O campo 'status' é obrigatório." });
-    svc.moveTask(Number(req.params.id), status, req.session.userRole || "user");
+    await svc.moveTask(Number(req.params.id), status, req.session.userRole || "user");
     return res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -47,9 +47,9 @@ function moveTaskHandler(req, res) {
   }
 }
 
-function deleteTaskHandler(req, res) {
+async function deleteTaskHandler(req, res) {
   try {
-    svc.deleteTask(Number(req.params.id), req.session.userRole || "user");
+    await svc.deleteTask(Number(req.params.id), req.session.userRole || "user");
     return res.json({ success: true });
   } catch (err) {
     console.error(err);
@@ -59,7 +59,7 @@ function deleteTaskHandler(req, res) {
   }
 }
 
-function linkTaskToProposalHandler(req, res) {
+async function linkTaskToProposalHandler(req, res) {
   try {
     const role = req.session.userRole || "user";
     if (role !== "admin" && role !== "comercial") {
@@ -68,8 +68,8 @@ function linkTaskToProposalHandler(req, res) {
     const taskId = Number(req.params.id);
     const { proposal_id } = req.body;
     if (!proposal_id) return res.status(400).json({ success: false, message: "proposal_id é obrigatório." });
-    svc.linkTaskToProposal(taskId, Number(proposal_id), {
-      id: req.session.userId,
+    await svc.linkTaskToProposal(taskId, Number(proposal_id), {
+      id:   req.session.userId,
       nome: req.session.userName || "Usuário",
     });
     return res.json({ success: true });
@@ -81,24 +81,24 @@ function linkTaskToProposalHandler(req, res) {
   }
 }
 
-function getCommentsHandler(req, res) {
+async function getCommentsHandler(req, res) {
   try {
     const { type, id } = req.params;
-    return res.json(svc.getComments(type, Number(id)));
+    return res.json(await svc.getComments(type, Number(id)));
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Erro ao carregar comentários." });
   }
 }
 
-function addCommentHandler(req, res) {
+async function addCommentHandler(req, res) {
   try {
     const { cardType, cardId, comment } = req.body;
     if (!cardType || !cardId) return res.status(400).json({ success: false, message: "cardType e cardId são obrigatórios." });
-    const result = svc.addComment({
+    const result = await svc.addComment({
       cardType,
-      cardId: Number(cardId),
-      userId: req.session.userId,
+      cardId:   Number(cardId),
+      userId:   req.session.userId,
       userNome: req.session.userName || "Usuário",
       comment,
     });

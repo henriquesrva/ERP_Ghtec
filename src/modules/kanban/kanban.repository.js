@@ -1,132 +1,187 @@
-const db = require("../../db/connection");
+const prisma = require("../../db/prisma");
+
+function mapKanbanTask(t) {
+  if (!t) return null;
+  return {
+    id:                       t.id,
+    title:                    t.title,
+    description:              t.description,
+    kanban_status:            t.kanbanStatus,
+    kanban_status_updated_at: t.kanbanStatusUpdatedAt,
+    created_by:               t.createdById,
+    created_at:               t.createdAt,
+    updated_at:               t.updatedAt,
+  };
+}
+
+function mapKanbanComment(c) {
+  if (!c) return null;
+  return {
+    id:         c.id,
+    card_type:  c.cardType,
+    card_id:    c.cardId,
+    user_id:    c.userId,
+    user_nome:  c.userNome,
+    comment:    c.comment,
+    created_at: c.createdAt,
+  };
+}
 
 // ── Cards (proposals + tasks combined) ───────────────────────────────────────
 
-function listCards() {
-  return db.prepare(`
-    SELECT
-      'proposal'                        AS card_type,
-      p.id                              AS id,
-      p.numero_proposta                 AS title,
-      NULL                              AS description,
-      p.kanban_status,
-      p.kanban_status_updated_at,
-      p.created_at,
-      c.nome                            AS cliente_nome,
-      p.valor_total                     AS total,
-      p.pdf_path,
-      NULL                              AS created_by,
-      p.execution_completed,
-      p.execution_date,
-      p.executed_by,
-      p.execution_os,
-      p.execution_details,
-      p.execution_marked_at,
-      p.approval_date,
-      p.approval_notes,
-      p.approval_attachment_path,
-      p.approval_registered_at,
-      p.billing_date,
-      p.invoice_number,
-      p.billing_notes,
-      p.billed_by_user_id,
-      p.billed_at,
-      (SELECT GROUP_CONCAT(pi.descricao, '|||')
-       FROM (SELECT pi2.descricao FROM proposal_items pi2
-             WHERE pi2.proposal_id = p.id
-             ORDER BY pi2.item_ordem ASC LIMIT 3) pi) AS items_preview,
-      (SELECT COUNT(*) FROM proposal_items pi3 WHERE pi3.proposal_id = p.id) AS items_count
-    FROM proposals p
-    LEFT JOIN clients c ON c.id = p.cliente_id
-    WHERE NOT (p.kanban_status = 'enviado'  AND julianday('now') - julianday(p.kanban_status_updated_at) > 30)
-      AND NOT (p.kanban_status = 'faturado' AND julianday('now') - julianday(p.kanban_status_updated_at) > 7)
-    UNION ALL
-    SELECT
-      'task'              AS card_type,
-      t.id                AS id,
-      t.title,
-      t.description,
-      t.kanban_status,
-      t.kanban_status_updated_at,
-      t.created_at,
-      NULL                AS cliente_nome,
-      NULL                AS total,
-      NULL                AS pdf_path,
-      t.created_by,
-      NULL                AS execution_completed,
-      NULL                AS execution_date,
-      NULL                AS executed_by,
-      NULL                AS execution_os,
-      NULL                AS execution_details,
-      NULL                AS execution_marked_at,
-      NULL                AS approval_date,
-      NULL                AS approval_notes,
-      NULL                AS approval_attachment_path,
-      NULL                AS approval_registered_at,
-      NULL                AS billing_date,
-      NULL                AS invoice_number,
-      NULL                AS billing_notes,
-      NULL                AS billed_by_user_id,
-      NULL                AS billed_at,
-      NULL                AS items_preview,
-      NULL                AS items_count
-    FROM kanban_tasks t
-    ORDER BY created_at ASC
-  `).all();
+async function listCards() {
+  const now = new Date();
+  const cutoffEnviado  = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const cutoffFaturado = new Date(now.getTime() -  7 * 24 * 60 * 60 * 1000);
+
+  const [proposals, tasks] = await Promise.all([
+    prisma.proposal.findMany({
+      where: {
+        NOT: [
+          { kanbanStatus: "enviado",  kanbanStatusUpdatedAt: { lt: cutoffEnviado  } },
+          { kanbanStatus: "faturado", kanbanStatusUpdatedAt: { lt: cutoffFaturado } },
+        ],
+      },
+      include: {
+        cliente: { select: { nome: true } },
+        items:   { orderBy: { itemOrdem: "asc" } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.kanbanTask.findMany({ orderBy: { createdAt: "asc" } }),
+  ]);
+
+  const proposalCards = proposals.map(p => ({
+    card_type:                    "proposal",
+    id:                           p.id,
+    title:                        p.numeroProposta,
+    description:                  null,
+    kanban_status:                p.kanbanStatus,
+    kanban_status_updated_at:     p.kanbanStatusUpdatedAt,
+    created_at:                   p.createdAt,
+    cliente_nome:                 p.cliente?.nome          ?? null,
+    total:                        Number(p.valorTotal),
+    pdf_path:                     p.pdfPath,
+    created_by:                   null,
+    execution_completed:          p.executionCompleted,
+    execution_date:               p.executionDate,
+    executed_by:                  p.executedBy,
+    execution_os:                 p.executionOs,
+    execution_details:            p.executionDetails,
+    execution_marked_at:          p.executionMarkedAt,
+    approval_date:                p.approvalDate,
+    approval_notes:               p.approvalNotes,
+    approval_attachment_path:     p.approvalAttachmentPath,
+    approval_registered_at:       p.approvalRegisteredAt,
+    billing_date:                 p.billingDate,
+    invoice_number:               p.invoiceNumber,
+    billing_notes:                p.billingNotes,
+    billed_by_user_id:            p.billedByUserId,
+    billed_at:                    p.billedAt,
+    items_preview:                p.items.slice(0, 3).map(i => i.descricao).join("|||") || null,
+    items_count:                  p.items.length,
+  }));
+
+  const taskCards = tasks.map(t => ({
+    card_type:                    "task",
+    id:                           t.id,
+    title:                        t.title,
+    description:                  t.description,
+    kanban_status:                t.kanbanStatus,
+    kanban_status_updated_at:     t.kanbanStatusUpdatedAt,
+    created_at:                   t.createdAt,
+    cliente_nome:                 null,
+    total:                        null,
+    pdf_path:                     null,
+    created_by:                   t.createdById,
+    execution_completed:          null,
+    execution_date:               null,
+    executed_by:                  null,
+    execution_os:                 null,
+    execution_details:            null,
+    execution_marked_at:          null,
+    approval_date:                null,
+    approval_notes:               null,
+    approval_attachment_path:     null,
+    approval_registered_at:       null,
+    billing_date:                 null,
+    invoice_number:               null,
+    billing_notes:                null,
+    billed_by_user_id:            null,
+    billed_at:                    null,
+    items_preview:                null,
+    items_count:                  null,
+  }));
+
+  const all = [...proposalCards, ...taskCards];
+  all.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  return all;
 }
 
 // ── Tasks CRUD ────────────────────────────────────────────────────────────────
 
-function createTask({ title, description, created_by }) {
-  return db.prepare(`
-    INSERT INTO kanban_tasks (title, description, created_by)
-    VALUES (@title, @description, @created_by)
-  `).run({ title, description: description || null, created_by: created_by || null });
+async function createTask({ title, description, created_by }) {
+  const t = await prisma.kanbanTask.create({
+    data: {
+      title,
+      description: description || null,
+      createdById: created_by  || null,
+    },
+  });
+  return mapKanbanTask(t);
 }
 
-function findTaskById(id) {
-  return db.prepare(`SELECT * FROM kanban_tasks WHERE id = ?`).get(id);
+async function findTaskById(id) {
+  const t = await prisma.kanbanTask.findUnique({ where: { id } });
+  return mapKanbanTask(t);
 }
 
-function updateTask(id, { title, description }) {
-  return db.prepare(`
-    UPDATE kanban_tasks
-    SET title = @title, description = @description, updated_at = CURRENT_TIMESTAMP
-    WHERE id = @id
-  `).run({ id, title, description: description || null });
+async function updateTask(id, { title, description }) {
+  const t = await prisma.kanbanTask.update({
+    where: { id },
+    data: { title, description: description || null },
+  });
+  return mapKanbanTask(t);
 }
 
-function setTaskKanbanStatus(id, status) {
-  return db.prepare(`
-    UPDATE kanban_tasks
-    SET kanban_status = ?, kanban_status_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `).run(status, id);
+async function setTaskKanbanStatus(id, status) {
+  await prisma.kanbanTask.update({
+    where: { id },
+    data:  { kanbanStatus: status, kanbanStatusUpdatedAt: new Date() },
+  });
 }
 
-function deleteTask(id) {
-  return db.prepare(`DELETE FROM kanban_tasks WHERE id = ?`).run(id);
+async function deleteTask(id) {
+  await prisma.kanbanTask.delete({ where: { id } });
 }
 
 // ── Comments ──────────────────────────────────────────────────────────────────
 
-function getComments(cardType, cardId) {
-  return db.prepare(`
-    SELECT * FROM kanban_comments
-    WHERE card_type = ? AND card_id = ?
-    ORDER BY created_at ASC
-  `).all(cardType, cardId);
+// kanban_comments is a polymorphic relation (card_type + card_id).
+// No FK constraint — validation is done in kanban.service.js.
+async function getComments(cardType, cardId) {
+  const rows = await prisma.kanbanComment.findMany({
+    where:   { cardType, cardId },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows.map(mapKanbanComment);
 }
 
-function addComment({ card_type, card_id, user_id, user_nome, comment }) {
-  return db.prepare(`
-    INSERT INTO kanban_comments (card_type, card_id, user_id, user_nome, comment)
-    VALUES (@card_type, @card_id, @user_id, @user_nome, @comment)
-  `).run({ card_type, card_id, user_id, user_nome, comment });
+async function addComment({ card_type, card_id, user_id, user_nome, comment }) {
+  const c = await prisma.kanbanComment.create({
+    data: {
+      cardType: card_type,
+      cardId:   card_id,
+      userId:   user_id,
+      userNome: user_nome,
+      comment,
+    },
+  });
+  return c;
 }
 
-function deleteCommentsByCard(cardType, cardId) {
-  return db.prepare(`DELETE FROM kanban_comments WHERE card_type = ? AND card_id = ?`).run(cardType, cardId);
+async function deleteCommentsByCard(cardType, cardId) {
+  await prisma.kanbanComment.deleteMany({ where: { cardType, cardId } });
 }
 
 module.exports = {

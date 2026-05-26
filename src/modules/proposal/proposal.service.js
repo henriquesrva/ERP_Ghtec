@@ -328,7 +328,7 @@ async function markProposalExecuted(proposalId, data, userRole, userId, userName
     if (data.execution_date) parts.push(`em ${data.execution_date}`);
     if (data.execution_os)   parts.push(`OS: ${data.execution_os}`);
     parts.push(`(marcado por ${userName})`);
-    kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
+    await kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
   } catch (e) {
     console.error("[markProposalExecuted] auto-comment falhou:", e.message);
   }
@@ -355,7 +355,7 @@ async function removeProposalExecution(proposalId, userRole, userId, userName) {
   try {
     let comment = `Sistema: Selo de execução removido por ${userName}.`;
     if (autoMoved) comment += " Proposta retornou automaticamente para Pendente Execução.";
-    kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
+    await kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
   } catch (e) {
     console.error("[removeProposalExecution] auto-comment falhou:", e.message);
   }
@@ -379,7 +379,7 @@ async function registerApproval(proposalId, data, userId, userName) {
     let comment = `Sistema: Aprovação registrada por ${userName}`;
     if (data.approval_date) comment += ` em ${data.approval_date}`;
     comment += ".";
-    kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
+    await kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment });
   } catch (e) {
     console.error("[registerApproval] auto-comment falhou:", e.message);
   }
@@ -406,7 +406,7 @@ async function registerBilling(proposalId, data, userId, userName) {
   try {
     const parts = [`Sistema: Faturamento registrado por ${userName}. NF: ${data.invoice_number.trim()}`];
     if (data.billing_date) parts.push(`Data: ${data.billing_date}`);
-    kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
+    await kanbanRepo.addComment({ card_type: "proposal", card_id: proposalId, user_id: userId, user_nome: "Sistema", comment: parts.join(". ") + "." });
   } catch (e) {
     console.error("[registerBilling] auto-comment falhou:", e.message);
   }

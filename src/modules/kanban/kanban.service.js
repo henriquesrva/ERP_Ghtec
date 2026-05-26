@@ -2,26 +2,25 @@ const repo = require("./kanban.repository");
 const { canMoveKanban, KANBAN_STATUSES } = require("../../shared/domain/kanban");
 const proposalRepo = require("../proposal/proposal.repository");
 
-function getAllCards() {
+async function getAllCards() {
   return repo.listCards();
 }
 
-function createTask(data, userId) {
+async function createTask(data, userId) {
   if (!data.title || !data.title.trim()) {
     const err = new Error("O título da tarefa é obrigatório.");
     err.code = "VALIDATION";
     throw err;
   }
-  const result = repo.createTask({
-    title: data.title.trim(),
+  return repo.createTask({
+    title:       data.title.trim(),
     description: data.description || null,
-    created_by: userId || null,
+    created_by:  userId || null,
   });
-  return repo.findTaskById(result.lastInsertRowid);
 }
 
-function updateTask(id, data) {
-  const task = repo.findTaskById(id);
+async function updateTask(id, data) {
+  const task = await repo.findTaskById(id);
   if (!task) {
     const err = new Error("Tarefa não encontrada.");
     err.code = "NOT_FOUND";
@@ -32,12 +31,11 @@ function updateTask(id, data) {
     err.code = "VALIDATION";
     throw err;
   }
-  repo.updateTask(id, { title: data.title.trim(), description: data.description || null });
-  return repo.findTaskById(id);
+  return repo.updateTask(id, { title: data.title.trim(), description: data.description || null });
 }
 
-function moveTask(id, newStatus, userRole) {
-  const task = repo.findTaskById(id);
+async function moveTask(id, newStatus, userRole) {
+  const task = await repo.findTaskById(id);
   if (!task) {
     const err = new Error("Tarefa não encontrada.");
     err.code = "NOT_FOUND";
@@ -58,34 +56,34 @@ function moveTask(id, newStatus, userRole) {
     err.code = "FORBIDDEN";
     throw err;
   }
-  repo.setTaskKanbanStatus(id, newStatus);
+  await repo.setTaskKanbanStatus(id, newStatus);
 }
 
-function deleteTask(id, userRole) {
+async function deleteTask(id, userRole) {
   if (userRole !== "admin") {
     const err = new Error("Você não tem permissão para excluir esta tarefa.");
     err.code = "FORBIDDEN";
     throw err;
   }
-  const task = repo.findTaskById(id);
+  const task = await repo.findTaskById(id);
   if (!task) {
     const err = new Error("Tarefa não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
-  repo.deleteCommentsByCard("task", id);
-  repo.deleteTask(id);
+  await repo.deleteCommentsByCard("task", id);
+  await repo.deleteTask(id);
 }
 
-function linkTaskToProposal(taskId, proposalId, user) {
-  const task = repo.findTaskById(taskId);
+async function linkTaskToProposal(taskId, proposalId, user) {
+  const task = await repo.findTaskById(taskId);
   if (!task) {
     const err = new Error("Tarefa não encontrada.");
     err.code = "NOT_FOUND";
     throw err;
   }
 
-  const proposal = proposalRepo.findProposalRowById(proposalId);
+  const proposal = await proposalRepo.findProposalRowById(proposalId);
   if (!proposal) {
     const err = new Error("Proposta não encontrada.");
     err.code = "NOT_FOUND";
@@ -98,36 +96,36 @@ function linkTaskToProposal(taskId, proposalId, user) {
     commentText += `\nInformações da tarefa: ${task.description}`;
   }
 
-  repo.addComment({
+  await repo.addComment({
     card_type: "proposal",
-    card_id: proposalId,
-    user_id: user.id,
+    card_id:   proposalId,
+    user_id:   user.id,
     user_nome: user.nome,
-    comment: commentText,
+    comment:   commentText,
   });
 
-  repo.deleteCommentsByCard("task", taskId);
-  repo.deleteTask(taskId);
+  await repo.deleteCommentsByCard("task", taskId);
+  await repo.deleteTask(taskId);
 }
 
-function getComments(cardType, cardId) {
+async function getComments(cardType, cardId) {
   return repo.getComments(cardType, cardId);
 }
 
-function addComment({ cardType, cardId, userId, userNome, comment }) {
+async function addComment({ cardType, cardId, userId, userNome, comment }) {
   if (!comment || !comment.trim()) {
     const err = new Error("O comentário não pode ser vazio.");
     err.code = "VALIDATION";
     throw err;
   }
-  const result = repo.addComment({
+  const result = await repo.addComment({
     card_type: cardType,
-    card_id: cardId,
-    user_id: userId,
+    card_id:   cardId,
+    user_id:   userId,
     user_nome: userNome,
-    comment: comment.trim(),
+    comment:   comment.trim(),
   });
-  return { id: result.lastInsertRowid };
+  return { id: result.id };
 }
 
 module.exports = {
