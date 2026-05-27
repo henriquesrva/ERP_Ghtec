@@ -12,8 +12,8 @@ const MENUS = [
     links: [
       { label: 'Propostas',           to: '/proposals',                      react: true  },
       { label: 'Kanban',              href: '/legacy/kanban.html',           react: false },
-      { label: 'Clientes',            href: '/legacy/clients.html',          react: false },
-      { label: 'Objetos e Condições', href: '/legacy/objetos.html',          react: false },
+      { label: 'Clientes',            to:   '/clients',                      react: true  },
+      { label: 'Objetos e Condições', to:   '/objetos',                       react: true  },
     ],
     activePaths: ['/proposals', '/kanban', '/clients', '/objetos', '/nova-proposta'],
   },

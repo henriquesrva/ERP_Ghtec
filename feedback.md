@@ -1,66 +1,96 @@
-# Feedback — Passo 4.4: Migração Usuários
+# Feedback — Passo 4.6: Migrar Clientes para React
 
-## Arquivos criados
+## O que foi feito
 
-- `frontend/src/api/users.js` — listUsers, createUser, changeUserRole, deleteUser, changePassword, updateSignature
-- `frontend/src/pages/Usuarios.jsx` — componente completo com sub-componentes: UsersTable, PasswordCard, SignatureCard
+### Dependências adicionadas
+- `chart.js` e `react-chartjs-2` instalados em `frontend/package.json`
+  - Necessários para o gráfico de análise de lucro por cliente
 
-## Arquivos alterados
+### Arquivos criados
+- `frontend/src/api/clients.js` — camada API (`listClients`, `searchClients`, `getClient`, `createClient`, `updateClient`, `deleteClient`, `getProfitAnalysis`)
+- `frontend/src/pages/Clients.jsx` — página React completa com CRUD + análise de lucro
 
-- `frontend/src/router.jsx` — `/usuarios` saiu do LEGACY, ganhou `<Route>` própria; importado Usuarios
-- `frontend/src/components/layout/Navbar.jsx` — gear icon mudou de `<a href="/legacy/usuarios.html">` para `<Link to="/usuarios">` React Router
+### Arquivos alterados
+- `frontend/src/router.jsx` — `/clients` saiu do array LEGACY, virou `<Route path="/clients" element={<Clients />} />`
+- `frontend/src/components/layout/Navbar.jsx` — "Clientes" trocado de `href` legacy para `to="/clients"` com `react: true`
+
+### Arquivos NÃO alterados
+- `public/legacy/clients.html` — mantido conforme instrução
+- Nenhum arquivo de backend alterado
+
+---
 
 ## Endpoints usados
 
-| Método | Rota | Quem pode |
+| Endpoint | Método | Uso |
 |---|---|---|
-| GET | `/users` | admin |
-| POST | `/users` | admin |
-| PUT | `/users/:id/role` | admin |
-| DELETE | `/users/:id` | admin |
-| PUT | `/users/me/password` | todos |
-| PUT | `/users/me/signature` | todos |
+| `GET /clients` | GET | Listar todos os clientes |
+| `GET /clients/search?q=` | GET | Busca com debounce 280ms |
+| `GET /clients/profit-analysis` | GET | Dados do gráfico de lucro |
+| `GET /clients/:id` | GET | Carregar cliente para edição |
+| `POST /clients` | POST | Criar cliente → `{ success, client }` |
+| `PUT /clients/:id` | PUT | Atualizar cliente → `{ success, client }` |
+| `DELETE /clients/:id` | DELETE | Excluir com ConfirmModal |
+
+---
 
 ## Comportamentos migrados
 
-**Admin:**
-- Layout split: formulário de criação (esquerda) + [tabela + senha + assinatura] (direita)
-- Tabela de usuários com select de role por linha e botão "Salvar" que aparece só quando há mudança pendente
-- Badges de role com cores por perfil (admin/user/comercial/tecnico/financeiro)
-- Botão "Excluir" desabilitado para o próprio usuário logado
-- ConfirmModal antes de excluir
-- Toast para role change e exclusão
+- Listar clientes com busca por nome/CNPJ (debounce 280ms)
+- Criar cliente (validação: nome obrigatório)
+- Editar cliente (clicar no item da lista carrega o formulário)
+- Após CREATE: troca para modo edição com os dados do cliente salvo (igual ao legado)
+- Após UPDATE: atualiza título do formulário com novo nome
+- Excluir com ConfirmModal; 409 HAS_PROPOSALS → aviso inline no formulário
+- 409 DUPLICATE_CNPJ em criar/editar → aviso inline (msg-warn)
+- Split layout: lista esquerda (360px) + formulário direita
+- Botão excluir (✕) aparece ao hover no item da lista
+- Formulário com todos os campos: nome, nome_fantasia, razao_social, cnpj, inscricao_estadual, email, telefone, contato_responsavel, endereco, cidade, estado, cep, observacoes, has_parts_contract
+- Checkbox "Possui contrato de peças" com descrição
+- Edit badge "Editando" aparece quando em modo edição
+- Query params: `?id=X` abre edição do cliente X
+- Barra de análise de lucro com botão que abre modal
+- Modal com gráfico de barras Chart.js (horizontal se > 4 clientes)
+  - Verde para lucro positivo, vermelho para negativo
+  - Tooltip com valor formatado em BRL
+- Tabela detalhada no modal: cliente, propostas, valor faturado, custo, lucro, margem, itens s/ custo
+- Aviso de itens sem preço de compra no modal
+- Loading state em lista e modal
+- Mensagens de sucesso/erro inline + Toast global
 
-**Todos os usuários:**
-- Card "Trocar minha senha" (atual + nova + confirmação, validação de match)
-- Card "Minha Assinatura" (cargo + telefone, pré-populado do AuthContext)
-- Após salvar assinatura, atualiza AuthContext para refletir na geração de propostas
+---
 
-**Não-admin:**
-- Layout simplificado: apenas senha + assinatura (sem tabela nem criação)
+## Como ficou /app/clients
 
-## Regras de permissão preservadas
+Rota React protegida. Split layout fiel ao legado. Análise de lucro migrada completamente com gráfico react-chartjs-2 e tabela de detalhamento.
 
-- Gestão de usuários (criar/alterar role/excluir) só visível para `user.role === 'admin'`
-- Backend continua sendo a fonte da regra (403 retornado pelo server para não-admin)
-- Botão excluir desabilitado para próprio usuário (`u.id === me?.id`)
-- Assinatura acessível a todos
+---
 
-## Como ficou /app/usuarios
+## O que ficou em legacy
 
-Rota React. Gear icon da Navbar aponta para `/app/usuarios` via Link React. `isAdmin` já detecta `/usuarios` path para ativo.
+`public/legacy/clients.html` — mantido no lugar, mas a Navbar React não aponta mais para ele.
 
-## O que ainda está em legacy
-
-`public/legacy/usuarios.html` — mantido, navegação principal usa React.
+---
 
 ## Validações executadas
 
-- `npm run frontend:build` → ✅ (211KB / gzip 65KB)
-- `npm test` → ✅ 408/408
-- `npm run prisma:status` → ✅ schema up to date
-- `node scripts/check-prisma-connection.js` → ✅ Prisma conectado
+- `npm run frontend:build` → 63 modules, sem erros (incluindo chart.js)
+- `npm test` → 408/408 passando (18 arquivos)
+- `npm run prisma:status` → Database schema is up to date!
+- `node scripts/check-prisma-connection.js` → ✅ Prisma OK
 
-## Documentação
+---
 
-`SYSTEM_CONTEXT.md` não atualizado — migração de tela individual não constitui mudança estrutural.
+## Problemas encontrados
+
+Nenhum. Build limpo, testes intactos, sem necessidade de alterar backend.
+
+**Observação:** O backend tem um bug no `client.service.js` onde `countClientProposals` não é `await`ed (retorna Promise ao invés do número), tornando a proteção `HAS_PROPOSALS` ineficaz. Não foi corrigido neste passo por estar fora do escopo da migração de frontend.
+
+---
+
+## Próximo passo recomendado
+
+**Passo 4.7 — Migrar tela Financeiro para React**
+
+`financeiro.html` (250 linhas, 3 fetch calls) — dashboard financeiro com gráficos Chart.js. Já temos react-chartjs-2 instalado.
