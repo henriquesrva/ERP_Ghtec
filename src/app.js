@@ -331,6 +331,20 @@ app.post("/contas-pagar/:id/baixar", (req, res, next) => {
 }, baixarContaHandler);
 app.post("/contas-pagar/:id/cancelar", cancelarContaHandler);
 
+// ── React frontend (build estático) ──────────────────────────────────────────
+const frontendDist = path.resolve(__dirname, "../frontend/dist");
+app.use("/app", express.static(frontendDist));
+app.get(["/app", "/app/*"], (req, res) => {
+  res.sendFile(path.join(frontendDist, "index.html"), err => {
+    if (err) res.status(503).json({ message: "Frontend não buildado. Execute: npm run frontend:build" });
+  });
+});
+
+// Redirects de compatibilidade
+app.get("/",              (req, res) => res.redirect("/app/"));
+app.get("/index.html",    (req, res) => res.redirect("/app/"));
+app.get("/proposals.html",(req, res) => res.redirect("/app/proposals"));
+
 // ── Handlers de fallback (devem vir depois de todas as rotas) ─────────────────
 const notFoundHandler = require("./middleware/notFoundHandler");
 const errorHandler    = require("./middleware/errorHandler");
