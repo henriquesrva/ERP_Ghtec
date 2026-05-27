@@ -9,6 +9,7 @@ import Fornecedores    from './pages/Fornecedores';
 import Usuarios        from './pages/Usuarios';
 import Objetos         from './pages/Objetos';
 import Clients         from './pages/Clients';
+import Financeiro      from './pages/Financeiro';
 import LegacyRedirect  from './pages/LegacyRedirect';
 
 // Telas ainda não migradas — abrem a versão legacy
@@ -17,7 +18,7 @@ const LEGACY = [
   { path: '/parts',            href: '/legacy/parts.html',            label: 'Peças' },
   { path: '/kanban',           href: '/legacy/kanban.html',           label: 'Kanban' },
   { path: '/stock',            href: '/legacy/stock.html',            label: 'Estoque' },
-  { path: '/financeiro',       href: '/legacy/financeiro.html',       label: 'Financeiro' },
+  // /financeiro já migrado — removido da lista legacy
   { path: '/contas-pagar',     href: '/legacy/contas-pagar.html',     label: 'Contas a Pagar' },
   { path: '/notas-recebidas',  href: '/legacy/notas-recebidas.html',  label: 'Notas Recebidas' },
 ];
@@ -39,6 +40,7 @@ export default function AppRouter() {
           <Route path="/usuarios"      element={<Usuarios />} />
           <Route path="/objetos"       element={<Objetos />} />
           <Route path="/clients"       element={<Clients />} />
+          <Route path="/financeiro"    element={<Financeiro />} />
 
           {/* ── Legacy redirects — telas ainda não migradas ── */}
           {LEGACY.map(({ path, href, label }) => (

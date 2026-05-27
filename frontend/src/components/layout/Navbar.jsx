@@ -33,9 +33,9 @@ const MENUS = [
     label: 'Financeiro',
     links: [
       { label: 'Contas a Pagar', href: '/legacy/contas-pagar.html', react: false },
-      { label: 'Financeiro',     href: '/legacy/financeiro.html',   react: false },
+      { label: 'Financeiro',     to:   '/financeiro',               react: true  },
     ],
-    activePaths: ['/contas-pagar', '/financeiro'],
+    activePaths: ['/contas-pagar', '/financeiro'],  // /financeiro já é React
   },
 ];
 

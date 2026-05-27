@@ -1,68 +1,75 @@
-# Feedback — Passo 4.6.1: Corrigir bug await countClientProposals
+# Feedback — Passo 4.7: Migrar tela Financeiro para React
 
-## Causa exata do bug
+## O que foi feito
 
-Em `src/modules/client/client.service.js`, linha 68:
-
-```js
-// ANTES (bugado)
-const proposalCount = repo.countClientProposals(id);
-if (proposalCount > 0) { ...
-```
-
-`countClientProposals` é `async` (usa `prisma.proposal.count`), então retorna uma **Promise**.
-Sem `await`, `proposalCount` recebe a Promise em si, não o número.
-A comparação `Promise > 0` resolve para `NaN > 0 = false` — **sempre falso**.
-Resultado: qualquer cliente podia ser excluído, mesmo com propostas vinculadas.
+Migração completa de `public/legacy/financeiro.html` para React.
 
 ---
 
-## Arquivos alterados
+## Arquivos criados
 
-### `src/modules/client/client.service.js`
-- Adicionado `await` na chamada `countClientProposals`:
-  ```js
-  // DEPOIS (correto)
-  const proposalCount = await repo.countClientProposals(id);
-  ```
+### `frontend/src/api/financeiro.js`
+- Único export: `getResumo()` → `GET /contas-pagar/resumo`
 
-### `tests/services/client.service.test.js`
-- Trocados 3 mocks de `mockReturnValue` (síncrono) para `mockResolvedValue` (async) no bloco `deleteClient`, para refletir corretamente o comportamento assíncrono do repository:
-  - `mockReturnValue(3)` → `mockResolvedValue(3)` (teste HAS_PROPOSALS)
-  - `mockReturnValue(0)` → `mockResolvedValue(0)` (teste excluir sem propostas)
-  - `mockReturnValue(1)` → `mockResolvedValue(1)` (teste não chamar deleteClientById)
+### `frontend/src/pages/Financeiro.jsx`
+- Registra `ArcElement, Tooltip, Legend` no ChartJS (necessário para Doughnut)
+- Funções utilitárias: `fmtDate(d)` (dd/mm/yyyy de ISO), `fmtMoeda(v)` (R$ format pt-BR), `mesAtual()`
+- `generateColors(n)` — 10 cores base cicladas
+- Sub-componentes: `KpiCard`, `ProxVencimentos`, `CategoriaChart`
+- `CategoriaChart` usa `Doughnut` com wrapper `div` `height: 220px, position: relative`, `maintainAspectRatio: false`
+- Legend `position: "right"`, tooltip com `fmtMoeda`
+- Link "Contas a pagar →" aponta para `/legacy/contas-pagar.html` (ainda não migrada)
+- Estado: `loading`, `error`, `resumo` — trata caso de erro com `msg error`
 
 ---
 
-## Por que os testes passavam antes mesmo com o bug
+## Arquivos modificados
 
-Os testes usavam `mockReturnValue` (retorno síncrono), não `mockResolvedValue`. Como o service **não** fazia `await`, recebia o valor diretamente do mock síncrono (ex: `3`). O teste funcionava com o mock mas falhava em produção (onde `countClientProposals` retorna uma Promise real).
+### `frontend/src/router.jsx`
+- Adicionado import de `Financeiro`
+- Removida entry `/financeiro` do array `LEGACY`
+- Adicionada `<Route path="/financeiro" element={<Financeiro />} />`
 
-Após a correção: service usa `await` + testes usam `mockResolvedValue` — comportamento mock alinhado com produção.
+### `frontend/src/components/layout/Navbar.jsx`
+- Financeiro alterado de `href: '/legacy/financeiro.html', react: false` para `to: '/financeiro', react: true`
+
+### `public/css/styles.css`
+- Adicionados estilos globais para a tela Financeiro:
+  - `.kpi-grid` — grid 4 colunas (responsive: 2 cols < 900px, 1 col < 560px)
+  - `.kpi-card`, `.kpi-label`, `.kpi-value`, `.kpi-sub`
+  - Modificadores `.kpi-aberto`, `.kpi-atrasado`, `.kpi-pago`, `.kpi-vencendo` com cores `--color-info`, `--color-danger`, `--color-primary`, `--color-amber`
+  - `.two-col` — grid 2 colunas (responsive: 1 col < 760px)
 
 ---
 
 ## Validações executadas
 
+- `npm run frontend:build` → ✅ 65 modules, build OK
 - `npm test` → ✅ 408/408 passando (18 arquivos)
 - `npm run prisma:status` → ✅ Database schema is up to date!
-- `npm run frontend:build` → ✅ 63 modules, build OK
+- `node scripts/check-prisma-connection.js` → ✅ Prisma conectado ao PostgreSQL com sucesso!
 
 ---
 
-## Confirmação de que HAS_PROPOSALS voltou a funcionar
+## Endpoint utilizado
 
-Após a correção, o fluxo `deleteClient` funciona corretamente:
-1. `findClientById` verifica se o cliente existe (NOT_FOUND se não)
-2. `await countClientProposals(id)` retorna o número real de propostas
-3. Se `proposalCount > 0`: lança `HAS_PROPOSALS` com a contagem — **cliente não é excluído**
-4. Se `proposalCount === 0`: prossegue para `deleteClientById` — cliente excluído normalmente
+`GET /contas-pagar/resumo` — já existente no backend, sem alterações.
+
+**Shape da resposta:**
+```json
+{
+  "totais": { "total_aberto": 0, "total_atrasado": 0, "total_pago_mes": 0 },
+  "proxVencimentos": [{ "descricao": "", "fornecedor_nome": "", "data_vencimento": "yyyy-mm-dd", "atrasado": false, "valor": 0 }],
+  "vencendo7dias": { "total": 0, "n": 0 },
+  "porCategoria": [{ "categoria": "", "total": 0 }]
+}
+```
 
 ---
 
 ## Próximo passo recomendado
 
-**Passo 4.7 — Migrar tela Financeiro para React**
+**Passo 4.8 — Migrar tela Contas a Pagar para React**
 
-`financeiro.html` (250 linhas, 3 fetch calls) — dashboard financeiro com gráficos Chart.js.
-`react-chartjs-2` já está instalado (adicionado no Passo 4.6).
+`contas-pagar.html` (519 linhas, 10 fetch calls) — gestão de contas com file upload de comprovante.
+Complexidade média-alta: parcelamento, baixa com upload, filtros, cancelamento.

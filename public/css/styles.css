@@ -997,6 +997,53 @@ tr.row-atrasado:hover td { background: var(--color-danger-bg); }
   .modal { padding: 20px 16px; }
 }
 
+/* ── Financeiro — KPI grid ───────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+.kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  border-left: 4px solid transparent;
+  box-shadow: var(--shadow-sm);
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+.kpi-value { font-size: 22px; font-weight: 800; line-height: 1; }
+.kpi-sub   { font-size: 11px; color: var(--color-muted); margin-top: 5px; }
+
+.kpi-aberto   { border-left-color: var(--color-info); }
+.kpi-atrasado { border-left-color: var(--color-danger); }
+.kpi-pago     { border-left-color: var(--color-primary); }
+.kpi-vencendo { border-left-color: var(--color-amber); }
+
+.kpi-aberto   .kpi-value { color: var(--color-info); }
+.kpi-atrasado .kpi-value { color: var(--color-danger); }
+.kpi-pago     .kpi-value { color: var(--color-primary); }
+.kpi-vencendo .kpi-value { color: var(--color-amber); }
+
+/* ── two-col layout (financeiro) ─────────────────────────────────── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+
 /* ── Print ───────────────────────────────────────────────────────── */
 @media print {
   .nav, .page-bar, .btn-logout, .btn-back { display: none !important; }
