@@ -5,6 +5,7 @@ import Login           from './pages/Login';
 import Dashboard       from './pages/Dashboard';
 import Proposals       from './pages/Proposals';
 import Responsaveis    from './pages/Responsaveis';
+import Fornecedores    from './pages/Fornecedores';
 import LegacyRedirect  from './pages/LegacyRedirect';
 
 // Telas ainda não migradas — abrem a versão legacy
@@ -17,7 +18,6 @@ const LEGACY = [
   { path: '/financeiro',       href: '/legacy/financeiro.html',       label: 'Financeiro' },
   { path: '/contas-pagar',     href: '/legacy/contas-pagar.html',     label: 'Contas a Pagar' },
   { path: '/notas-recebidas',  href: '/legacy/notas-recebidas.html',  label: 'Notas Recebidas' },
-  { path: '/fornecedores',     href: '/legacy/fornecedores.html',     label: 'Fornecedores' },
   { path: '/usuarios',         href: '/legacy/usuarios.html',         label: 'Usuários' },
   { path: '/objetos',          href: '/legacy/objetos.html',          label: 'Objetos e Condições' },
 ];
@@ -35,6 +35,7 @@ export default function AppRouter() {
           <Route path="/"              element={<Dashboard />} />
           <Route path="/proposals"     element={<Proposals />} />
           <Route path="/responsaveis"  element={<Responsaveis />} />
+          <Route path="/fornecedores"  element={<Fornecedores />} />
 
           {/* ── Legacy redirects — telas ainda não migradas ── */}
           {LEGACY.map(({ path, href, label }) => (
