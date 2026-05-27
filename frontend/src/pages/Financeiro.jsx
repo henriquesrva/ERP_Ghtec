@@ -160,8 +160,8 @@ export default function Financeiro() {
           <h1>Painel Financeiro</h1>
           <div>Visão consolidada de contas a pagar e despesas</div>
         </div>
-        <a
-          href="/legacy/contas-pagar.html"
+        <Link
+          to="/contas-pagar"
           className="btn btn-sm"
           style={{
             background: 'rgba(255,255,255,0.15)',
@@ -170,7 +170,7 @@ export default function Financeiro() {
           }}
         >
           Contas a pagar →
-        </a>
+        </Link>
       </div>
 
       <div className="container">
@@ -213,9 +213,9 @@ export default function Financeiro() {
               <div className="card">
                 <div className="card-title">
                   Próximos vencimentos
-                  <a href="/legacy/contas-pagar.html" className="btn btn-sm btn-ghost">
+                  <Link to="/contas-pagar" className="btn btn-sm btn-ghost">
                     Ver todos →
-                  </a>
+                  </Link>
                 </div>
                 <ProxVencimentos rows={proxVenc} />
               </div>

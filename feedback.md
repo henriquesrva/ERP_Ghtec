@@ -1,75 +1,99 @@
-# Feedback — Passo 4.7: Migrar tela Financeiro para React
-
-## O que foi feito
-
-Migração completa de `public/legacy/financeiro.html` para React.
-
----
+# Feedback — Passo 4.8: Migrar tela Contas a Pagar para React
 
 ## Arquivos criados
 
-### `frontend/src/api/financeiro.js`
-- Único export: `getResumo()` → `GET /contas-pagar/resumo`
+### `frontend/src/api/contasPagar.js`
+- `listContas(params)` → `GET /contas-pagar?status=&fornecedor_id=&categoria_id=&forma_pagamento=&limit=200`
+- `getConta(id)` → `GET /contas-pagar/:id`
+- `createConta(data)` → `POST /contas-pagar` (JSON)
+- `updateConta(id, data)` → `PUT /contas-pagar/:id`
+- `baixarConta(id, formData)` → `POST /contas-pagar/:id/baixar` (FormData com arquivo)
+- `cancelarConta(id, data)` → `POST /contas-pagar/:id/cancelar` (JSON)
 
-### `frontend/src/pages/Financeiro.jsx`
-- Registra `ArcElement, Tooltip, Legend` no ChartJS (necessário para Doughnut)
-- Funções utilitárias: `fmtDate(d)` (dd/mm/yyyy de ISO), `fmtMoeda(v)` (R$ format pt-BR), `mesAtual()`
-- `generateColors(n)` — 10 cores base cicladas
-- Sub-componentes: `KpiCard`, `ProxVencimentos`, `CategoriaChart`
-- `CategoriaChart` usa `Doughnut` com wrapper `div` `height: 220px, position: relative`, `maintainAspectRatio: false`
-- Legend `position: "right"`, tooltip com `fmtMoeda`
-- Link "Contas a pagar →" aponta para `/legacy/contas-pagar.html` (ainda não migrada)
-- Estado: `loading`, `error`, `resumo` — trata caso de erro com `msg error`
+### `frontend/src/api/categoriasDespesa.js`
+- `listCategoriasDespesa()` → `GET /categorias-despesa`
+
+### `frontend/src/pages/ContasPagar.jsx`
+- Filtros: status (em_aberto / atrasado / pago / cancelado), fornecedor, categoria, forma de pagamento
+- Tabela: Descrição (+NF se nota_recebida_id), Fornecedor, Vencimento, Valor, Parcela, Forma pgto, Status, Ações
+- `row-atrasado` aplicado quando `c.atrasado` é truthy
+- Tags: `tag-danger` (atrasado), `tag-ok` (pago), `tag-muted` (cancelado), `tag-warn` (em aberto)
+- **Dar baixa**: FormData com campos data_pagamento, valor_pago, forma_pagamento, observacoes + arquivo `comprovante_pagamento`
+- **Cancelar**: motivo opcional; botão só exibido para admin/financeiro (via `useAuth()`)
+- **Nova conta**: formulário JSON com todos os campos obrigatórios e opcionais
+- Link "Comprovante": `/files/${c.comprovante_pagamento}` (campo já vem como `comprovantes/filename`)
+- Filtros autodisparados via `useCallback + useEffect` (sem botão "Buscar")
+- Estado de loading, toast de sucesso/erro, erros inline nos modais
+- Modais renderizados condicionalmente (não há toggle de classe `open` — são montados/desmontados)
 
 ---
 
 ## Arquivos modificados
 
 ### `frontend/src/router.jsx`
-- Adicionado import de `Financeiro`
-- Removida entry `/financeiro` do array `LEGACY`
-- Adicionada `<Route path="/financeiro" element={<Financeiro />} />`
+- Adicionado import `ContasPagar`
+- Removida entry `/contas-pagar` do array `LEGACY`
+- Adicionada `<Route path="/contas-pagar" element={<ContasPagar />} />`
 
 ### `frontend/src/components/layout/Navbar.jsx`
-- Financeiro alterado de `href: '/legacy/financeiro.html', react: false` para `to: '/financeiro', react: true`
+- "Contas a Pagar" alterado de `href: '/legacy/contas-pagar.html', react: false` para `to: '/contas-pagar', react: true`
+- `activePaths` do grupo financeiro já continha `/contas-pagar` — sem alteração necessária
 
-### `public/css/styles.css`
-- Adicionados estilos globais para a tela Financeiro:
-  - `.kpi-grid` — grid 4 colunas (responsive: 2 cols < 900px, 1 col < 560px)
-  - `.kpi-card`, `.kpi-label`, `.kpi-value`, `.kpi-sub`
-  - Modificadores `.kpi-aberto`, `.kpi-atrasado`, `.kpi-pago`, `.kpi-vencendo` com cores `--color-info`, `--color-danger`, `--color-primary`, `--color-amber`
-  - `.two-col` — grid 2 colunas (responsive: 1 col < 760px)
+### `frontend/src/pages/Financeiro.jsx`
+- Link "Contas a pagar →" no page-bar trocado de `<a href="/legacy/contas-pagar.html">` para `<Link to="/contas-pagar">`
+- Link "Ver todos →" dentro do card de próximos vencimentos também trocado para `<Link to="/contas-pagar">`
+
+---
+
+## Endpoints utilizados
+
+| Endpoint | Uso |
+|---|---|
+| `GET /contas-pagar` | Listar com filtros |
+| `GET /contas-pagar/:id` | N/A (não foi necessário — dados da baixa já vêm da linha) |
+| `POST /contas-pagar` | Criar conta avulsa |
+| `POST /contas-pagar/:id/baixar` | Dar baixa com upload de comprovante |
+| `POST /contas-pagar/:id/cancelar` | Cancelar conta |
+| `GET /fornecedores` | Popular dropdown de filtro e formulário |
+| `GET /categorias-despesa` | Popular dropdown de filtro e formulário |
+
+---
+
+## Upload de comprovante
+
+- **Campo Multer**: `comprovante_pagamento` (confirmado no `src/app.js`, linha 327: `uploadComprovante.single("comprovante_pagamento")`)
+- **Implementação**: `FormData.append('comprovante_pagamento', file)` — sem definir Content-Type manualmente
+- **`http.js`** detecta `FormData` e não injeta `Content-Type`, permitindo o boundary automático do browser
+- **Link para download**: `/files/${c.comprovante_pagamento}` — onde `comprovante_pagamento` já é `comprovantes/filename` (mapeado no repository)
+
+---
+
+## Permissão de cancelamento
+
+- Botão "Cancelar" só exibido quando `user.role === 'admin' || user.role === 'financeiro'`
+- Backend também verifica o role na sessão — frontend é apenas conveniência visual
+
+---
+
+## O que ficou em legacy
+
+- `public/legacy/contas-pagar.html` — mantido, não removido (conforme instrução)
+- Navegação principal agora aponta para `/app/contas-pagar` (React)
 
 ---
 
 ## Validações executadas
 
-- `npm run frontend:build` → ✅ 65 modules, build OK
+- `npm run frontend:build` → ✅ 68 modules, build OK
 - `npm test` → ✅ 408/408 passando (18 arquivos)
 - `npm run prisma:status` → ✅ Database schema is up to date!
 - `node scripts/check-prisma-connection.js` → ✅ Prisma conectado ao PostgreSQL com sucesso!
 
 ---
 
-## Endpoint utilizado
-
-`GET /contas-pagar/resumo` — já existente no backend, sem alterações.
-
-**Shape da resposta:**
-```json
-{
-  "totais": { "total_aberto": 0, "total_atrasado": 0, "total_pago_mes": 0 },
-  "proxVencimentos": [{ "descricao": "", "fornecedor_nome": "", "data_vencimento": "yyyy-mm-dd", "atrasado": false, "valor": 0 }],
-  "vencendo7dias": { "total": 0, "n": 0 },
-  "porCategoria": [{ "categoria": "", "total": 0 }]
-}
-```
-
----
-
 ## Próximo passo recomendado
 
-**Passo 4.8 — Migrar tela Contas a Pagar para React**
+**Passo 4.9 — Migrar tela Notas Recebidas para React**
 
-`contas-pagar.html` (519 linhas, 10 fetch calls) — gestão de contas com file upload de comprovante.
-Complexidade média-alta: parcelamento, baixa com upload, filtros, cancelamento.
+`notas-recebidas.html` (1137 linhas, 10 fetch calls) — média-alta complexidade.
+Upload de PDF + XML via FormData, cancelamento com motivo, listagem com filtros.
