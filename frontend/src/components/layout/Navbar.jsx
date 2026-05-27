@@ -81,13 +81,13 @@ export default function Navbar() {
       {/* Lado direito */}
       <div className="nav-right">
         <span id="navUserLabel">{user?.nome}</span>
-        <a
-          href="/legacy/usuarios.html"
+        <Link
+          to="/usuarios"
           className={`nav-icon-link${isAdmin ? ' active' : ''}`}
           title="Usuários e configurações"
         >
           &#9881;
-        </a>
+        </Link>
         <button className="btn-logout" onClick={logout}>Sair</button>
       </div>
     </nav>
