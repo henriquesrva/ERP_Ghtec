@@ -10,7 +10,8 @@ import Usuarios        from './pages/Usuarios';
 import Objetos         from './pages/Objetos';
 import Clients         from './pages/Clients';
 import Financeiro      from './pages/Financeiro';
-import ContasPagar     from './pages/ContasPagar';
+import ContasPagar      from './pages/ContasPagar';
+import NotasRecebidas  from './pages/NotasRecebidas';
 import LegacyRedirect  from './pages/LegacyRedirect';
 
 // Telas ainda não migradas — abrem a versão legacy
@@ -21,7 +22,7 @@ const LEGACY = [
   { path: '/stock',            href: '/legacy/stock.html',            label: 'Estoque' },
   // /financeiro já migrado — removido da lista legacy
   // /contas-pagar já migrado — removido da lista legacy
-  { path: '/notas-recebidas',  href: '/legacy/notas-recebidas.html',  label: 'Notas Recebidas' },
+  // /notas-recebidas já migrado — removido da lista legacy
 ];
 
 export default function AppRouter() {
@@ -42,7 +43,8 @@ export default function AppRouter() {
           <Route path="/objetos"       element={<Objetos />} />
           <Route path="/clients"       element={<Clients />} />
           <Route path="/financeiro"    element={<Financeiro />} />
-          <Route path="/contas-pagar"  element={<ContasPagar />} />
+          <Route path="/contas-pagar"      element={<ContasPagar />} />
+          <Route path="/notas-recebidas" element={<NotasRecebidas />} />
 
           {/* ── Legacy redirects — telas ainda não migradas ── */}
           {LEGACY.map(({ path, href, label }) => (

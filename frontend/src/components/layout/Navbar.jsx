@@ -24,7 +24,7 @@ const MENUS = [
       { label: 'Peças',           href: '/legacy/parts.html',             react: false },
       { label: 'Estoque',         href: '/legacy/stock.html',             react: false },
       { label: 'Fornecedores',    to:   '/fornecedores',                  react: true  },
-      { label: 'Notas Recebidas', href: '/legacy/notas-recebidas.html',   react: false },
+      { label: 'Notas Recebidas', to:   '/notas-recebidas',                react: true  },
     ],
     activePaths: ['/parts', '/stock', '/fornecedores', '/notas-recebidas'],
   },
