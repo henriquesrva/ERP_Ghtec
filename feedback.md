@@ -1,71 +1,53 @@
-# Feedback — Passo 4.1: Base React + Vite
-
-## O que foi feito
-
-Criação completa da base React + Vite e migração das telas Login, Dashboard e Proposals.
+# Feedback — Passo 4.2: Migração Responsáveis
 
 ## Arquivos criados
 
-**Frontend base:**
-- `frontend/package.json` — React 18, react-dom, react-router-dom, Vite 5
-- `frontend/index.html` — entry point com link para `/css/styles.css` do Express
-- `frontend/vite.config.js` — base `/app/`, proxy para todas as rotas Express, build → dist/
-
-**App shell:**
-- `frontend/src/main.jsx` — render root
-- `frontend/src/App.jsx` — BrowserRouter (basename="/app") + AuthProvider
-- `frontend/src/router.jsx` — rotas públicas, ProtectedRoute, LegacyRedirect para 12 telas
-
-**Auth:**
-- `frontend/src/contexts/AuthContext.jsx` — GET /auth/me no mount, login, logout
-- `frontend/src/hooks/useAuth.js`
-
-**Layout:**
-- `frontend/src/components/layout/ProtectedRoute.jsx`
-- `frontend/src/components/layout/AppLayout.jsx`
-- `frontend/src/components/layout/Navbar.jsx` — CSS hover, React Link para migrados, `<a>` para legados
-
-**Shared:**
-- `frontend/src/components/shared/Loading.jsx`
-- `frontend/src/components/shared/Toast.jsx` — auto-dismiss 4s
-- `frontend/src/components/shared/ConfirmModal.jsx`
-
-**API:**
-- `frontend/src/api/http.js` — fetch centralizado com credentials: include
-- `frontend/src/api/auth.js`
-- `frontend/src/api/proposals.js`
-
-**Páginas migradas:**
-- `frontend/src/pages/Login.jsx`
-- `frontend/src/pages/Dashboard.jsx`
-- `frontend/src/pages/Proposals.jsx`
-- `frontend/src/pages/LegacyRedirect.jsx`
+- `frontend/src/api/responsaveis.js` — listResponsaveis, searchResponsaveis, createResponsavel, deleteResponsavel
+- `frontend/src/pages/Responsaveis.jsx` — componente completo migrado do legado
 
 ## Arquivos alterados
 
-- `src/app.js` — serve `frontend/dist/` em `/app/`, SPA fallback, redirect `/` → `/app/`
-- `src/middleware/requireAuth.js` — `/app/` e `/legacy/` adicionados ao PUBLIC_PREFIXES; ADMIN_PAGES atualizado
-- `package.json` — scripts `frontend:dev`, `frontend:build`, `frontend:preview`
-- `docs/REACT_MIGRATION_PLAN.md` — status atualizado para Passo 4.1 concluído
-- `docs/SYSTEM_CONTEXT.md` — stack, arquitetura e decisões técnicas atualizados
+- `frontend/src/router.jsx` — rota `/responsaveis` saiu do array LEGACY, ganhou `<Route path="/responsaveis" element={<Responsaveis />} />`
 
-## Movimentações de arquivo
+## Endpoints usados
 
-14 HTMLs movidos de `public/` para `public/legacy/`:
-proposals.html, clients.html, parts.html, kanban.html, stock.html, financeiro.html,
-contas-pagar.html, notas-recebidas.html, fornecedores.html, usuarios.html,
-responsaveis.html, objetos.html, nova-proposta.html, index.html
+- `GET /responsaveis` — lista completa
+- `GET /responsaveis/search?q=...` — busca com debounce 280ms (igual ao legado)
+- `POST /responsaveis` — criação
+- `DELETE /responsaveis/:id` — exclusão
 
-Permanecem em `public/`: `login.html`, `auth.js`, `css/`, `assets/`
+Sem `PUT` — backend não tem edição de responsável, portanto não foi implementada.
+
+## Comportamentos migrados
+
+- Lista de responsáveis com busca em tempo real (debounce 280ms)
+- Botão de excluir visível somente no hover do item (via estado `hoveredId`)
+- ConfirmModal antes de excluir
+- Toast de sucesso/erro após operações
+- Loading state na lista (texto "Carregando...")
+- Erro de carregamento com botão "Tentar novamente"
+- Formulário de criação: nome (obrigatório), cargo e telefone (opcionais)
+- Validação inline: destaca campo nome em erro
+- Layout split: lista à esquerda (360px), formulário à direita (1fr)
+- Após criar, lista recarrega mantendo a busca ativa
+
+## Rota
+
+`/app/responsaveis` → componente React `Responsaveis.jsx`
+
+Navbar não alterada — Responsáveis não aparecia em nenhum grupo de menu no legado (acessado via URL direta ou Nova Proposta). O `isAdmin` da Navbar já detecta `/responsaveis` para iluminar o ícone de engrenagem.
+
+## O que ainda está em legacy
+
+`public/legacy/responsaveis.html` — arquivo mantido, mas navegação principal usa React.
 
 ## Validações executadas
 
-- `npm run frontend:build` → ✅ build OK (179KB gzip: 58KB)
+- `npm run frontend:build` → ✅ (185KB / gzip 59KB)
+- `npm test` → ✅ 408/408 testes
 - `npm run prisma:status` → ✅ schema up to date
-- `npm test` → ✅ 408/408 testes passando
+- `node scripts/check-prisma-connection.js` → ✅ todos os checks passando
 
-## Decisão arquitetural registrada
+## Documentação
 
-React serve sob `/app/` (basename="/app") para evitar conflito com rotas de API Express
-(`GET /proposals` é API, `GET /app/proposals` é página React). Decisão registrada no
-SYSTEM_CONTEXT.md seção 14, item 4.
+`SYSTEM_CONTEXT.md` não atualizado — migração de tela individual não constitui mudança estrutural.
