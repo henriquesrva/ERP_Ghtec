@@ -65,7 +65,7 @@ async function deleteClient(id) {
     throw err;
   }
 
-  const proposalCount = repo.countClientProposals(id);
+  const proposalCount = await repo.countClientProposals(id);
   if (proposalCount > 0) {
     const err = new Error(
       `Este cliente possui ${proposalCount} proposta(s) vinculada(s) e não pode ser excluído. ` +

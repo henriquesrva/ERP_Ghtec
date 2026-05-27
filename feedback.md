@@ -1,91 +1,62 @@
-# Feedback — Passo 4.6: Migrar Clientes para React
+# Feedback — Passo 4.6.1: Corrigir bug await countClientProposals
 
-## O que foi feito
+## Causa exata do bug
 
-### Dependências adicionadas
-- `chart.js` e `react-chartjs-2` instalados em `frontend/package.json`
-  - Necessários para o gráfico de análise de lucro por cliente
+Em `src/modules/client/client.service.js`, linha 68:
 
-### Arquivos criados
-- `frontend/src/api/clients.js` — camada API (`listClients`, `searchClients`, `getClient`, `createClient`, `updateClient`, `deleteClient`, `getProfitAnalysis`)
-- `frontend/src/pages/Clients.jsx` — página React completa com CRUD + análise de lucro
+```js
+// ANTES (bugado)
+const proposalCount = repo.countClientProposals(id);
+if (proposalCount > 0) { ...
+```
 
-### Arquivos alterados
-- `frontend/src/router.jsx` — `/clients` saiu do array LEGACY, virou `<Route path="/clients" element={<Clients />} />`
-- `frontend/src/components/layout/Navbar.jsx` — "Clientes" trocado de `href` legacy para `to="/clients"` com `react: true`
-
-### Arquivos NÃO alterados
-- `public/legacy/clients.html` — mantido conforme instrução
-- Nenhum arquivo de backend alterado
+`countClientProposals` é `async` (usa `prisma.proposal.count`), então retorna uma **Promise**.
+Sem `await`, `proposalCount` recebe a Promise em si, não o número.
+A comparação `Promise > 0` resolve para `NaN > 0 = false` — **sempre falso**.
+Resultado: qualquer cliente podia ser excluído, mesmo com propostas vinculadas.
 
 ---
 
-## Endpoints usados
+## Arquivos alterados
 
-| Endpoint | Método | Uso |
-|---|---|---|
-| `GET /clients` | GET | Listar todos os clientes |
-| `GET /clients/search?q=` | GET | Busca com debounce 280ms |
-| `GET /clients/profit-analysis` | GET | Dados do gráfico de lucro |
-| `GET /clients/:id` | GET | Carregar cliente para edição |
-| `POST /clients` | POST | Criar cliente → `{ success, client }` |
-| `PUT /clients/:id` | PUT | Atualizar cliente → `{ success, client }` |
-| `DELETE /clients/:id` | DELETE | Excluir com ConfirmModal |
+### `src/modules/client/client.service.js`
+- Adicionado `await` na chamada `countClientProposals`:
+  ```js
+  // DEPOIS (correto)
+  const proposalCount = await repo.countClientProposals(id);
+  ```
 
----
-
-## Comportamentos migrados
-
-- Listar clientes com busca por nome/CNPJ (debounce 280ms)
-- Criar cliente (validação: nome obrigatório)
-- Editar cliente (clicar no item da lista carrega o formulário)
-- Após CREATE: troca para modo edição com os dados do cliente salvo (igual ao legado)
-- Após UPDATE: atualiza título do formulário com novo nome
-- Excluir com ConfirmModal; 409 HAS_PROPOSALS → aviso inline no formulário
-- 409 DUPLICATE_CNPJ em criar/editar → aviso inline (msg-warn)
-- Split layout: lista esquerda (360px) + formulário direita
-- Botão excluir (✕) aparece ao hover no item da lista
-- Formulário com todos os campos: nome, nome_fantasia, razao_social, cnpj, inscricao_estadual, email, telefone, contato_responsavel, endereco, cidade, estado, cep, observacoes, has_parts_contract
-- Checkbox "Possui contrato de peças" com descrição
-- Edit badge "Editando" aparece quando em modo edição
-- Query params: `?id=X` abre edição do cliente X
-- Barra de análise de lucro com botão que abre modal
-- Modal com gráfico de barras Chart.js (horizontal se > 4 clientes)
-  - Verde para lucro positivo, vermelho para negativo
-  - Tooltip com valor formatado em BRL
-- Tabela detalhada no modal: cliente, propostas, valor faturado, custo, lucro, margem, itens s/ custo
-- Aviso de itens sem preço de compra no modal
-- Loading state em lista e modal
-- Mensagens de sucesso/erro inline + Toast global
+### `tests/services/client.service.test.js`
+- Trocados 3 mocks de `mockReturnValue` (síncrono) para `mockResolvedValue` (async) no bloco `deleteClient`, para refletir corretamente o comportamento assíncrono do repository:
+  - `mockReturnValue(3)` → `mockResolvedValue(3)` (teste HAS_PROPOSALS)
+  - `mockReturnValue(0)` → `mockResolvedValue(0)` (teste excluir sem propostas)
+  - `mockReturnValue(1)` → `mockResolvedValue(1)` (teste não chamar deleteClientById)
 
 ---
 
-## Como ficou /app/clients
+## Por que os testes passavam antes mesmo com o bug
 
-Rota React protegida. Split layout fiel ao legado. Análise de lucro migrada completamente com gráfico react-chartjs-2 e tabela de detalhamento.
+Os testes usavam `mockReturnValue` (retorno síncrono), não `mockResolvedValue`. Como o service **não** fazia `await`, recebia o valor diretamente do mock síncrono (ex: `3`). O teste funcionava com o mock mas falhava em produção (onde `countClientProposals` retorna uma Promise real).
 
----
-
-## O que ficou em legacy
-
-`public/legacy/clients.html` — mantido no lugar, mas a Navbar React não aponta mais para ele.
+Após a correção: service usa `await` + testes usam `mockResolvedValue` — comportamento mock alinhado com produção.
 
 ---
 
 ## Validações executadas
 
-- `npm run frontend:build` → 63 modules, sem erros (incluindo chart.js)
-- `npm test` → 408/408 passando (18 arquivos)
-- `npm run prisma:status` → Database schema is up to date!
-- `node scripts/check-prisma-connection.js` → ✅ Prisma OK
+- `npm test` → ✅ 408/408 passando (18 arquivos)
+- `npm run prisma:status` → ✅ Database schema is up to date!
+- `npm run frontend:build` → ✅ 63 modules, build OK
 
 ---
 
-## Problemas encontrados
+## Confirmação de que HAS_PROPOSALS voltou a funcionar
 
-Nenhum. Build limpo, testes intactos, sem necessidade de alterar backend.
-
-**Observação:** O backend tem um bug no `client.service.js` onde `countClientProposals` não é `await`ed (retorna Promise ao invés do número), tornando a proteção `HAS_PROPOSALS` ineficaz. Não foi corrigido neste passo por estar fora do escopo da migração de frontend.
+Após a correção, o fluxo `deleteClient` funciona corretamente:
+1. `findClientById` verifica se o cliente existe (NOT_FOUND se não)
+2. `await countClientProposals(id)` retorna o número real de propostas
+3. Se `proposalCount > 0`: lança `HAS_PROPOSALS` com a contagem — **cliente não é excluído**
+4. Se `proposalCount === 0`: prossegue para `deleteClientById` — cliente excluído normalmente
 
 ---
 
@@ -93,4 +64,5 @@ Nenhum. Build limpo, testes intactos, sem necessidade de alterar backend.
 
 **Passo 4.7 — Migrar tela Financeiro para React**
 
-`financeiro.html` (250 linhas, 3 fetch calls) — dashboard financeiro com gráficos Chart.js. Já temos react-chartjs-2 instalado.
+`financeiro.html` (250 linhas, 3 fetch calls) — dashboard financeiro com gráficos Chart.js.
+`react-chartjs-2` já está instalado (adicionado no Passo 4.6).

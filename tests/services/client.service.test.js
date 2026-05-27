@@ -182,7 +182,7 @@ describe("deleteClient", () => {
 
   it("lança HAS_PROPOSALS se cliente tem propostas", async () => {
     vi.spyOn(repo, "findClientById").mockResolvedValue(FAKE);
-    vi.spyOn(repo, "countClientProposals").mockReturnValue(3);
+    vi.spyOn(repo, "countClientProposals").mockResolvedValue(3);
     const err = await deleteClient(1).catch((e) => e);
     expect(err.code).toBe("HAS_PROPOSALS");
     expect(err.proposalCount).toBe(3);
@@ -190,7 +190,7 @@ describe("deleteClient", () => {
 
   it("exclui cliente sem propostas", async () => {
     vi.spyOn(repo, "findClientById").mockResolvedValue(FAKE);
-    vi.spyOn(repo, "countClientProposals").mockReturnValue(0);
+    vi.spyOn(repo, "countClientProposals").mockResolvedValue(0);
     vi.spyOn(repo, "deleteClientById").mockResolvedValue(undefined);
     await expect(deleteClient(1)).resolves.toBeUndefined();
     expect(repo.deleteClientById).toHaveBeenCalledWith(1);
@@ -205,7 +205,7 @@ describe("deleteClient", () => {
 
   it("não chama deleteClientById se HAS_PROPOSALS", async () => {
     vi.spyOn(repo, "findClientById").mockResolvedValue(FAKE);
-    vi.spyOn(repo, "countClientProposals").mockReturnValue(1);
+    vi.spyOn(repo, "countClientProposals").mockResolvedValue(1);
     vi.spyOn(repo, "deleteClientById");
     await deleteClient(1).catch(() => {});
     expect(repo.deleteClientById).not.toHaveBeenCalled();
