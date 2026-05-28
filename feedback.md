@@ -1,123 +1,128 @@
-# Feedback — Passo 4.16: Remover Legado HTML Antigo
+# Feedback — Passo 4.17: Code Splitting com React.lazy
 
 ---
 
-## 1. Arquivos/Pastas Removidos
-
-| Item | Tipo |
-|---|---|
-| `public/legacy/` | Pasta com 14 HTMLs (clients, contas-pagar, financeiro, fornecedores, index, kanban, notas-recebidas, nova-proposta, objetos, parts, proposals, responsaveis, stock, usuarios) |
-| `public/auth.js` | Script de autenticação do frontend legado |
-| `frontend/src/pages/LegacyRedirect.jsx` | Componente React de redirecionamento (não mais necessário) |
-
----
-
-## 2. Arquivos Alterados
+## 1. Arquivos Alterados
 
 | Arquivo | Alteração |
 |---|---|
-| `src/middleware/requireAuth.js` | Removido `/auth.js` e `/legacy/` de `PUBLIC_PREFIXES`; `ADMIN_PAGES` esvaziado |
-| `frontend/src/router.jsx` | Removido bloco `const LEGACY` e `LEGACY.map()`; router limpo com 14 rotas |
-| `frontend/src/pages/Responsaveis.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
-| `frontend/src/pages/Objetos.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
-| `frontend/src/pages/Usuarios.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
-| `frontend/src/pages/Clients.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
-| `frontend/src/pages/Fornecedores.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
-| `frontend/src/contexts/AuthContext.jsx` | Comentário: removida referência a "auth.js legado" |
-| `docs/SYSTEM_CONTEXT.md` | Atualizado: stack, estrutura de pastas, decisão técnica 4, orientação frontend, rodapé |
-| `contexto/REACT_MIGRATION_PLAN.md` | Status atualizado para Passo 4.16 concluído |
+| `frontend/src/router.jsx` | 13 imports convertidos para `React.lazy`; `Suspense` adicionado; `Loading` importado |
 
 ---
 
-## 3. Resultado das Buscas
+## 2. Páginas Convertidas para Lazy
+
+| Página | Tipo |
+|---|---|
+| `Login` | Eager (import direto — tela de entrada) |
+| `Dashboard` | Eager (import direto — tela inicial após login) |
+| `Proposals` | lazy |
+| `NovaProposta` | lazy |
+| `Kanban` | lazy |
+| `Clients` | lazy |
+| `Objetos` | lazy |
+| `Parts` | lazy |
+| `Stock` | lazy |
+| `Fornecedores` | lazy |
+| `NotasRecebidas` | lazy |
+| `ContasPagar` | lazy |
+| `Financeiro` | lazy |
+| `Responsaveis` | lazy |
+| `Usuarios` | lazy |
+
+Login e Dashboard mantidos como eager porque são as telas de entrada mais frequentes — qualquer usuário passa por elas antes de qualquer outra página.
+
+---
+
+## 3. Como Ficou o Suspense/Fallback
+
+Único `<Suspense>` envolvendo o `<Routes>` inteiro no `AppRouter`. Fallback: componente `Loading` existente (spinner centralizado full-viewport).
+
+```jsx
+<Suspense fallback={<Loading />}>
+  <Routes>
+    ...
+  </Routes>
+</Suspense>
+```
+
+Quando o usuário navega para uma rota lazy pela primeira vez, o spinner aparece enquanto o chunk da página é baixado. Nas visitas seguintes, o chunk já está em cache — nenhum spinner.
+
+---
+
+## 4. Resultado do Build — Antes × Depois
+
+### Antes (único chunk)
 
 ```
-grep -Rn "/legacy"      frontend/src src  → 0 resultados
-grep -Rn "legacy/"      frontend/src src  → 0 resultados
-grep -Rn "auth\.js"     frontend/src src  → 0 resultados
-grep -Rn "LegacyRedirect" frontend/src   → 0 resultados
+dist/assets/index-C_g2t1ev.js   584.52 kB   (166.56 kB gzip)
 ```
 
-Zero referências ativas em código. Legado completamente removido.
+### Depois (chunks por página)
 
----
+**Chunks iniciais (carregados em toda visita):**
 
-## 4. Ajustes em requireAuth
-
-**Antes:**
-```js
-const PUBLIC_PREFIXES = ["/css/", "/assets/", "/auth.js", "/app/", "/legacy/"];
-const ADMIN_PAGES     = new Set(["/legacy/usuarios.html"]);
+```
+dist/assets/index-0xPxnlz_.js   164.98 kB   (57.34 kB gzip)
+dist/assets/index-B9CieZiW.js   176.19 kB   (57.64 kB gzip)
+Total inicial:                   341.17 kB  (114.98 kB gzip)
 ```
 
-**Depois:**
-```js
-const PUBLIC_PREFIXES = ["/css/", "/assets/", "/app/"];
-const ADMIN_PAGES     = new Set();
+**Chunks de página (carregados apenas ao navegar):**
+
+```
+dist/assets/NotasRecebidas-KFw9EKdV.js   38.61 kB   (8.36 kB gzip)
+dist/assets/Kanban-BA1rU5-p.js           33.52 kB   (8.11 kB gzip)
+dist/assets/Stock-9rvFdwgc.js            30.41 kB   (7.23 kB gzip)
+dist/assets/NovaProposta-DLkw7KJL.js     29.58 kB   (7.96 kB gzip)
+dist/assets/Parts-CtzH8X7-.js            25.18 kB   (6.32 kB gzip)
+dist/assets/Clients-D3ybADtA.js          17.44 kB   (5.13 kB gzip)
+dist/assets/Objetos-BUOYmq42.js          16.93 kB   (4.17 kB gzip)
+dist/assets/Fornecedores-dacl1zaf.js     14.22 kB   (4.06 kB gzip)
+dist/assets/ContasPagar-Bl65juM_.js      13.42 kB   (3.45 kB gzip)
+dist/assets/Usuarios-BsYFqdJ-.js         11.60 kB   (3.61 kB gzip)
+dist/assets/Responsaveis-CnDw42TU.js      5.71 kB   (2.19 kB gzip)
+dist/assets/Proposals-DBfVjRzy.js         4.56 kB   (1.86 kB gzip)
+dist/assets/Financeiro-9_lfOyHG.js        4.04 kB   (1.73 kB gzip)
 ```
 
-- `/auth.js` removido (arquivo deletado)
-- `/legacy/` removido (pasta deletada)
-- `ADMIN_PAGES` esvaziado (proteção de rota legada não se aplica mais)
-- `/app/` mantido — necessário para servir o SPA React sem autenticação
+**CSS chunks (lazy — apenas quando a página é carregada):**
+
+```
+dist/assets/NovaProposta-BbytmvPD.css    12.59 kB   (2.90 kB gzip)
+dist/assets/Kanban-DpOl1XhZ.css           9.27 kB   (2.05 kB gzip)
+```
+
+### Resumo
+
+| Métrica | Antes | Depois | Redução |
+|---|---|---|---|
+| JS inicial (minificado) | 584.52 kB | 341.17 kB | **−243 kB (−41%)** |
+| JS inicial (gzip) | 166.56 kB | 114.98 kB | **−51 kB (−31%)** |
+| Chunks JS | 1 | 15 + compartilhados | — |
 
 ---
 
-## 5. Ajustes em app.js
-
-Nenhum. O `app.js` não tinha referências explícitas a `/legacy/` — a pasta era servida via `express.static(../public)` implicitamente. Com a pasta removida, ela simplesmente deixa de existir. Todos os outros serviços permanecem intactos:
-
-- `express.static(../public)` → serve `css/`, `assets/`, `login.html`
-- `/app` → serve `frontend/dist/` (React)
-- `/files/` → serve `output/proposals/`
-- `/health` → funcional
-
----
-
-## 6. Documentação Atualizada
-
-### SYSTEM_CONTEXT.md
-- Stack: removida linha "Frontend (legado) — HTML vanilla em public/legacy/"
-- Estrutura de pastas: `public/` simplificada (css, assets, login.html — sem legacy)
-- `router.jsx`: descrição atualizada ("todas as 15 telas React")
-- Decisão técnica 4: atualizada — migração concluída em Passo 4.16
-- Orientação frontend: atualizada — sem mais menção a telas HTML legadas
-- Rodapé: atualizado para 2026-05-28, Passo 4.16
-
-### contexto/REACT_MIGRATION_PLAN.md
-- Status atualizado para: "Migração React concluída. Todas as 15 telas migradas. public/legacy/ removido."
-
----
-
-## 7. Validações Executadas
+## 5. Validações Executadas
 
 | Validação | Resultado |
 |---|---|
-| `npm run frontend:build` | ✅ 78 módulos, build limpo |
+| `npm run frontend:build` | ✅ 79 módulos, build limpo, sem erros |
 | `npm test` | ✅ 408/408 testes backend passando (18 suites) |
 | `node scripts/check-prisma-connection.js` | ✅ Prisma + PostgreSQL OK |
 
 ---
 
-## 8. Estado Final de public/
+## 6. Problemas Encontrados
 
-```
-public/
-├── assets/
-│   └── logoGHTEC.png
-├── css/
-│   └── styles.css
-└── login.html          ← mantido como fallback (não removido neste passo)
-```
+Nenhum. A aplicação do `React.lazy` foi direta — Vite detectou os dynamic imports automaticamente e criou um chunk por página sem nenhuma configuração adicional.
 
 ---
 
-## 9. Próximo Passo Recomendado
+## 7. Próximo Passo Recomendado
 
-**Migração React completa e legado removido.**
+**Sistema estável para deploy.**
 
-Próximos passos possíveis:
-
-1. **Code splitting** — bundle está em 584 kB. Aplicar `React.lazy` por rota reduz TTI inicial. Baixo risco, ganho mensurável.
-2. **Remover `public/login.html`** — a tela de login agora é `/app/login` (React). O HTML legado pode ser removido e `/login.html` retirado de `PUBLIC_PATHS` no requireAuth. Verificar se há bookmarks/links externos antes.
-3. **Deploy** — sistema está estável para validação em produção.
+Tarefas pendentes antes de deploy:
+1. **Remover `public/login.html`** — a tela de login é `/app/login` (React). Verificar se há bookmarks/links externos antes de remover e limpar `PUBLIC_PATHS` no `requireAuth.js`.
+2. **Deploy** — estrutura pronta para produção. Build gera `frontend/dist/` servido pelo Express em `/app/`.
