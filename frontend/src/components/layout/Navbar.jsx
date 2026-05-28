@@ -22,7 +22,7 @@ const MENUS = [
     label: 'Operacional',
     links: [
       { label: 'Peças',           href: '/legacy/parts.html',             react: false },
-      { label: 'Estoque',         href: '/legacy/stock.html',             react: false },
+      { label: 'Estoque',         to:   '/stock',                         react: true  },
       { label: 'Fornecedores',    to:   '/fornecedores',                  react: true  },
       { label: 'Notas Recebidas', to:   '/notas-recebidas',                react: true  },
     ],
