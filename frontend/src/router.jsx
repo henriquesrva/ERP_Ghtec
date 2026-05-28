@@ -15,12 +15,13 @@ import NotasRecebidas  from './pages/NotasRecebidas';
 import Stock           from './pages/Stock';
 import Parts           from './pages/Parts';
 import Kanban          from './pages/Kanban';
+import NovaProposta    from './pages/NovaProposta';
 import LegacyRedirect  from './pages/LegacyRedirect';
 
-// Telas ainda não migradas — abrem a versão legacy
+// Todas as telas já migradas — lista legacy vazia
 const LEGACY = [
-  { path: '/nova-proposta', href: '/legacy/nova-proposta.html', label: 'Nova Proposta' },
-  // /kanban já migrado — removido da lista legacy
+  // /nova-proposta já migrado
+  // /kanban já migrado
   // /parts já migrado — removido da lista legacy
   // /stock já migrado — removido da lista legacy
   // /financeiro já migrado — removido da lista legacy
@@ -51,8 +52,9 @@ export default function AppRouter() {
           <Route path="/stock"           element={<Stock />} />
           <Route path="/parts"           element={<Parts />} />
           <Route path="/kanban"          element={<Kanban />} />
+          <Route path="/nova-proposta"   element={<NovaProposta />} />
 
-          {/* ── Legacy redirects — telas ainda não migradas ── */}
+          {/* ── Legacy redirects — todas migradas ── */}
           {LEGACY.map(({ path, href, label }) => (
             <Route
               key={path}
