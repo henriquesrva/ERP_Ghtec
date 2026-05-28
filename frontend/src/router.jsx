@@ -13,13 +13,14 @@ import Financeiro      from './pages/Financeiro';
 import ContasPagar      from './pages/ContasPagar';
 import NotasRecebidas  from './pages/NotasRecebidas';
 import Stock           from './pages/Stock';
+import Parts           from './pages/Parts';
 import LegacyRedirect  from './pages/LegacyRedirect';
 
 // Telas ainda não migradas — abrem a versão legacy
 const LEGACY = [
-  { path: '/nova-proposta',    href: '/legacy/nova-proposta.html',    label: 'Nova Proposta' },
-  { path: '/parts',            href: '/legacy/parts.html',            label: 'Peças' },
-  { path: '/kanban',           href: '/legacy/kanban.html',           label: 'Kanban' },
+  { path: '/nova-proposta', href: '/legacy/nova-proposta.html', label: 'Nova Proposta' },
+  { path: '/kanban',        href: '/legacy/kanban.html',        label: 'Kanban' },
+  // /parts já migrado — removido da lista legacy
   // /stock já migrado — removido da lista legacy
   // /financeiro já migrado — removido da lista legacy
   // /contas-pagar já migrado — removido da lista legacy
@@ -47,6 +48,7 @@ export default function AppRouter() {
           <Route path="/contas-pagar"      element={<ContasPagar />} />
           <Route path="/notas-recebidas" element={<NotasRecebidas />} />
           <Route path="/stock"           element={<Stock />} />
+          <Route path="/parts"           element={<Parts />} />
 
           {/* ── Legacy redirects — telas ainda não migradas ── */}
           {LEGACY.map(({ path, href, label }) => (

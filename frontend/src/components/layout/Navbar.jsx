@@ -21,12 +21,12 @@ const MENUS = [
     group: 'operacional',
     label: 'Operacional',
     links: [
-      { label: 'Peças',           href: '/legacy/parts.html',             react: false },
+      { label: 'Peças',           to:   '/parts',                         react: true  },
       { label: 'Estoque',         to:   '/stock',                         react: true  },
       { label: 'Fornecedores',    to:   '/fornecedores',                  react: true  },
       { label: 'Notas Recebidas', to:   '/notas-recebidas',                react: true  },
     ],
-    activePaths: ['/parts', '/stock', '/fornecedores', '/notas-recebidas'],
+    activePaths: ['/parts', '/stock', '/fornecedores', '/notas-recebidas', '/part-categories'],
   },
   {
     group: 'financeiro',
