@@ -1,5 +1,5 @@
 const PUBLIC_PATHS   = new Set(["/auth/login", "/auth/logout", "/health"]);
-const PUBLIC_PREFIXES = ["/css/", "/assets/", "/app/"];
+const PUBLIC_PREFIXES = ["/assets/", "/app/"];
 const ADMIN_PAGES    = new Set();
 
 function requireAuth(req, res, next) {

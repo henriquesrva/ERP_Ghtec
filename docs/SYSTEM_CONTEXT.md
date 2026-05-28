@@ -226,15 +226,15 @@ propostas_automaticas/
 │       ├── extensao.js        # Valor por extenso (limitado: só 0–10)
 │       └── normalize.js       # Remove acentos, converte para lowercase, colapsa espaços
 ├── public/                    # Assets estáticos servidos pelo Express
-│   ├── css/styles.css         # Design system global (tokens CSS, componentes)
-│   └── assets/logoGHTEC.png   # Logo do frontend
+│   └── assets/logoGHTEC.png   # Logo do frontend (referenciada por URL em /assets/logoGHTEC.png)
 ├── frontend/                  # Aplicação React + Vite
-│   ├── index.html             # Entry point HTML (usa /css/styles.css do Express)
+│   ├── index.html             # Entry point HTML (sem link externo de CSS — bundlado pelo Vite)
 │   ├── vite.config.js         # Vite: base="/app/", proxy para Express, build → dist/
 │   ├── package.json           # Dependências React (react, react-dom, react-router-dom)
 │   ├── dist/                  # Build de produção — servido em /app/ pelo Express
 │   └── src/
-│       ├── main.jsx           # Render root
+│       ├── main.jsx           # Render root — importa styles.css
+│       ├── styles.css         # Design system global (tokens CSS, componentes) — bundlado pelo Vite
 │       ├── App.jsx            # BrowserRouter (basename="/app") + AuthProvider
 │       ├── router.jsx         # Rotas: todas as 15 telas React (migração concluída)
 │       ├── contexts/AuthContext.jsx  # Estado global de auth (GET /auth/me)
@@ -919,7 +919,7 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 1. **Node.js + Express 4:** simplicidade, ecossistema amplo, sem overhead de frameworks maiores.
 2. **SQLite (better-sqlite3):** deploy simples (arquivo único), sem necessidade de servidor de banco separado, adequado para volume de uso atual.
 3. **Modo WAL no SQLite:** melhor performance para leituras concorrentes leves, sem risco de bloqueio.
-4. **Migração para React + Vite concluída (2026-05, Passos 4.1–4.16):** React 18 + Vite 5 + React Router v6. React serve sob `/app/` (`basename="/app"`) para evitar conflito com rotas de API Express. Build de produção em `frontend/dist/`, servido estaticamente pelo Express. CSS global (`styles.css`) compartilhado via `/css/styles.css`. Todas as 15 telas migradas. `public/legacy/` e `public/auth.js` removidos. `LegacyRedirect` removido.
+4. **Migração para React + Vite concluída (2026-05, Passos 4.1–4.19):** React 18 + Vite 5 + React Router v6. React serve sob `/app/` (`basename="/app"`) para evitar conflito com rotas de API Express. Build de produção em `frontend/dist/`, servido estaticamente pelo Express. CSS global (`styles.css`) bundlado pelo Vite — em `frontend/src/styles.css`, importado em `main.jsx`. Todas as 15 telas migradas. `public/` contém apenas `assets/logoGHTEC.png`. `public/legacy/`, `public/auth.js`, `public/login.html` e `public/css/` removidos. `LegacyRedirect` removido.
 5. **Geração de PDF em 3 camadas (Puppeteer + pdf-lib):** solução robusta para marcas d'água independentes do conteúdo, necessária porque Puppeteer tem limitações de renderização CSS de impressão.
 6. **CSS da proposta injetado inline no HTML:** garante renderização correta pelo Puppeteer sem dependência de URLs externas.
 7. **Assets do PDF em base64 Data URI:** evita problemas de path durante renderização headless.

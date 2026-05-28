@@ -8,8 +8,8 @@ const expressRoutes = [
   '/proposals', '/kanban', '/stock', '/fornecedores',
   '/categorias-despesa', '/notas-recebidas', '/contas-pagar',
   '/files', '/health',
-  // Assets e legacy servidos pelo Express
-  '/css', '/assets', '/legacy',
+  // Assets servidos pelo Express (logo, etc.)
+  '/assets',
 ];
 
 function proxyEntries() {
