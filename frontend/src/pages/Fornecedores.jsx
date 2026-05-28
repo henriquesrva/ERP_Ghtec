@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   listFornecedores,
   searchFornecedores,
@@ -514,9 +515,9 @@ export default function Fornecedores() {
                                 return (
                                   <tr key={n.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                                     <td style={{ padding: '5px 6px' }}>
-                                      <a href={`/legacy/notas-recebidas.html?id=${n.id}`} style={{ color: 'var(--color-primary)' }}>
+                                      <Link to={`/notas-recebidas?id=${n.id}`} style={{ color: 'var(--color-primary)' }}>
                                         {n.numero_nota || 's/n'}{n.serie ? `/${n.serie}` : ''}
-                                      </a>
+                                      </Link>
                                     </td>
                                     <td style={{ padding: '5px 6px' }}>{fmtDate(n.data_entrada)}</td>
                                     <td style={{ padding: '5px 6px' }}>{fmtMoeda(n.valor_total)}</td>

@@ -16,7 +16,6 @@ import Stock           from './pages/Stock';
 import Parts           from './pages/Parts';
 import Kanban          from './pages/Kanban';
 import NovaProposta    from './pages/NovaProposta';
-import LegacyRedirect  from './pages/LegacyRedirect';
 
 // Todas as telas já migradas — lista legacy vazia
 const LEGACY = [

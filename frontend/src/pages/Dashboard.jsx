@@ -2,14 +2,14 @@ import { Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 
 const QUICK_LINKS = [
-  { emoji: '📝', label: 'Nova Proposta',   href: '/legacy/nova-proposta.html', react: false },
-  { emoji: '📋', label: 'Propostas',       to:   '/proposals',                 react: true  },
-  { emoji: '📊', label: 'Kanban',          href: '/legacy/kanban.html',        react: false },
-  { emoji: '👥', label: 'Clientes',        href: '/legacy/clients.html',       react: false },
-  { emoji: '🔧', label: 'Peças',           href: '/legacy/parts.html',         react: false },
-  { emoji: '📦', label: 'Estoque',         href: '/legacy/stock.html',         react: false },
-  { emoji: '🏭', label: 'Fornecedores',    href: '/legacy/fornecedores.html',  react: false },
-  { emoji: '💰', label: 'Financeiro',      href: '/legacy/financeiro.html',    react: false },
+  { emoji: '📝', label: 'Nova Proposta', to: '/nova-proposta', react: true },
+  { emoji: '📋', label: 'Propostas',    to: '/proposals',      react: true },
+  { emoji: '📊', label: 'Kanban',       to: '/kanban',         react: true },
+  { emoji: '👥', label: 'Clientes',     to: '/clients',        react: true },
+  { emoji: '🔧', label: 'Peças',        to: '/parts',          react: true },
+  { emoji: '📦', label: 'Estoque',      to: '/stock',          react: true },
+  { emoji: '🏭', label: 'Fornecedores', to: '/fornecedores',   react: true },
+  { emoji: '💰', label: 'Financeiro',   to: '/financeiro',     react: true },
 ];
 
 export default function Dashboard() {

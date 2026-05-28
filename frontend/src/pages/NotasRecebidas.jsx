@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { listNotas, getNota, createNota, cancelarNota as apiCancelarNota } from '../api/notasRecebidas';
 import { listFornecedores, searchFornecedores } from '../api/fornecedores';
@@ -501,6 +502,7 @@ function DetailContent({ data, podeCancel, cancelConfirm, cancelErr, cancelLoadi
 
 export default function NotasRecebidas() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ── List ─────────────────────────────────────────────────────────────────────
   const [filtros, setFiltros] = useState({ status: '', fornecedor_id: '', categoria_id: '' });
@@ -558,6 +560,14 @@ export default function NotasRecebidas() {
   }, [filtros]);
 
   useEffect(() => { loadList(); }, [loadList]);
+
+  // ── Deep-link: /notas-recebidas?id=123 abre o detalhe automaticamente ────────
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (!id) return;
+    setSearchParams({}, { replace: true });
+    openDetail(Number(id));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Toast ─────────────────────────────────────────────────────────────────────
   function showToast(msg, ok = true) {

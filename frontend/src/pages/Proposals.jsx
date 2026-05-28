@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { listProposals, deleteProposal } from '../api/proposals';
 import Toast        from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
@@ -115,11 +116,11 @@ export default function Proposals() {
             maxWidth: '580px',
             margin: '40px auto 0',
           }}>
-            <a className="section-card" href="/legacy/nova-proposta.html">
+            <Link className="section-card" to="/nova-proposta">
               <span className="sc-icon">📝</span>
               <div className="sc-title">Nova proposta</div>
               <div className="sc-desc">Criar uma nova proposta comercial e gerar o PDF</div>
-            </a>
+            </Link>
 
             <div
               className="section-card"
