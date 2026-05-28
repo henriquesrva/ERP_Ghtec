@@ -1,110 +1,119 @@
-# Feedback — Passo 4.20: Revisar e limpar app.js pós-migração React
+# Feedback — Passo 4.21: Auditoria final de consistência pós-migração React
 
 ---
 
-## 1. Auditoria do app.js
+## 1. Resultado dos greps
 
-`src/app.js` está limpo e correto para o estado pós-migração. Resumo da estrutura encontrada:
-
-| Bloco | Linha | Estado |
+| Busca | Achados | Classificação |
 |---|---|---|
-| `requireAuth` middleware | 169 | ✅ Correto — roda antes de tudo |
-| `express.static(public)` | 171 | ✅ Necessário — serve `assets/logoGHTEC.png` |
-| `/files/*` static routes | 172–175 | ✅ Intocados — servem output de PDFs/uploads |
-| Rotas de API | 177–332 | ✅ Sem alterações |
-| `express.static(frontendDist)` | 336 | ✅ Serve bundle React em `/app` |
-| SPA fallback `["/app", "/app/*"]` | 337–341 | ✅ Correto — serve `index.html` para rotas SPA |
-| Redirects de compatibilidade | 344–346 | ✅ Mantidos (ver item 3) |
-| `notFoundHandler` / `errorHandler` | 349–353 | ✅ Último na cadeia |
-
-**Nenhuma alteração de código foi necessária em `app.js`.**
+| `legacy` | `Navbar.jsx:6` — comentário "página legacy" | **Funcional obsoleto** → corrigido |
+| `auth.js` | `Login.jsx:6`, `Proposals.jsx:8` | Comentário histórico — aceitável |
+| `login.html` | `Login.jsx:6` | Comentário histórico — aceitável |
+| `proposals.html` | `app.js:346` | Redirect de compatibilidade intencional — aceitável |
+| `index.html` | `app.js:338` (SPA fallback), `app.js:345` (redirect), `styles.css:627` | Dois são necessários; CSS era comentário obsoleto → corrigido |
+| `/css/` | Nenhuma referência funcional | Limpo |
+| `public/css` | Nenhuma referência funcional | Limpo |
 
 ---
 
-## 2. Redirects encontrados
+## 2. Referências funcionais corrigidas
+
+### `frontend/src/components/layout/Navbar.jsx`
+
+**Problema:** O componente tinha um padrão de coexistência legado (`react: true/false`) usado durante a migração para distinguir links React Router de links HTML antigos. Com 100% das telas em React, o código morto (`react: false → <a href>`) nunca executava mais.
+
+**O que foi removido:**
+- Comentário `// react: true → ... / react: false → <a href> para página legacy`
+- Propriedade `react: true` de todos os 10 links de menu (sempre era `true`)
+- Ramo morto no render: `link.react ? <Link> : <a href={link.href}>`
+- Comentário `// /financeiro já é React`
+
+**Resultado:** Render simplificado — todos os links são `<Link>` React Router diretamente.
+
+### `frontend/src/styles.css:627`
+
+**Problema:** Comentário CSS `/* Modal Overlay (entity picker — usado em index.html) */` referenciava arquivo legado.
+
+**Corrigido para:** `/* Modal Overlay (entity picker) */`
+
+---
+
+## 3. Estado final do requireAuth.js
 
 ```js
-app.get("/",              (req, res) => res.redirect("/app/"));
-app.get("/index.html",    (req, res) => res.redirect("/app/"));
-app.get("/proposals.html",(req, res) => res.redirect("/app/proposals"));
+const PUBLIC_PATHS   = new Set(["/auth/login", "/auth/logout", "/health"]);
+const PUBLIC_PREFIXES = ["/assets/", "/app/"];
 ```
 
-Nenhum redirect para `/legacy`, `/login.html` ou rotas mortas.
+- Mínimo e correto
+- `/app/` libera toda a SPA React (login incluído)
+- `/assets/` libera o logo
+- Redirect não autenticado aponta para `/app/login`
+- Sem rastros de `/css/`, `/legacy`, `/auth.js`, `/login.html`
 
 ---
 
-## 3. Redirects mantidos/removidos e por quê
+## 4. Estado final do app.js
 
-| Redirect | Decisão | Motivo |
-|---|---|---|
-| `/` → `/app/` | **Mantido** | Essencial — entrada principal do sistema |
-| `/index.html` → `/app/` | **Mantido** | Bookmark compatibility — inofensivo, 1 linha |
-| `/proposals.html` → `/app/proposals` | **Mantido** | Bookmark compatibility — rota React válida |
-
-Não havia redirect `/login.html` em `app.js` (já tratado pelo `requireAuth` no Passo 4.18).
-
----
-
-## 4. Estado do express.static public/
-
-```js
-app.use(express.static(path.resolve(__dirname, "../public")));
-```
-
-Mantido sem alteração. `public/` contém apenas `assets/logoGHTEC.png`, referenciada via URL `/assets/logoGHTEC.png` em `Login.jsx` e `Navbar.jsx`. Sem nenhum arquivo legado exposto.
+- `express.static(public)` serve apenas `assets/logoGHTEC.png` — sem legado exposto
+- SPA: `express.static(frontendDist)` + fallback `app.get(["/app", "/app/*"])`
+- `/files/*` servem output de PDFs/uploads — intocados
+- Redirects de compatibilidade mantidos e intencionais:
+  - `/` → `/app/`
+  - `/index.html` → `/app/`
+  - `/proposals.html` → `/app/proposals`
+- Nenhum redirect para `/legacy`, `/login.html`, `/css/` ou rotas mortas
 
 ---
 
-## 5. Estado do fallback /app
+## 5. Estado final do frontend/index.html e main.jsx
 
-```js
-app.use("/app", express.static(frontendDist));
-app.get(["/app", "/app/*"], (req, res) => {
-  res.sendFile(path.join(frontendDist, "index.html"), ...);
-});
-```
+**`frontend/index.html`:**
+- Sem `<link rel="stylesheet">` externo — CSS bundlado pelo Vite
+- Entry point mínimo e limpo
 
-Correto. `express.static` serve os assets do bundle (JS/CSS com hash). O `app.get` fallback serve `index.html` para qualquer rota SPA não encontrada como arquivo. Rotas de API não são interceptadas — todas estão declaradas antes deste bloco.
-
----
-
-## 6. Arquivos alterados
-
-`app.js` **não foi alterado**.
-
-Documentação atualizada:
-
-| Arquivo | Alterações |
-|---|---|
-| `docs/SYSTEM_CONTEXT.md` | Descrição de Comunicação Frontend ↔ Backend atualizada; tabela de páginas migrada de `.html` para rotas `/app/`; 7 referências "Acesso via `xxx.html`" atualizadas para rotas React |
-| `contexto/REACT_MIGRATION_PLAN.md` | Status header atualizado para Passo 4.20 concluído |
+**`frontend/src/main.jsx`:**
+- `import './styles.css'` presente — CSS global bundlado via Vite
+- Sem dependências externas desnecessárias
 
 ---
 
-## 7. Documentação atualizada?
+## 6. Documentação atualizada?
 
-Sim — limpeza ampla de referências `.html` obsoletas em `docs/SYSTEM_CONTEXT.md`:
-- Seção "Comunicação Frontend ↔ Backend" corrigida
-- Seção 6 (Fluxos Principais): 7 "Acesso via `xxx.html`" → rotas `/app/`
-- Seção 8 (Estado Atual da Interface): tabela de 15 páginas atualizada de `.html` para rotas React
+Não — nenhuma inconsistência estrutural encontrada na documentação que exigisse atualização neste passo (as limpezas de doc foram feitas nos Passos 4.19 e 4.20).
 
 ---
 
-## 8. Validações executadas
+## 7. Validações executadas
 
 | Validação | Resultado |
 |---|---|
-| `npm run frontend:build` | ✅ built in 1.17s |
+| `npm run frontend:build` | ✅ built in 1.26s |
 | `npm test` | ✅ 408 passed (18 files) |
 | `npm run prisma:status` | ✅ Database schema is up to date |
 | `node scripts/check-prisma-connection.js` | ✅ 15 passos, todos OK |
 
 ---
 
+## 8. Veredito: pronto para deploy/staging?
+
+**Sim.** O sistema está consistente e limpo:
+
+- Zero referências funcionais ao frontend legado
+- `public/` expõe apenas o logo (`assets/logoGHTEC.png`)
+- CSS global bundlado pelo Vite — sem dependência HTTP externa
+- `requireAuth.js` mínimo e correto
+- `app.js` com ordem de middlewares correta e sem código morto
+- `Navbar.jsx` limpo — sem código de coexistência legado
+- 408 testes backend passando
+- Build React limpo sem warnings
+
+---
+
 ## 9. Próximo passo recomendado
 
-**Passo 4.21** — Auditoria final de consistência:
-- Verificar se há alguma referência `.html` restante em código funcional (não documentação)
-- Revisar `requireAuth.js` para confirmar que `PUBLIC_PREFIXES` e `PUBLIC_PATHS` estão mínimos e corretos
-- Rodar um grep final por `legacy`, `auth.js`, `login.html`, `css/` para confirmar zero restos legados no código
-- Opcional: consolidar logo em `frontend/public/` se fizer sentido no futuro (baixa prioridade)
+A migração está completa. Os próximos passos são operacionais:
+
+- **Deploy/staging:** Rodar `npm run frontend:build` no servidor e reiniciar o processo PM2
+- **Smoke test em staging:** Verificar `/app/login`, `/app/`, `/app/proposals`, upload de arquivos (notas recebidas, contas a pagar, aprovação de kanban) e geração de PDF
+- **Opcional futuro:** Mover `public/assets/logoGHTEC.png` para `frontend/public/` e remover o `express.static(public)` — baixíssima prioridade, sem impacto funcional

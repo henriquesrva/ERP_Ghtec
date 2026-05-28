@@ -1,19 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 
-// ── Definição dos menus ────────────────────────────────────────────────────────
-// react: true  → Link interno React Router (sem reload)
-// react: false → <a href> para página legacy (saí do SPA)
-
 const MENUS = [
   {
     group: 'comercial',
     label: 'Comercial',
     links: [
-      { label: 'Propostas',           to: '/proposals',                      react: true  },
-      { label: 'Kanban',              to:   '/kanban',                       react: true  },
-      { label: 'Clientes',            to:   '/clients',                      react: true  },
-      { label: 'Objetos e Condições', to:   '/objetos',                       react: true  },
+      { label: 'Propostas',           to: '/proposals'      },
+      { label: 'Kanban',              to: '/kanban'          },
+      { label: 'Clientes',            to: '/clients'         },
+      { label: 'Objetos e Condições', to: '/objetos'         },
     ],
     activePaths: ['/proposals', '/kanban', '/clients', '/objetos', '/nova-proposta'],
   },
@@ -21,10 +17,10 @@ const MENUS = [
     group: 'operacional',
     label: 'Operacional',
     links: [
-      { label: 'Peças',           to:   '/parts',                         react: true  },
-      { label: 'Estoque',         to:   '/stock',                         react: true  },
-      { label: 'Fornecedores',    to:   '/fornecedores',                  react: true  },
-      { label: 'Notas Recebidas', to:   '/notas-recebidas',                react: true  },
+      { label: 'Peças',           to: '/parts'           },
+      { label: 'Estoque',         to: '/stock'           },
+      { label: 'Fornecedores',    to: '/fornecedores'    },
+      { label: 'Notas Recebidas', to: '/notas-recebidas' },
     ],
     activePaths: ['/parts', '/stock', '/fornecedores', '/notas-recebidas', '/part-categories'],
   },
@@ -32,10 +28,10 @@ const MENUS = [
     group: 'financeiro',
     label: 'Financeiro',
     links: [
-      { label: 'Contas a Pagar', to:   '/contas-pagar',             react: true  },
-      { label: 'Financeiro',     to:   '/financeiro',               react: true  },
+      { label: 'Contas a Pagar', to: '/contas-pagar' },
+      { label: 'Financeiro',     to: '/financeiro'   },
     ],
-    activePaths: ['/contas-pagar', '/financeiro'],  // /financeiro já é React
+    activePaths: ['/contas-pagar', '/financeiro'],
   },
 ];
 
@@ -67,11 +63,8 @@ export default function Navbar() {
             </button>
             <div className="nav-dropdown">
               {menu.links.map(link => {
-                const isLinkActive = link.react && path === link.to;
-                const cls = `nav-dd-link${isLinkActive ? ' active' : ''}`;
-                return link.react
-                  ? <Link key={link.label} to={link.to} className={cls}>{link.label}</Link>
-                  : <a    key={link.label} href={link.href} className={cls}>{link.label}</a>;
+                const cls = `nav-dd-link${path === link.to ? ' active' : ''}`;
+                return <Link key={link.label} to={link.to} className={cls}>{link.label}</Link>;
               })}
             </div>
           </div>

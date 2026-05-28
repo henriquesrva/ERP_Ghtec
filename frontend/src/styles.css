@@ -624,7 +624,7 @@ tr:last-child td { border-bottom: none; }
 .confirm-box p  { margin: 0 0 20px; font-size: 13px; color: var(--color-muted); line-height: 1.6; }
 .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
-/* ── Modal Overlay (entity picker — usado em index.html) ─────────── */
+/* ── Modal Overlay (entity picker) ──────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
