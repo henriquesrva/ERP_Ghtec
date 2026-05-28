@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 
+const canSeeFinanceiro = (role) => role === 'admin' || role === 'financeiro';
+
 const MENUS = [
   {
     group: 'comercial',
@@ -12,6 +14,7 @@ const MENUS = [
       { label: 'Objetos e Condições', to: '/objetos'         },
     ],
     activePaths: ['/proposals', '/kanban', '/clients', '/objetos', '/nova-proposta'],
+    roles: null, // visível para todos
   },
   {
     group: 'operacional',
@@ -23,6 +26,7 @@ const MENUS = [
       { label: 'Notas Recebidas', to: '/notas-recebidas' },
     ],
     activePaths: ['/parts', '/stock', '/fornecedores', '/notas-recebidas', '/part-categories'],
+    roles: null,
   },
   {
     group: 'financeiro',
@@ -32,57 +36,87 @@ const MENUS = [
       { label: 'Financeiro',     to: '/financeiro'   },
     ],
     activePaths: ['/contas-pagar', '/financeiro'],
+    roles: ['admin', 'financeiro'], // restrito
   },
 ];
+
+function roleLabel(role) {
+  const map = { admin: 'Admin', user: 'Usuário', comercial: 'Comercial', tecnico: 'Técnico', financeiro: 'Financeiro' };
+  return map[role] ?? role;
+}
 
 export default function Navbar() {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const path = location.pathname;
+  const path  = location.pathname;
+  const role  = user?.role;
+  const isAdm = role === 'admin';
 
-  const isAdmin = path.startsWith('/usuarios') || path.startsWith('/responsaveis');
+  const visibleMenus = MENUS.filter(m => !m.roles || m.roles.includes(role));
+
+  const isSettingsArea = path.startsWith('/usuarios') || path.startsWith('/responsaveis');
 
   return (
     <nav className="nav">
+
       {/* Brand */}
       <Link className="nav-brand" to="/">
         <img src="/assets/logoGHTEC.png" alt="GHTec" className="app-logo" />
       </Link>
 
       {/* Grupos de menu */}
-      {MENUS.map(menu => {
+      {visibleMenus.map(menu => {
         const isActive = menu.activePaths.some(p => path === p || path.startsWith(p + '/'));
         return (
           <div
             key={menu.group}
             className={`nav-group${isActive ? ' active' : ''}`}
-            data-group={menu.group}
           >
             <button className="nav-group-btn">
-              {menu.label} <span className="nav-arrow">&#9662;</span>
+              {menu.label}&nbsp;<span className="nav-arrow">&#9662;</span>
             </button>
             <div className="nav-dropdown">
-              {menu.links.map(link => {
-                const cls = `nav-dd-link${path === link.to ? ' active' : ''}`;
-                return <Link key={link.label} to={link.to} className={cls}>{link.label}</Link>;
-              })}
+              {menu.links.map(link => (
+                <Link
+                  key={link.label}
+                  to={link.to}
+                  className={`nav-dd-link${path === link.to ? ' active' : ''}`}
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
           </div>
         );
       })}
 
-      {/* Lado direito */}
-      <div className="nav-right">
-        <span id="navUserLabel">{user?.nome}</span>
-        <Link
-          to="/usuarios"
-          className={`nav-icon-link${isAdmin ? ' active' : ''}`}
-          title="Usuários e configurações"
-        >
-          &#9881;
-        </Link>
-        <button className="btn-logout" onClick={logout}>Sair</button>
+      {/* Usuário — menu dropdown à direita */}
+      <div className={`nav-group nav-user-group${isSettingsArea ? ' active' : ''}`}>
+        <button className="nav-group-btn nav-user-btn">
+          <span className="nav-user-name">{user?.nome ?? '…'}</span>
+          <span className={`nav-user-role-dot nav-user-role-${role}`} />
+          <span className="nav-arrow">&#9662;</span>
+        </button>
+        <div className="nav-dropdown nav-user-dropdown">
+          <div className="nav-user-info">
+            <span className="nav-user-info-name">{user?.nome}</span>
+            <span className="nav-user-info-role">{roleLabel(role)}</span>
+          </div>
+          {isAdm && (
+            <Link
+              to="/usuarios"
+              className={`nav-dd-link${path.startsWith('/usuarios') ? ' active' : ''}`}
+            >
+              Usuários
+            </Link>
+          )}
+          <div className="nav-dd-divider" />
+          <button className="nav-dd-logout-item" onClick={logout}>
+            Sair
+          </button>
+        </div>
       </div>
+
     </nav>
   );
 }
