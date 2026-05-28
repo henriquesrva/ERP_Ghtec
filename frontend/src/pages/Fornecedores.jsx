@@ -14,7 +14,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import useAuth      from '../hooks/useAuth';
 
 /**
- * Fornecedores.jsx — migrado de public/legacy/fornecedores.html
+ * Fornecedores.jsx
  *
  * Preserva:
  *  - GET /fornecedores?includeInactive=

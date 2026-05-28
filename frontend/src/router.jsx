@@ -17,17 +17,6 @@ import Parts           from './pages/Parts';
 import Kanban          from './pages/Kanban';
 import NovaProposta    from './pages/NovaProposta';
 
-// Todas as telas já migradas — lista legacy vazia
-const LEGACY = [
-  // /nova-proposta já migrado
-  // /kanban já migrado
-  // /parts já migrado — removido da lista legacy
-  // /stock já migrado — removido da lista legacy
-  // /financeiro já migrado — removido da lista legacy
-  // /contas-pagar já migrado — removido da lista legacy
-  // /notas-recebidas já migrado — removido da lista legacy
-];
-
 export default function AppRouter() {
   return (
     <Routes>
@@ -37,30 +26,20 @@ export default function AppRouter() {
       {/* Protegidas: requerem sessão */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          {/* ── Telas já migradas ── */}
-          <Route path="/"              element={<Dashboard />} />
-          <Route path="/proposals"     element={<Proposals />} />
-          <Route path="/responsaveis"  element={<Responsaveis />} />
-          <Route path="/fornecedores"  element={<Fornecedores />} />
-          <Route path="/usuarios"      element={<Usuarios />} />
-          <Route path="/objetos"       element={<Objetos />} />
-          <Route path="/clients"       element={<Clients />} />
-          <Route path="/financeiro"    element={<Financeiro />} />
-          <Route path="/contas-pagar"      element={<ContasPagar />} />
-          <Route path="/notas-recebidas" element={<NotasRecebidas />} />
-          <Route path="/stock"           element={<Stock />} />
-          <Route path="/parts"           element={<Parts />} />
-          <Route path="/kanban"          element={<Kanban />} />
+          <Route path="/"                element={<Dashboard />} />
+          <Route path="/proposals"       element={<Proposals />} />
           <Route path="/nova-proposta"   element={<NovaProposta />} />
-
-          {/* ── Legacy redirects — todas migradas ── */}
-          {LEGACY.map(({ path, href, label }) => (
-            <Route
-              key={path}
-              path={path}
-              element={<LegacyRedirect to={href} label={label} />}
-            />
-          ))}
+          <Route path="/kanban"          element={<Kanban />} />
+          <Route path="/clients"         element={<Clients />} />
+          <Route path="/objetos"         element={<Objetos />} />
+          <Route path="/parts"           element={<Parts />} />
+          <Route path="/stock"           element={<Stock />} />
+          <Route path="/fornecedores"    element={<Fornecedores />} />
+          <Route path="/notas-recebidas" element={<NotasRecebidas />} />
+          <Route path="/contas-pagar"    element={<ContasPagar />} />
+          <Route path="/financeiro"      element={<Financeiro />} />
+          <Route path="/responsaveis"    element={<Responsaveis />} />
+          <Route path="/usuarios"        element={<Usuarios />} />
         </Route>
       </Route>
 

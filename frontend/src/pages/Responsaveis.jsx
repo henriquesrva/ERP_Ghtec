@@ -9,7 +9,7 @@ import Toast        from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
 
 /**
- * Responsaveis.jsx — migrado de public/legacy/responsaveis.html
+ * Responsaveis.jsx
  *
  * Preserva:
  *  - GET /responsaveis (lista completa)

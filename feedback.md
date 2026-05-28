@@ -1,118 +1,123 @@
-# Feedback — Passo 4.15: Corrigir Links Legados Ativos
+# Feedback — Passo 4.16: Remover Legado HTML Antigo
 
 ---
 
-## 1. Arquivos Alterados
+## 1. Arquivos/Pastas Removidos
+
+| Item | Tipo |
+|---|---|
+| `public/legacy/` | Pasta com 14 HTMLs (clients, contas-pagar, financeiro, fornecedores, index, kanban, notas-recebidas, nova-proposta, objetos, parts, proposals, responsaveis, stock, usuarios) |
+| `public/auth.js` | Script de autenticação do frontend legado |
+| `frontend/src/pages/LegacyRedirect.jsx` | Componente React de redirecionamento (não mais necessário) |
+
+---
+
+## 2. Arquivos Alterados
 
 | Arquivo | Alteração |
 |---|---|
-| `frontend/src/pages/Dashboard.jsx` | 7 links `/legacy/*.html` → `<Link to="...">` React Router |
-| `frontend/src/pages/Proposals.jsx` | Link `/legacy/nova-proposta.html` → `<Link to="/nova-proposta">`; import `Link` adicionado |
-| `frontend/src/pages/NotasRecebidas.jsx` | `useSearchParams` importado; `useEffect` de deep-link adicionado |
-| `frontend/src/pages/Fornecedores.jsx` | `Link` importado; link de nota `/legacy/notas-recebidas.html?id=` → `<Link to="/notas-recebidas?id=">` |
-| `frontend/src/router.jsx` | Import morto de `LegacyRedirect` removido |
+| `src/middleware/requireAuth.js` | Removido `/auth.js` e `/legacy/` de `PUBLIC_PREFIXES`; `ADMIN_PAGES` esvaziado |
+| `frontend/src/router.jsx` | Removido bloco `const LEGACY` e `LEGACY.map()`; router limpo com 14 rotas |
+| `frontend/src/pages/Responsaveis.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
+| `frontend/src/pages/Objetos.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
+| `frontend/src/pages/Usuarios.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
+| `frontend/src/pages/Clients.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
+| `frontend/src/pages/Fornecedores.jsx` | JSDoc: removida linha "migrado de public/legacy/..." |
+| `frontend/src/contexts/AuthContext.jsx` | Comentário: removida referência a "auth.js legado" |
+| `docs/SYSTEM_CONTEXT.md` | Atualizado: stack, estrutura de pastas, decisão técnica 4, orientação frontend, rodapé |
+| `contexto/REACT_MIGRATION_PLAN.md` | Status atualizado para Passo 4.16 concluído |
 
 ---
 
-## 2. Links Corrigidos no Dashboard
+## 3. Resultado das Buscas
 
-| Link antigo | Link novo |
-|---|---|
-| `/legacy/nova-proposta.html` | `<Link to="/nova-proposta">` |
-| `/legacy/kanban.html` | `<Link to="/kanban">` |
-| `/legacy/clients.html` | `<Link to="/clients">` |
-| `/legacy/parts.html` | `<Link to="/parts">` |
-| `/legacy/stock.html` | `<Link to="/stock">` |
-| `/legacy/fornecedores.html` | `<Link to="/fornecedores">` |
-| `/legacy/financeiro.html` | `<Link to="/financeiro">` |
+```
+grep -Rn "/legacy"      frontend/src src  → 0 resultados
+grep -Rn "legacy/"      frontend/src src  → 0 resultados
+grep -Rn "auth\.js"     frontend/src src  → 0 resultados
+grep -Rn "LegacyRedirect" frontend/src   → 0 resultados
+```
 
-Todos os 8 itens do Dashboard agora usam React Router (`react: true`). Visual e classes preservados.
+Zero referências ativas em código. Legado completamente removido.
 
 ---
 
-## 3. Link Corrigido no Proposals
+## 4. Ajustes em requireAuth
 
-```jsx
-// Antes
-<a className="section-card" href="/legacy/nova-proposta.html">
-
-// Depois
-<Link className="section-card" to="/nova-proposta">
+**Antes:**
+```js
+const PUBLIC_PREFIXES = ["/css/", "/assets/", "/auth.js", "/app/", "/legacy/"];
+const ADMIN_PAGES     = new Set(["/legacy/usuarios.html"]);
 ```
 
-Import de `Link` adicionado na linha 2 de Proposals.jsx.
+**Depois:**
+```js
+const PUBLIC_PREFIXES = ["/css/", "/assets/", "/app/"];
+const ADMIN_PAGES     = new Set();
+```
+
+- `/auth.js` removido (arquivo deletado)
+- `/legacy/` removido (pasta deletada)
+- `ADMIN_PAGES` esvaziado (proteção de rota legada não se aplica mais)
+- `/app/` mantido — necessário para servir o SPA React sem autenticação
 
 ---
 
-## 4. Solução para Fornecedores → NotasRecebidas
+## 5. Ajustes em app.js
 
-**Opção B implementada** (deep-link funcional).
+Nenhum. O `app.js` não tinha referências explícitas a `/legacy/` — a pasta era servida via `express.static(../public)` implicitamente. Com a pasta removida, ela simplesmente deixa de existir. Todos os outros serviços permanecem intactos:
 
-### Em Fornecedores.jsx
-
-```jsx
-// Antes
-<a href={`/legacy/notas-recebidas.html?id=${n.id}`}>
-
-// Depois
-<Link to={`/notas-recebidas?id=${n.id}`}>
-```
-
-### Em NotasRecebidas.jsx
-
-```jsx
-// Import adicionado
-import { useSearchParams } from 'react-router-dom';
-
-// Estado adicionado no componente
-const [searchParams, setSearchParams] = useSearchParams();
-
-// useEffect adicionado após loadList
-useEffect(() => {
-  const id = searchParams.get('id');
-  if (!id) return;
-  setSearchParams({}, { replace: true }); // limpa a URL após usar
-  openDetail(Number(id));
-}, []); // eslint-disable-line react-hooks/exhaustive-deps
-```
-
-**Comportamento:** ao navegar para `/notas-recebidas?id=123`, o componente abre automaticamente o modal de detalhe da nota 123. Se a nota não existir, `openDetail` já trata o erro silenciosamente (estado `detailData = null`). A URL é limpa (`replace: true`) após abrir o modal para não manter o parâmetro na barra de endereços.
+- `express.static(../public)` → serve `css/`, `assets/`, `login.html`
+- `/app` → serve `frontend/dist/` (React)
+- `/files/` → serve `output/proposals/`
+- `/health` → funcional
 
 ---
 
-## 5. Resultado do Grep por /legacy
+## 6. Documentação Atualizada
 
-```
-grep -Rn "/legacy" frontend/src
-grep -Rn "legacy/" frontend/src
-```
+### SYSTEM_CONTEXT.md
+- Stack: removida linha "Frontend (legado) — HTML vanilla em public/legacy/"
+- Estrutura de pastas: `public/` simplificada (css, assets, login.html — sem legacy)
+- `router.jsx`: descrição atualizada ("todas as 15 telas React")
+- Decisão técnica 4: atualizada — migração concluída em Passo 4.16
+- Orientação frontend: atualizada — sem mais menção a telas HTML legadas
+- Rodapé: atualizado para 2026-05-28, Passo 4.16
 
-Todas as ocorrências restantes são **apenas comentários JSDoc** (ex: `* Fornecedores.jsx — migrado de public/legacy/fornecedores.html`).
-
-**Nenhum link JSX ativo aponta para `/legacy`.**
+### contexto/REACT_MIGRATION_PLAN.md
+- Status atualizado para: "Migração React concluída. Todas as 15 telas migradas. public/legacy/ removido."
 
 ---
 
-## 6. Validações Executadas
+## 7. Validações Executadas
 
 | Validação | Resultado |
 |---|---|
-| `npm run frontend:build` | ✅ 78 módulos (era 79 — LegacyRedirect removido), build limpo |
-| `npm test` | ✅ 408/408 testes passando (18 suites) |
+| `npm run frontend:build` | ✅ 78 módulos, build limpo |
+| `npm test` | ✅ 408/408 testes backend passando (18 suites) |
 | `node scripts/check-prisma-connection.js` | ✅ Prisma + PostgreSQL OK |
 
 ---
 
-## 7. Próximo Passo Recomendado
+## 8. Estado Final de public/
 
-**Migração React concluída.** Todos os links ativos apontam para rotas React. Nenhum clique normal dentro do SPA manda o usuário para `/legacy`.
+```
+public/
+├── assets/
+│   └── logoGHTEC.png
+├── css/
+│   └── styles.css
+└── login.html          ← mantido como fallback (não removido neste passo)
+```
 
-**Passo 4.16 sugerido — Remover arquivos legacy**
+---
 
-Agora é seguro deletar:
-- `public/legacy/` (todos os HTMLs)
-- `public/auth.js` (lógica de sessão do legado — substituída pelo AuthContext)
-- Comentários JSDoc de migração nos arquivos React (opcional, cosmético)
-- Arquivo `frontend/src/pages/LegacyRedirect.jsx` (componente não mais referenciado)
+## 9. Próximo Passo Recomendado
 
-Confirmar antes: verificar se alguma URL `/legacy/` ainda é acessada diretamente por bookmarks ou links externos antes de remover.
+**Migração React completa e legado removido.**
+
+Próximos passos possíveis:
+
+1. **Code splitting** — bundle está em 584 kB. Aplicar `React.lazy` por rota reduz TTI inicial. Baixo risco, ganho mensurável.
+2. **Remover `public/login.html`** — a tela de login agora é `/app/login` (React). O HTML legado pode ser removido e `/login.html` retirado de `PUBLIC_PATHS` no requireAuth. Verificar se há bookmarks/links externos antes.
+3. **Deploy** — sistema está estável para validação em produção.

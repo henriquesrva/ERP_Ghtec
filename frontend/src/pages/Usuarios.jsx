@@ -12,7 +12,7 @@ import ConfirmModal from '../components/shared/ConfirmModal';
 import useAuth      from '../hooks/useAuth';
 
 /**
- * Usuarios.jsx — migrado de public/legacy/usuarios.html
+ * Usuarios.jsx
  *
  * Preserva:
  *  - GET /users (admin: tabela com role select + delete)

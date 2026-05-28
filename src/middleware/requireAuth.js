@@ -1,6 +1,6 @@
 const PUBLIC_PATHS   = new Set(["/login.html", "/auth/login", "/auth/logout", "/health"]);
-const PUBLIC_PREFIXES = ["/css/", "/assets/", "/auth.js", "/app/", "/legacy/"];
-const ADMIN_PAGES    = new Set(["/legacy/usuarios.html"]);
+const PUBLIC_PREFIXES = ["/css/", "/assets/", "/app/"];
+const ADMIN_PAGES    = new Set();
 
 function requireAuth(req, res, next) {
   if (PUBLIC_PATHS.has(req.path)) return next();

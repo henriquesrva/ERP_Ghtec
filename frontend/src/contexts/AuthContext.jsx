@@ -6,7 +6,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Verifica sessão ao montar — equivalente ao auth.js legado
+  // Verifica sessão ao montar
   useEffect(() => {
     fetch('/auth/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)

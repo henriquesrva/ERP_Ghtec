@@ -17,7 +17,7 @@ import Toast        from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
 
 /**
- * Clients.jsx — migrado de public/legacy/clients.html
+ * Clients.jsx
  *
  * Endpoints:
  *   GET  /clients

@@ -120,8 +120,7 @@ Só atualize este arquivo quando uma mudança alterar a estrutura permanente do 
 | Renderização de PDF | Puppeteer (headless Chrome) |
 | Merge de PDF | `pdf-lib` |
 | Upload de arquivos | Multer |
-| Frontend (legado) | HTML + CSS + JavaScript puro em `public/legacy/` (em migração) |
-| Frontend (React) | React 18 + Vite 5 + React Router v6 em `frontend/` — servido em `/app/` |
+| Frontend | React 18 + Vite 5 + React Router v6 em `frontend/` — servido em `/app/` (migração concluída em 2026-05) |
 | Gerenciador de pacotes | npm |
 
 **Dependências (`package.json`):**
@@ -226,24 +225,10 @@ propostas_automaticas/
 │       ├── date.js            # Utilitários de data
 │       ├── extensao.js        # Valor por extenso (limitado: só 0–10)
 │       └── normalize.js       # Remove acentos, converte para lowercase, colapsa espaços
-├── public/                    # Frontend estático servido pelo Express
+├── public/                    # Assets estáticos servidos pelo Express
 │   ├── css/styles.css         # Design system global (tokens CSS, componentes)
-│   ├── auth.js                # Lógica JS de autenticação do legado
-│   ├── login.html             # Tela de login (legado — mantida para compatibilidade)
-│   ├── assets/logoGHTEC.png   # Logo do frontend
-│   └── legacy/                # Telas antigas (HTML vanilla) ainda não migradas para React
-│       ├── nova-proposta.html # Criação de proposta (não migrar — complexidade alta)
-│       ├── clients.html       # Clientes
-│       ├── parts.html         # Peças
-│       ├── kanban.html        # Board Kanban
-│       ├── stock.html         # Estoque
-│       ├── financeiro.html    # Dashboard financeiro
-│       ├── contas-pagar.html  # Contas a pagar
-│       ├── notas-recebidas.html # Notas recebidas
-│       ├── fornecedores.html  # Fornecedores
-│       ├── usuarios.html      # Gestão de usuários (admin only)
-│       ├── responsaveis.html  # Responsáveis
-│       └── objetos.html       # Objetos de proposta
+│   ├── login.html             # Tela de login legado (mantida como fallback)
+│   └── assets/logoGHTEC.png   # Logo do frontend
 ├── frontend/                  # Aplicação React + Vite
 │   ├── index.html             # Entry point HTML (usa /css/styles.css do Express)
 │   ├── vite.config.js         # Vite: base="/app/", proxy para Express, build → dist/
@@ -252,7 +237,7 @@ propostas_automaticas/
 │   └── src/
 │       ├── main.jsx           # Render root
 │       ├── App.jsx            # BrowserRouter (basename="/app") + AuthProvider
-│       ├── router.jsx         # Rotas: Login, Dashboard, Proposals, LegacyRedirects
+│       ├── router.jsx         # Rotas: todas as 15 telas React (migração concluída)
 │       ├── contexts/AuthContext.jsx  # Estado global de auth (GET /auth/me)
 │       ├── hooks/useAuth.js   # Shortcut para AuthContext
 │       ├── api/               # Módulos fetch por domínio (http.js, auth.js, proposals.js)
@@ -935,7 +920,7 @@ O padrão correto está em `part.service.js:parsePrecoCompra()`.
 1. **Node.js + Express 4:** simplicidade, ecossistema amplo, sem overhead de frameworks maiores.
 2. **SQLite (better-sqlite3):** deploy simples (arquivo único), sem necessidade de servidor de banco separado, adequado para volume de uso atual.
 3. **Modo WAL no SQLite:** melhor performance para leituras concorrentes leves, sem risco de bloqueio.
-4. **Migração incremental para React + Vite (iniciada em 2026-05, Passo 4.1):** React 18 + Vite 5 + React Router v6. React serve sob `/app/` (`basename="/app"`) para evitar conflito com as rotas de API Express (ex: `/proposals`). Build de produção em `frontend/dist/`, servido estaticamente pelo Express. CSS global (`styles.css`) é compartilhado — `frontend/index.html` carrega de `/css/styles.css`. Páginas não migradas ficam em `public/legacy/` e recebem um `<LegacyRedirect>` no React. Telas migradas: Login, Dashboard, Proposals. Telas excluídas do escopo de migração imediata: nova-proposta, clients, parts, kanban, financeiro.
+4. **Migração para React + Vite concluída (2026-05, Passos 4.1–4.16):** React 18 + Vite 5 + React Router v6. React serve sob `/app/` (`basename="/app"`) para evitar conflito com rotas de API Express. Build de produção em `frontend/dist/`, servido estaticamente pelo Express. CSS global (`styles.css`) compartilhado via `/css/styles.css`. Todas as 15 telas migradas. `public/legacy/` e `public/auth.js` removidos. `LegacyRedirect` removido.
 5. **Geração de PDF em 3 camadas (Puppeteer + pdf-lib):** solução robusta para marcas d'água independentes do conteúdo, necessária porque Puppeteer tem limitações de renderização CSS de impressão.
 6. **CSS da proposta injetado inline no HTML:** garante renderização correta pelo Puppeteer sem dependência de URLs externas.
 7. **Assets do PDF em base64 Data URI:** evita problemas de path durante renderização headless.
@@ -1154,7 +1139,7 @@ O `errorHandler.js` captura e responde com status adequado.
 - **Assets do PDF:** os arquivos `marcatopo.png`, `marcabaixo.jpg`, `marca_fixa.png` e `LogoGHTEC.png` em `src/assets/` são críticos. Se o nome ou extensão mudar, o `assetDataUri()` vai lançar erro e a geração de proposta vai falhar completamente.
 - **Autocomplete de itens:** respeite a prioridade `part_client_price_references > price_history` na sugestão de preço.
 - **Banco é PostgreSQL/Prisma.** `better-sqlite3` permanece apenas para `sessionStore.js` — não expanda seu uso.
-- **Frontend em migração para React:** novos módulos devem ser criados em `frontend/src/pages/`. Telas legadas em `public/legacy/` — não criar novas telas HTML ali.
+- **Frontend React:** novos módulos devem ser criados em `frontend/src/pages/`. Não criar telas HTML estáticas em `public/`.
 - **Não adicione dependências** sem necessidade real — o `package.json` enxuto é intencional.
 
 ### Atualize este arquivo
@@ -1190,4 +1175,4 @@ Expansão incremental: autosave de rascunho, relatórios de lucratividade, integ
 
 ---
 
-*Atualizado em 2026-05-27 — Passo 4.1: base React + Vite criada. Login, Dashboard e Proposals migrados para React. HTMLs legados movidos para `public/legacy/`. React serve em `/app/` (basename="/app"). 408 testes passando, 18 arquivos.*
+*Atualizado em 2026-05-28 — Passo 4.16: migração React concluída. Todas as 15 telas em React. `public/legacy/` e `public/auth.js` removidos. React é a interface oficial do sistema. 408 testes backend passando.*

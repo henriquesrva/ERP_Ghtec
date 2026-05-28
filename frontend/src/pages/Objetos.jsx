@@ -10,9 +10,9 @@ import Toast        from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
 
 /**
- * Objetos.jsx — migrado de public/legacy/objetos.html
+ * Objetos.jsx
  *
- * Cobre dois módulos no mesmo componente (igual ao legado):
+ * Cobre dois módulos no mesmo componente:
  *
  * ─ Objetos (templates de escopo de proposta)
  *   GET  /objetos
