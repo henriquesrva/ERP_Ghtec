@@ -11,7 +11,7 @@ const MENUS = [
     label: 'Comercial',
     links: [
       { label: 'Propostas',           to: '/proposals',                      react: true  },
-      { label: 'Kanban',              href: '/legacy/kanban.html',           react: false },
+      { label: 'Kanban',              to:   '/kanban',                       react: true  },
       { label: 'Clientes',            to:   '/clients',                      react: true  },
       { label: 'Objetos e Condições', to:   '/objetos',                       react: true  },
     ],

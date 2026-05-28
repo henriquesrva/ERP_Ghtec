@@ -1,0 +1,403 @@
+/* ─── Page Bar Extensions ─────────────────────────────────────────── */
+.kb-page-bar-right { display: flex; align-items: center; gap: 12px; }
+.kb-page-bar-ts    { font-size: 12px; color: rgba(255,255,255,0.7); }
+.kb-btn-create-task {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  padding: 7px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 700;
+}
+.kb-btn-create-task:hover { background: rgba(255,255,255,0.25); }
+
+/* ─── Board ───────────────────────────────────────────────────────── */
+.kb-board-wrap { overflow-x: auto; padding: 24px 28px 40px; }
+.kb-board      { display: flex; gap: 14px; align-items: flex-start; min-width: max-content; }
+
+/* ─── Columns ─────────────────────────────────────────────────────── */
+.kb-col {
+  width: 250px;
+  background: #e8f0e8;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+.kb-col-header {
+  background: var(--green);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kb-col-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+.kb-col-count {
+  background: rgba(255,255,255,0.22);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.kb-col-cards { padding: 10px 8px; min-height: 100px; display: flex; flex-direction: column; gap: 8px; }
+.kb-col-empty { font-size: 11px; color: var(--muted); text-align: center; padding: 18px 8px; }
+
+/* ─── Cards ───────────────────────────────────────────────────────── */
+.kb-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 12px 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: box-shadow 0.12s;
+}
+.kb-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.kb-card.is-task { border-left: 3px solid var(--blue); }
+
+.kb-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.kb-card-num          { font-weight: 800; font-size: 12px; color: var(--green); white-space: nowrap; }
+.kb-card-task-badge   { font-size: 10px; font-weight: 700; background: var(--blue-bg); color: var(--blue); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.kb-card-days         { font-size: 10px; font-weight: 700; color: #fff; background: var(--muted); border-radius: 10px; padding: 1px 7px; white-space: nowrap; flex-shrink: 0; }
+.kb-card-days.warn    { background: var(--amber); }
+.kb-card-days.alert   { background: var(--danger); }
+.kb-card-client       { font-weight: 700; font-size: 12px; margin-bottom: 3px; line-height: 1.3; }
+.kb-card-meta         { font-size: 11px; color: var(--muted); margin-bottom: 10px; display: flex; flex-direction: column; gap: 1px; }
+.kb-card-value        { font-weight: 700; color: var(--green); }
+.kb-card-parts        { font-size: 10px; color: var(--muted); font-style: italic; }
+.kb-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* ─── Card Buttons ─────────────────────────────────────────────────── */
+.kb-btn-move {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #f5f5f5;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+.kb-btn-move:hover:not(:disabled) { background: var(--green-bg); border-color: var(--green-light); color: var(--green); }
+.kb-btn-move:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.kb-btn-pdf {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--green-light);
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.12s;
+  font-family: inherit;
+}
+.kb-btn-pdf:hover      { background: #dcedc8; }
+.kb-btn-pdf.disabled   { border-color: #ccc; background: #f5f5f5; color: var(--muted); cursor: default; }
+
+.kb-btn-detail {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: var(--radius);
+  border: 1px solid #c5cae9;
+  background: var(--blue-bg);
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s;
+  font-family: inherit;
+}
+.kb-btn-detail:hover { background: #bbdefb; }
+
+/* ─── Badges ────────────────────────────────────────────────────────── */
+.kb-exec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.kb-exec-badge.done    { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.kb-exec-badge.pending { background: #fff8e1; color: #e65100; border: 1px solid #ffcc80; }
+.kb-billing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #90caf9;
+}
+
+/* ─── Drawer ───────────────────────────────────────────────────────── */
+.kb-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 700;
+}
+.kb-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.14);
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.kb-drawer-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.kb-drawer-header h2 { margin: 0; font-size: 15px; }
+.kb-drawer-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: var(--muted);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.kb-drawer-close:hover { background: #f5f5f5; }
+.kb-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.kb-drawer-section {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+.kb-drawer-field          { margin-bottom: 10px; }
+.kb-drawer-field-label    { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.kb-drawer-field-value    { font-size: 13px; font-weight: 600; }
+.kb-drawer-edit-area      { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; background: #fafafa; }
+.kb-drawer-actions        { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* ─── Comments ─────────────────────────────────────────────────────── */
+.kb-comment-item {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  margin-bottom: 8px;
+}
+.kb-comment-meta   { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: flex; gap: 8px; }
+.kb-comment-author { font-weight: 700; color: var(--text); }
+.kb-comment-text   { font-size: 13px; line-height: 1.4; white-space: pre-wrap; }
+.kb-comment-input-area { display: flex; gap: 8px; margin-top: 8px; }
+.kb-comment-input-area textarea {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  height: 60px;
+}
+.kb-comment-input-area textarea:focus { outline: none; border-color: var(--green-light); }
+.kb-btn-send {
+  align-self: flex-end;
+  padding: 8px 16px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.kb-btn-send:hover { background: var(--green-light); }
+.kb-no-comments { font-size: 12px; color: var(--muted); font-style: italic; margin: 0; }
+
+/* ─── Kanban action buttons ─────────────────────────────────────────── */
+.kb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 18px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.kb-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.kb-btn-ghost    { background: #eee; color: #444; }
+.kb-btn-ghost:hover:not(:disabled) { background: #e0e0e0; }
+.kb-btn-warn     { background: var(--amber); color: #fff; }
+.kb-btn-warn:hover:not(:disabled)  { background: #e65100; }
+.kb-btn-green    { background: var(--green); color: #fff; }
+.kb-btn-green:hover:not(:disabled) { background: var(--green-light); }
+.kb-btn-danger   { background: var(--danger); color: #fff; }
+.kb-btn-danger:hover:not(:disabled){ background: #b71c1c; }
+
+/* ─── Modals ────────────────────────────────────────────────────────── */
+.kb-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kb-modal-box {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.kb-modal-box h3 { margin: 0 0 16px; font-size: 15px; }
+.kb-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+.kb-form-group { margin-bottom: 14px; }
+.kb-form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.kb-form-group input,
+.kb-form-group textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.kb-form-group input:focus,
+.kb-form-group textarea:focus { outline: none; border-color: var(--green-light); }
+.kb-form-group textarea { resize: vertical; min-height: 80px; }
+
+/* ─── Local confirm (suporta variantes de cor) ──────────────────────── */
+.kb-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kb-confirm-box {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.kb-confirm-box h3  { margin: 0 0 10px; font-size: 15px; }
+.kb-confirm-box p   { margin: 0 0 20px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+.kb-confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ─── Destination buttons (modal Enviado) ───────────────────────────── */
+.kb-btn-dest {
+  width: 100%;
+  padding: 10px 16px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.kb-btn-dest:hover:not(:disabled) { background: var(--green-bg); border-color: var(--green-light); color: var(--green); }
+.kb-btn-dest:disabled { opacity: 0.38; cursor: not-allowed; }
+
+/* ─── Link proposal modal ───────────────────────────────────────────── */
+.kb-link-prop-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  transition: background 0.1s;
+}
+.kb-link-prop-item:hover      { background: var(--green-bg); }
+.kb-link-prop-item:last-child { border-bottom: none; }
+
+/* ─── Loading / Error ──────────────────────────────────────────────── */
+.kb-loading { text-align: center; color: var(--muted); padding: 60px 28px; font-size: 13px; }
+.kb-error   { color: var(--danger); text-align: center; padding: 40px 28px; }
+
+/* ─── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .kb-drawer { width: 100%; }
+}
