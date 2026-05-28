@@ -1,4 +1,4 @@
-const PUBLIC_PATHS   = new Set(["/login.html", "/auth/login", "/auth/logout", "/health"]);
+const PUBLIC_PATHS   = new Set(["/auth/login", "/auth/logout", "/health"]);
 const PUBLIC_PREFIXES = ["/css/", "/assets/", "/app/"];
 const ADMIN_PAGES    = new Set();
 
@@ -8,7 +8,7 @@ function requireAuth(req, res, next) {
 
   if (!req.session?.userId) {
     const acceptsHtml = (req.headers.accept || "").includes("text/html");
-    if (req.method === "GET" && acceptsHtml) return res.redirect("/login.html");
+    if (req.method === "GET" && acceptsHtml) return res.redirect("/app/login");
     return res.status(401).json({ success: false, message: "Não autenticado." });
   }
 

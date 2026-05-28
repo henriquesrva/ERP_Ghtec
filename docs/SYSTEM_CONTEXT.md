@@ -227,7 +227,6 @@ propostas_automaticas/
 │       └── normalize.js       # Remove acentos, converte para lowercase, colapsa espaços
 ├── public/                    # Assets estáticos servidos pelo Express
 │   ├── css/styles.css         # Design system global (tokens CSS, componentes)
-│   ├── login.html             # Tela de login legado (mantida como fallback)
 │   └── assets/logoGHTEC.png   # Logo do frontend
 ├── frontend/                  # Aplicação React + Vite
 │   ├── index.html             # Entry point HTML (usa /css/styles.css do Express)
@@ -598,7 +597,7 @@ Sistema de 5 roles. Veja seção detalhada em Regras de Negócio (item 7).
 
 | Página | Arquivo | Função |
 |---|---|---|
-| Login | `login.html` | Autenticação |
+| Login | `/app/login` (React) | Autenticação |
 | Dashboard | `index.html` | Visão geral / atalhos |
 | Nova Proposta | `nova-proposta.html` | Criação de proposta (formulário principal) |
 | Propostas | `proposals.html` | Listagem e download de PDFs |
