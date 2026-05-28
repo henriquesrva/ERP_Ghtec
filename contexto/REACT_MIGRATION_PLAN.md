@@ -3,7 +3,7 @@
 **Data da análise:** 2026-05-27
 **Objetivo:** Plano de migração do frontend atual (HTML + CSS + JS vanilla) para React + Vite, mantendo o backend Express intacto.
 
-> **Status atual (2026-05-28 — Passo 4.16 concluído):** Migração React concluída. Todas as 15 telas migradas para React + Vite. `public/legacy/` e `public/auth.js` removidos. React é a interface oficial — servido pelo Express em `/app/`. 408 testes backend passando.
+> **Status atual (2026-05-28 — Passo 4.20 concluído):** Migração React concluída e limpeza pós-migração concluída. Todas as 15 telas migradas para React + Vite. `public/` contém apenas `assets/logoGHTEC.png`. CSS global bundlado em `frontend/src/styles.css`. `public/legacy/`, `public/auth.js`, `public/login.html` e `public/css/` removidos. React é a interface oficial — servido pelo Express em `/app/`. 408 testes backend passando.
 
 ---
 

@@ -1,100 +1,110 @@
-# Feedback — Passo 4.19: Auditar e limpar assets públicos restantes
+# Feedback — Passo 4.20: Revisar e limpar app.js pós-migração React
 
 ---
 
-## 1. Resultado da auditoria de public/css
+## 1. Auditoria do app.js
 
-`public/css/styles.css` era carregado via `<link rel="stylesheet" href="/css/styles.css" />` em `frontend/index.html`.
-No runtime de produção, o Express servia o arquivo a partir de `public/`. No dev, o Vite proxy encaminhava `/css` para o Express.
+`src/app.js` está limpo e correto para o estado pós-migração. Resumo da estrutura encontrada:
 
-Nenhum componente React importava `styles.css` diretamente — o CSS era carregado como HTTP request externa ao bundle Vite.
+| Bloco | Linha | Estado |
+|---|---|---|
+| `requireAuth` middleware | 169 | ✅ Correto — roda antes de tudo |
+| `express.static(public)` | 171 | ✅ Necessário — serve `assets/logoGHTEC.png` |
+| `/files/*` static routes | 172–175 | ✅ Intocados — servem output de PDFs/uploads |
+| Rotas de API | 177–332 | ✅ Sem alterações |
+| `express.static(frontendDist)` | 336 | ✅ Serve bundle React em `/app` |
+| SPA fallback `["/app", "/app/*"]` | 337–341 | ✅ Correto — serve `index.html` para rotas SPA |
+| Redirects de compatibilidade | 344–346 | ✅ Mantidos (ver item 3) |
+| `notFoundHandler` / `errorHandler` | 349–353 | ✅ Último na cadeia |
 
----
-
-## 2. Resultado da auditoria de public/assets
-
-`public/assets/logoGHTEC.png` é referenciada via URL absoluta `/assets/logoGHTEC.png` em:
-- `frontend/src/pages/Login.jsx`
-- `frontend/src/components/layout/Navbar.jsx`
-
-O Express serve `public/` como static, portanto `/assets/logoGHTEC.png` é resolvida corretamente tanto em dev quanto em produção. Nenhuma mudança necessária.
-
----
-
-## 3. Decisão sobre styles.css
-
-**Opção B executada — CSS movido para `frontend/src/styles.css`.**
-
-- Copiado `public/css/styles.css` → `frontend/src/styles.css`
-- Adicionado `import './styles.css'` em `frontend/src/main.jsx`
-- Removida tag `<link rel="stylesheet" href="/css/styles.css" />` de `frontend/index.html`
-- Deletado `public/css/` (diretório e arquivo)
-- Removido `/css` da lista de proxy em `frontend/vite.config.js`
-- Removido `/css/` de `PUBLIC_PREFIXES` em `src/middleware/requireAuth.js`
-
-O CSS agora é bundlado pelo Vite e entregue como `/app/assets/index-<hash>.css` — zero dependência HTTP externa.
+**Nenhuma alteração de código foi necessária em `app.js`.**
 
 ---
 
-## 4. Decisão sobre logo/assets
+## 2. Redirects encontrados
 
-**Mantido em `public/assets/logoGHTEC.png`.** Sem alteração.
+```js
+app.get("/",              (req, res) => res.redirect("/app/"));
+app.get("/index.html",    (req, res) => res.redirect("/app/"));
+app.get("/proposals.html",(req, res) => res.redirect("/app/proposals"));
+```
 
-Mover para `frontend/public/` quebraria as URLs em produção porque o Express serve `frontend/dist/` em `/app/`, alterando o path para `/app/assets/logoGHTEC.png`. Seria necessário atualizar os componentes e remover o proxy `/assets` — mais risco, sem ganho real.
+Nenhum redirect para `/legacy`, `/login.html` ou rotas mortas.
 
 ---
 
-## 5. Arquivos removidos/movidos
+## 3. Redirects mantidos/removidos e por quê
 
-| Ação | Arquivo |
-|---|---|
-| Removido | `public/css/styles.css` |
-| Removido | `public/css/` (diretório) |
-| Adicionado | `frontend/src/styles.css` (copiado do anterior) |
+| Redirect | Decisão | Motivo |
+|---|---|---|
+| `/` → `/app/` | **Mantido** | Essencial — entrada principal do sistema |
+| `/index.html` → `/app/` | **Mantido** | Bookmark compatibility — inofensivo, 1 linha |
+| `/proposals.html` → `/app/proposals` | **Mantido** | Bookmark compatibility — rota React válida |
+
+Não havia redirect `/login.html` em `app.js` (já tratado pelo `requireAuth` no Passo 4.18).
+
+---
+
+## 4. Estado do express.static public/
+
+```js
+app.use(express.static(path.resolve(__dirname, "../public")));
+```
+
+Mantido sem alteração. `public/` contém apenas `assets/logoGHTEC.png`, referenciada via URL `/assets/logoGHTEC.png` em `Login.jsx` e `Navbar.jsx`. Sem nenhum arquivo legado exposto.
+
+---
+
+## 5. Estado do fallback /app
+
+```js
+app.use("/app", express.static(frontendDist));
+app.get(["/app", "/app/*"], (req, res) => {
+  res.sendFile(path.join(frontendDist, "index.html"), ...);
+});
+```
+
+Correto. `express.static` serve os assets do bundle (JS/CSS com hash). O `app.get` fallback serve `index.html` para qualquer rota SPA não encontrada como arquivo. Rotas de API não são interceptadas — todas estão declaradas antes deste bloco.
 
 ---
 
 ## 6. Arquivos alterados
 
-| Arquivo | Alteração |
+`app.js` **não foi alterado**.
+
+Documentação atualizada:
+
+| Arquivo | Alterações |
 |---|---|
-| `frontend/src/main.jsx` | Adicionado `import './styles.css'` |
-| `frontend/index.html` | Removida tag `<link>` para `/css/styles.css` |
-| `frontend/vite.config.js` | Removido `/css` e `/legacy` da lista de proxy |
-| `src/middleware/requireAuth.js` | Removido `/css/` de `PUBLIC_PREFIXES` |
+| `docs/SYSTEM_CONTEXT.md` | Descrição de Comunicação Frontend ↔ Backend atualizada; tabela de páginas migrada de `.html` para rotas `/app/`; 7 referências "Acesso via `xxx.html`" atualizadas para rotas React |
+| `contexto/REACT_MIGRATION_PLAN.md` | Status header atualizado para Passo 4.20 concluído |
 
 ---
 
-## 7. app.js precisou mudar?
+## 7. Documentação atualizada?
 
-Não. `app.use(express.static(... public ...))` continua necessário para servir `public/assets/logoGHTEC.png`.
-
----
-
-## 8. Documentação atualizada?
-
-Sim — `docs/SYSTEM_CONTEXT.md`:
-- Árvore de `public/`: removida entrada `css/styles.css`; atualizada nota do logo
-- Árvore de `frontend/`: atualizado `index.html` e adicionado `src/styles.css`
-- Nota histórica (item 4): atualizada para Passos 4.1–4.19 com o novo status do CSS
+Sim — limpeza ampla de referências `.html` obsoletas em `docs/SYSTEM_CONTEXT.md`:
+- Seção "Comunicação Frontend ↔ Backend" corrigida
+- Seção 6 (Fluxos Principais): 7 "Acesso via `xxx.html`" → rotas `/app/`
+- Seção 8 (Estado Atual da Interface): tabela de 15 páginas atualizada de `.html` para rotas React
 
 ---
 
-## 9. Validações executadas
+## 8. Validações executadas
 
 | Validação | Resultado |
 |---|---|
-| `npm run frontend:build` | ✅ built in 1.17s — CSS bundlado em `index-BJ4LAFma.css` |
-| `dist/index.html` sem `<link>` externo | ✅ confirmado |
+| `npm run frontend:build` | ✅ built in 1.17s |
 | `npm test` | ✅ 408 passed (18 files) |
 | `npm run prisma:status` | ✅ Database schema is up to date |
 | `node scripts/check-prisma-connection.js` | ✅ 15 passos, todos OK |
 
 ---
 
-## 10. Próximo passo recomendado
+## 9. Próximo passo recomendado
 
-**Passo 4.20** — Revisar e limpar `app.js`:
-- Remover redirects de compatibilidade (`/index.html`, `/proposals.html`) se não forem mais necessários
-- Confirmar que o fallback SPA (`/app/*`) está correto e que nenhuma rota HTML legada sobrou
-- Verificar se `public/` pode eventualmente ser consolidado (logo movida para `frontend/public/`) em uma próxima etapa controlada
+**Passo 4.21** — Auditoria final de consistência:
+- Verificar se há alguma referência `.html` restante em código funcional (não documentação)
+- Revisar `requireAuth.js` para confirmar que `PUBLIC_PREFIXES` e `PUBLIC_PATHS` estão mínimos e corretos
+- Rodar um grep final por `legacy`, `auth.js`, `login.html`, `css/` para confirmar zero restos legados no código
+- Opcional: consolidar logo em `frontend/public/` se fizer sentido no futuro (baixa prioridade)

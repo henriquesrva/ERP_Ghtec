@@ -264,7 +264,7 @@ repository.js   → Queries SQL diretas, sem lógica de negócio
 
 ### Comunicação Frontend ↔ Backend
 
-REST API pura. O frontend faz `fetch()` para endpoints JSON do Express. Não há SSR — o Express serve arquivos `.html` estáticos da pasta `public/` e toda a lógica de interface roda no browser em JavaScript puro.
+REST API pura. O frontend faz `fetch()` para endpoints JSON do Express. Não há SSR — o Express serve o build React (`frontend/dist/`) em `/app/` e toda a lógica de interface roda no browser como SPA React. `public/` serve apenas assets estáticos (`assets/logoGHTEC.png`).
 
 ### Fluxo de Dados
 
@@ -439,13 +439,13 @@ Entradas e saídas de peças do estoque.
 
 ### 6.1 Cadastro de Clientes
 
-Acesso via `clients.html`. CRUD completo. Campos: razão social, nome fantasia, CNPJ, inscrição estadual, endereço, contato, observações, flag de contrato de peças.
+Acesso via `/app/clients`. CRUD completo. Campos: razão social, nome fantasia, CNPJ, inscrição estadual, endereço, contato, observações, flag de contrato de peças.
 
 Busca por nome (autocomplete) e por CNPJ. Não há validação de formato de CNPJ — é armazenado como texto.
 
 ### 6.2 Cadastro de Peças
 
-Acesso via `parts.html`. CRUD completo com validação de unicidade por `(nome, marca, modelo)`. Campos obrigatórios: nome e preço de compra.
+Acesso via `/app/parts`. CRUD completo com validação de unicidade por `(nome, marca, modelo)`. Campos obrigatórios: nome e preço de compra.
 
 Ao cadastrar, seleciona a categoria e preenche o `identity_code` (ex: `001`). O sistema gera automaticamente o `codigo_interno` como `{category.code}-{identity_code}` (ex: `MOT-001`). O código é único — o sistema bloqueia duplicatas.
 
@@ -457,13 +457,13 @@ Acesso implícito dentro do módulo de peças (`/part-categories`). Categoria te
 
 ### 6.4 Cadastro de Responsáveis
 
-Acesso via `responsaveis.html`. CRUD simples: nome, cargo, telefone. Usado para selecionar rapidamente o responsável que assina a proposta, sem ter que digitar tudo toda vez.
+Acesso via `/app/responsaveis`. CRUD simples: nome, cargo, telefone. Usado para selecionar rapidamente o responsável que assina a proposta, sem ter que digitar tudo toda vez.
 
-Se o usuário logado tiver `signature_cargo` e `signature_telefone` configurados (via `usuarios.html`), esses dados são auto-preenchidos no campo de responsável da proposta.
+Se o usuário logado tiver `signature_cargo` e `signature_telefone` configurados (via `/app/usuarios`), esses dados são auto-preenchidos no campo de responsável da proposta.
 
 ### 6.5 Criação de Nova Proposta
 
-Acesso via `nova-proposta.html`. Fluxo:
+Acesso via `/app/nova-proposta`. Fluxo:
 
 1. Usuário informa o número da proposta (ex: `2024-001`)
 2. Seleciona o cliente (autocomplete busca clientes existentes; pode cadastrar novo inline)
@@ -492,7 +492,7 @@ Detalhada na seção 11.
 
 ### 6.7 Histórico de Propostas
 
-Acesso via `proposals.html`. Lista todas as propostas com dados principais. Cada proposta pode ser visualizada (detalhes + itens), ter o PDF baixado ou ser excluída (cascateia em `proposal_items` e `price_history`).
+Acesso via `/app/proposals`. Lista todas as propostas com dados principais. Cada proposta pode ser visualizada (detalhes + itens), ter o PDF baixado ou ser excluída (cascateia em `proposal_items` e `price_history`).
 
 Não há edição de proposta depois de criada — apenas exclusão e recriação.
 
@@ -508,7 +508,7 @@ A consulta durante criação de proposta usa a rota `/items/last-price?client_id
 
 ### 6.9 Condições Comerciais
 
-Templates de condições comerciais cadastrados via `nova-proposta.html` (ou diretamente via API). Ao selecionar um template, os campos `forma_pagamento`, `prazo_pagamento`, `prazo_entrega`, `garantia` e `validade` são preenchidos automaticamente. Pode ser sobrescrito manualmente.
+Templates de condições comerciais cadastrados via `/app/nova-proposta` (ou diretamente via API). Ao selecionar um template, os campos `forma_pagamento`, `prazo_pagamento`, `prazo_entrega`, `garantia` e `validade` são preenchidos automaticamente. Pode ser sobrescrito manualmente.
 
 ### 6.10 Permissões de Usuário
 
@@ -595,23 +595,23 @@ Sistema de 5 roles. Veja seção detalhada em Regras de Negócio (item 7).
 
 ### Páginas Existentes
 
-| Página | Arquivo | Função |
+| Página | Rota React | Função |
 |---|---|---|
-| Login | `/app/login` (React) | Autenticação |
-| Dashboard | `index.html` | Visão geral / atalhos |
-| Nova Proposta | `nova-proposta.html` | Criação de proposta (formulário principal) |
-| Propostas | `proposals.html` | Listagem e download de PDFs |
-| Clientes | `clients.html` | CRUD de clientes |
-| Peças | `parts.html` | CRUD de peças + histórico + referências de preço |
-| Kanban | `kanban.html` | Board de acompanhamento de propostas e tarefas |
-| Estoque | `stock.html` | Movimentações de estoque |
-| Financeiro | `financeiro.html` | Dashboard financeiro |
-| Contas a Pagar | `contas-pagar.html` | Gestão de contas |
-| Notas Recebidas | `notas-recebidas.html` | Lançamento de NFs de entrada |
-| Fornecedores | `fornecedores.html` | Cadastro de fornecedores |
-| Usuários | `usuarios.html` | Gestão de usuários (admin only) |
-| Responsáveis | `responsaveis.html` | Cadastro de responsáveis |
-| Objetos | `objetos.html` | Templates de objeto de proposta |
+| Login | `/app/login` | Autenticação |
+| Dashboard | `/app/` | Visão geral / atalhos |
+| Nova Proposta | `/app/nova-proposta` | Criação de proposta (formulário principal) |
+| Propostas | `/app/proposals` | Listagem e download de PDFs |
+| Clientes | `/app/clients` | CRUD de clientes |
+| Peças | `/app/parts` | CRUD de peças + histórico + referências de preço |
+| Kanban | `/app/kanban` | Board de acompanhamento de propostas e tarefas |
+| Estoque | `/app/stock` | Movimentações de estoque |
+| Financeiro | `/app/financeiro` | Dashboard financeiro |
+| Contas a Pagar | `/app/contas-pagar` | Gestão de contas |
+| Notas Recebidas | `/app/notas-recebidas` | Lançamento de NFs de entrada |
+| Fornecedores | `/app/fornecedores` | Cadastro de fornecedores |
+| Usuários | `/app/usuarios` | Gestão de usuários (admin only) |
+| Responsáveis | `/app/responsaveis` | Cadastro de responsáveis |
+| Objetos | `/app/objetos` | Templates de objeto de proposta |
 
 ### Layout Geral
 
